@@ -1,0 +1,608 @@
+{
+    "info": {
+        "_postman_id": "d2e3f4a5-b6c7-8901-bcde-f12345678901",
+        "name": "Construction ERP — RBAC Module",
+        "description": "Role & Permission Management API tests.\n\n**Pre-requisite**: Run the Auth collection first to get `{{auth_token}}`.\n\nThe calling user must have `role.create`, `role.update`, `role.delete`, `role.assign_permission`, and `permission.create` permissions.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:5000",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "created_role_id",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "ROLES",
+            "item": [
+                {
+                    "name": "1. Create Role — Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Role created', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data).to.have.property('id');",
+                                    "  pm.collectionVariables.set('created_role_id', body.data.id);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Project Manager\",\n  \"code\": \"PM\",\n  \"description\": \"Handles project approvals\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "2. Create Role — Duplicate Code",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Duplicate error', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "  pm.expect(body.message.toLowerCase()).to.include('already in use');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Project Manager Duplicate\",\n  \"code\": \"PM\",\n  \"description\": \"Duplicate role\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "3. Get All Roles",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Returns array', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data).to.be.an('array');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "4. Update Role — Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Role updated', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data.name).to.equal('Senior Project Manager');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles/{{created_role_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles",
+                                "{{created_role_id}}"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Senior Project Manager\",\n  \"description\": \"Senior level project approvals\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "5. Update System Role — Should Fail (403)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                                    "pm.test('System role blocked', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "  pm.expect(body.message.toLowerCase()).to.include('system');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles/SYSTEM_ROLE_ID_HERE",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles",
+                                "SYSTEM_ROLE_ID_HERE"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Hacked Role\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "6. Delete Role — Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Role deleted', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles/{{created_role_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles",
+                                "{{created_role_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "7. Unauthorized — No Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Unauthorized', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "ROLE PERMISSIONS",
+            "item": [
+                {
+                    "name": "8. Assign Permissions — Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Permissions assigned', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data.added).to.be.a('number');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles/{{created_role_id}}/assign-permissions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles",
+                                "{{created_role_id}}",
+                                "assign-permissions"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"permissions\": [\n    \"pr.create\",\n    \"pr.approve\",\n    \"po.create\"\n  ]\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "9. Assign Permissions — Unknown Code Fails",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Unknown codes error', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "  pm.expect(body.message.toLowerCase()).to.include('unknown');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles/{{created_role_id}}/assign-permissions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles",
+                                "{{created_role_id}}",
+                                "assign-permissions"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"permissions\": [\n    \"nonexistent.code\"\n  ]\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "10. Get Role Permissions",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Returns permissions', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data).to.have.property('role');",
+                                    "  pm.expect(body.data.permissions).to.be.an('array');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/roles/{{created_role_id}}/permissions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "roles",
+                                "{{created_role_id}}",
+                                "permissions"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "PERMISSIONS",
+            "item": [
+                {
+                    "name": "11. Create Permission — Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Permission created', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data.code).to.equal('pr.create');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/permissions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "permissions"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code\": \"pr.create\",\n  \"module\": \"procurement\",\n  \"description\": \"Create Purchase Requisition\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "12. Create Permission — Invalid Format",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Validation error', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "  pm.expect(body.message).to.equal('Validation failed');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/permissions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "permissions"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code\": \"PRCreate\",\n  \"module\": \"procurement\",\n  \"description\": \"Invalid format — missing dot separator\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "13. Get All Permissions (Grouped by Module)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Grouped structure', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data).to.be.an('array');",
+                                    "  if (body.data.length > 0) {",
+                                    "    pm.expect(body.data[0]).to.have.property('module');",
+                                    "    pm.expect(body.data[0]).to.have.property('permissions');",
+                                    "  }",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/permissions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "permissions"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["audit", "auth"]
+}
+
+model Role {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String           @db.VarChar(100)
+  code              String?          @unique @db.VarChar(50)
+  description       String?
+  is_system_role    Boolean?         @default(false)
+  is_active         Boolean?         @default(true)
+  created_by        String?          @db.Uuid
+  created_at        DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?        @db.Timestamp(6)
+  deleted_at        DateTime?        @db.Timestamp(6)
+  approval_matrices ApprovalMatrix[]
+  approval_steps    ApprovalStep[]
+  role_permissions  RolePermission[]
+  users             User[]
+
+  @@map("roles")
+  @@schema("auth")
+}
+
+model User {
+  id                   String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employee_code        String?         @db.VarChar(50)
+  name                 String          @db.VarChar(150)
+  email                String          @unique @db.VarChar(150)
+  phone                String?         @db.VarChar(30)
+  password_hash        String
+  role_id              String?         @db.Uuid
+  department           String?         @db.VarChar(100)
+  designation          String?         @db.VarChar(100)
+  manager_id           String?         @db.Uuid
+  is_active            Boolean?        @default(true)
+  is_locked            Boolean?        @default(false)
+  login_attempts       Int?            @default(0)
+  last_login_at        DateTime?       @db.Timestamp(6)
+  last_password_change DateTime?       @db.Timestamp(6)
+  created_by           String?         @db.Uuid
+  created_at           DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at           DateTime?       @db.Timestamp(6)
+  deleted_at           DateTime?       @db.Timestamp(6)
+  password_resets      PasswordReset[]
+  user_projects        UserProject[]
+  user_sessions        UserSession[]
+  roles                Role?           @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("users")
+  @@schema("auth")
+}
+
+model Permission {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String           @unique @db.VarChar(100)
+  module           String?          @db.VarChar(50)
+  description      String?
+  created_at       DateTime?        @default(now()) @db.Timestamp(6)
+  role_permissions RolePermission[]
+
+  @@map("permissions")
+  @@schema("auth")
+}
+
+model RolePermission {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role_id       String?     @db.Uuid
+  permission_id String?     @db.Uuid
+  created_at    DateTime?   @default(now()) @db.Timestamp(6)
+  permissions   Permission? @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles         Role?       @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("role_permissions")
+  @@schema("auth")
+}
+
+model Project {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code              String?          @unique @db.VarChar(50)
+  name              String           @db.VarChar(200)
+  description       String?
+  status            String?          @default("active") @db.VarChar(20)
+  start_date        DateTime?        @db.Timestamp(6)
+  end_date          DateTime?        @db.Timestamp(6)
+  created_at        DateTime?        @default(now()) @db.Timestamp(6)
+  user_projects     UserProject[]
+  approval_matrices ApprovalMatrix[]
+  approval_requests ApprovalRequest[]
+
+  @@map("projects")
+  @@schema("auth")
+}
+
+model UserProject {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  project_id  String?   @db.Uuid
+  access_type String?   @db.VarChar(50)
+  assigned_by String?   @db.Uuid
+  assigned_at DateTime? @default(now()) @db.Timestamp(6)
+  revoked_at  DateTime? @db.Timestamp(6)
+  users       User?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  projects    Project?  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("user_projects")
+  @@schema("auth")
+}
+
+model UserSession {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  jwt_token   String?
+  ip_address  String?
+  device_info String?
+  login_time  DateTime? @default(now()) @db.Timestamp(6)
+  logout_time DateTime? @db.Timestamp(6)
+  is_active   Boolean?  @default(true)
+  users       User?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("user_sessions")
+  @@schema("auth")
+}
+
+model PasswordReset {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  reset_token String?
+  expires_at  DateTime? @db.Timestamp(6)
+  used        Boolean?  @default(false)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  users       User?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("password_resets")
+  @@schema("auth")
+}
+
+model ApprovalMatrix {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  doc_type         String    @db.VarChar(50)
+  project_id       String?   @db.Uuid
+  department       String?   @db.VarChar(100)
+  min_amount       Decimal?  @db.Decimal
+  max_amount       Decimal?  @db.Decimal
+  role_id          String?   @db.Uuid
+  step_order       Int?
+  is_parallel      Boolean?  @default(false)
+  is_mandatory     Boolean?  @default(true)
+  escalation_hours Int?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  roles            Role?     @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  projects         Project?  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("approval_matrices")
+  @@schema("auth")
+}
+
+model ApprovalRequest {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  doc_type       String?        @db.VarChar(50)
+  doc_id         String?        @db.VarChar(100)
+  project_id     String?        @db.Uuid
+  requested_by   String?        @db.Uuid
+  current_status String?        @db.VarChar(50)
+  total_steps    Int?
+  current_step   Int?
+  amount         Decimal?       @db.Decimal
+  department     String?        @db.VarChar(100)
+  is_completed   Boolean?       @default(false)
+  created_at     DateTime?      @default(now()) @db.Timestamp(6)
+  completed_at   DateTime?      @db.Timestamp(6)
+  approval_steps ApprovalStep[]
+  projects       Project?       @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("approval_requests")
+  @@schema("auth")
+}
+
+model ApprovalStep {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  approval_request_id String?          @db.Uuid
+  step_order          Int?
+  role_id             String?          @db.Uuid
+  approver_user       String?          @db.Uuid
+  status              String?          @db.VarChar(50)
+  action              String?          @db.VarChar(50)
+  remarks             String?
+  approved_at         DateTime?        @db.Timestamp(6)
+  escalated           Boolean?         @default(false)
+  escalated_to        String?          @db.Uuid
+  approval_requests   ApprovalRequest? @relation(fields: [approval_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles               Role?            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("approval_steps")
+  @@schema("auth")
+}
+
+model ApprovalDelegation {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  from_user  String?   @db.Uuid
+  to_user    String?   @db.Uuid
+  start_date DateTime? @db.Timestamp(6)
+  end_date   DateTime? @db.Timestamp(6)
+  is_active  Boolean?  @default(true)
+
+  @@map("approval_delegations")
+  @@schema("auth")
+}
+
+model AuditLog {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  module      String?   @db.VarChar(50)
+  entity      String?   @db.VarChar(50)
+  entity_id   String?   @db.Uuid
+  action      String?   @db.VarChar(50)
+  before_data Json?
+  after_data  Json?
+  ip_address  String?
+  device_info String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("audit_logs")
+  @@schema("audit")
+}
+
+model SystemLog {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  level      String?   @db.VarChar(20)
+  message    String?
+  context    Json?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("system_logs")
+  @@schema("audit")
+}
+
+model IdempotencyKey {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key           String    @unique @db.VarChar(255)
+  user_id       String?   @db.Uuid
+  route         String    @db.VarChar(255)
+  request_hash  String    @db.VarChar(64)
+  response_body Json?
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  expires_at    DateTime  @db.Timestamp(6)
+
+  @@map("idempotency_keys")
+  @@schema("audit")
+}

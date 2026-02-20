@@ -1,0 +1,538 @@
+{
+    "info": {
+        "_postman_id": "f4a5b6c7-d8e9-0123-def0-234567890123",
+        "name": "Construction ERP — Approval Engine",
+        "description": "Approval workflow API tests.\n\n**Pre-requisites:**\n- Seed an `approval_matrices` row matching your test docType + projectId + amount range\n- Login as requester (capture `{{auth_token}}`)\n- Login as approver (capture `{{approver_token}}`)\n- Set `{{project_id}}` from an active project-access assignment\n\nTests auto-capture `{{approval_request_id}}` from the create response.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:5000",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "approver_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "project_id",
+            "value": "REPLACE_WITH_PROJECT_UUID",
+            "type": "string"
+        },
+        {
+            "key": "doc_id",
+            "value": "REPLACE_WITH_DOC_UUID",
+            "type": "string"
+        },
+        {
+            "key": "approval_request_id",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "REQUEST APPROVAL",
+            "item": [
+                {
+                    "name": "1. Create Approval Request — Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Request created', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data.approvalRequestId).to.be.a('string');",
+                                    "  pm.expect(body.data.currentStatus).to.equal('in_progress');",
+                                    "  pm.collectionVariables.set('approval_request_id', body.data.approvalRequestId);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/request",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "request"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"docType\": \"PO\",\n  \"docId\": \"{{doc_id}}\",\n  \"projectId\": \"{{project_id}}\",\n  \"amount\": 25000,\n  \"department\": \"Procurement\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "2. Duplicate Request — 409 Blocked",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                                    "pm.test('Conflict message', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "  pm.expect(body.message.toLowerCase()).to.include('already exists');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/request",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "request"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"docType\": \"PO\",\n  \"docId\": \"{{doc_id}}\",\n  \"projectId\": \"{{project_id}}\",\n  \"amount\": 25000,\n  \"department\": \"Procurement\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "3. No Matrix Configured — 422",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                                    "pm.test('No matrix error', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "  pm.expect(body.message.toLowerCase()).to.include('no approval matrix');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/request",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "request"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"docType\": \"PAYROLL_RUN\",\n  \"docId\": \"00000000-0000-0000-0000-000000000001\",\n  \"projectId\": \"{{project_id}}\",\n  \"amount\": 999999999,\n  \"department\": \"HR\"\n}"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "INBOX",
+            "item": [
+                {
+                    "name": "4. Approver Inbox — Pending Steps",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Inbox returned', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data).to.be.an('array');",
+                                    "  if (body.data.length > 0) {",
+                                    "    pm.expect(body.data[0]).to.have.property('docType');",
+                                    "    pm.expect(body.data[0]).to.have.property('stepOrder');",
+                                    "  }",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{approver_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/inbox?status=pending",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "inbox"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "pending"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "APPROVE / REJECT",
+            "item": [
+                {
+                    "name": "5. Approve Step 1",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Step approved', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(['in_progress', 'approved']).to.include(body.data.currentStatus);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{approver_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/{{approval_request_id}}/approve",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "{{approval_request_id}}",
+                                "approve"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"remarks\": \"Looks good, approved at step 1\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "6. Approve Step 2 (Second Approver)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Final approval', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data.currentStatus).to.equal('approved');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "_comment": "Use a second approver token with the matching role for step 2",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{approver_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/{{approval_request_id}}/approve",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "{{approval_request_id}}",
+                                "approve"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"remarks\": \"Final approval confirmed\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "7. Self-Approval Blocked — 403",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                                    "pm.test('Self-approval message', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "  pm.expect(body.message.toLowerCase()).to.include('self');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "_comment": "Use the same token as the requester (auth_token) to attempt approval",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/{{approval_request_id}}/approve",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "{{approval_request_id}}",
+                                "approve"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"remarks\": \"Self-approved\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "8. Reject Flow",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Request rejected', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data.currentStatus).to.equal('rejected');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "_comment": "Create a new approval request first (different docId), then call reject with approver token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{approver_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/{{approval_request_id}}/reject",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "{{approval_request_id}}",
+                                "reject"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"remarks\": \"Budget exceeded — please resubmit with revised amount\"\n}"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "HISTORY & CANCEL",
+            "item": [
+                {
+                    "name": "9. Get Approval History",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('History returned', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data).to.be.an('array');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/history?docType=PO&docId={{doc_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "history"
+                            ],
+                            "query": [
+                                {
+                                    "key": "docType",
+                                    "value": "PO"
+                                },
+                                {
+                                    "key": "docId",
+                                    "value": "{{doc_id}}"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "10. Cancel Approval — Requester Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Request cancelled', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data.currentStatus).to.equal('cancelled');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/approvals/{{approval_request_id}}/cancel",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "approvals",
+                                "{{approval_request_id}}",
+                                "cancel"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

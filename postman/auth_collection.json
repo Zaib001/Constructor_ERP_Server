@@ -1,0 +1,676 @@
+{
+    "info": {
+        "_postman_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
+        "name": "Construction ERP — Auth Module",
+        "description": "Production-grade auth API tests for the Construction ERP system.\n\n**Pre-requisite**: Set the `base_url` collection variable to your server URL (e.g. `http://localhost:5000`).\n\nAfter a successful login, the `auth_token` variable is set automatically via a test script.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:5000",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "reset_token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Login — Success",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Has token', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "  pm.expect(body.data.token).to.be.a('string');",
+                            "  pm.collectionVariables.set('auth_token', body.data.token);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/login",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "login"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"email\": \"admin@erp.com\",\n  \"password\": \"Admin1234\"\n}"
+                }
+            }
+        },
+        {
+            "name": "2. Login — Wrong Password",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                            "pm.test('Error message', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message).to.include('Invalid credentials');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/login",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "login"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"email\": \"admin@erp.com\",\n  \"password\": \"WrongPass999\"\n}"
+                }
+            }
+        },
+        {
+            "name": "3. Login — Locked User",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 423', () => pm.response.to.have.status(423));",
+                            "pm.test('Locked message', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('locked');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/login",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "login"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"email\": \"locked@erp.com\",\n  \"password\": \"AnyPass123\"\n}"
+                }
+            }
+        },
+        {
+            "name": "4. Login — Inactive User",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                            "pm.test('Inactive message', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('inactive');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/login",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "login"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"email\": \"inactive@erp.com\",\n  \"password\": \"AnyPass123\"\n}"
+                }
+            }
+        },
+        {
+            "name": "5. Register — Success (Admin Token Required)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                            "pm.test('Success response', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "  pm.expect(body.message).to.include('created');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/register",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "register"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"employeeCode\": \"EMP-101\",\n  \"name\": \"Ali Khan\",\n  \"email\": \"ali@erp.com\",\n  \"phone\": \"03001234567\",\n  \"password\": \"StrongPass123\",\n  \"department\": \"Procurement\",\n  \"designation\": \"Manager\"\n}"
+                }
+            }
+        },
+        {
+            "name": "6. Register — Duplicate Email",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                            "pm.test('Duplicate message', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('already');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/register",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "register"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"Ali Khan\",\n  \"email\": \"ali@erp.com\",\n  \"password\": \"StrongPass123\"\n}"
+                }
+            }
+        },
+        {
+            "name": "7. Logout",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Logout success', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/logout",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "logout"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "8. Use Token After Logout (Expect 401)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                            "pm.test('Session expired', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/logout",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "logout"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "9. Change Password — Success",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [
+                            "// Re-login first to get a fresh token before running this test"
+                        ],
+                        "type": "text/javascript"
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Password changed', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/change-password",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "change-password"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"oldPassword\": \"Admin1234\",\n  \"newPassword\": \"NewAdmin5678\"\n}"
+                }
+            }
+        },
+        {
+            "name": "10. Change Password — Wrong Old Password",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                            "pm.test('Wrong password message', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('incorrect');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/change-password",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "change-password"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"oldPassword\": \"WrongOldPass\",\n  \"newPassword\": \"NewAdmin5678\"\n}"
+                }
+            }
+        },
+        {
+            "name": "11. Request Password Reset",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Reset requested', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "  if (body._dev_reset_token) {",
+                            "    pm.collectionVariables.set('reset_token', body._dev_reset_token);",
+                            "    console.log('Dev reset token captured:', body._dev_reset_token);",
+                            "  }",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/request-reset",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "request-reset"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"email\": \"ali@erp.com\"\n}"
+                }
+            }
+        },
+        {
+            "name": "12. Reset Password — Success",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Reset success', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/reset-password",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "reset-password"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"newPassword\": \"ResetPass123\"\n}"
+                }
+            }
+        },
+        {
+            "name": "13. Reset Password — Token Already Used",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                            "pm.test('Already used', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('already been used');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/reset-password",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "reset-password"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"newPassword\": \"AnotherPass123\"\n}"
+                }
+            }
+        },
+        {
+            "name": "14. Reset Password — Expired Token",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                            "pm.test('Expired message', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('expired');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/auth/reset-password",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "auth",
+                        "reset-password"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"token\": \"this_token_is_expired_0000000000000000000000000000000000000\",\n  \"newPassword\": \"AnotherPass123\"\n}"
+                }
+            }
+        },
+        {
+            "name": "15. Health Check",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Server running', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "{{base_url}}/health",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "health"
+                    ]
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,160 @@
+2026-02-17T12:53:30.491Z [ERROR]: Forced error for testing
+2026-02-17T12:53:30.501Z [ERROR]: Forced error for testing
+2026-02-17T12:55:28.528Z [ERROR]: Forced error for testing
+2026-02-17T12:57:42.123Z [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000
+2026-02-20T07:25:27.296Z [ERROR]: Active session not found or already revoked
+2026-02-20T07:52:55.492Z [ERROR]: No approval matrix configured for docType='GRN', projectId='8c3a8847-0a41-460b-8757-14487e43c3d8', amount=1000. Contact the ERP administrator.
+2026-02-20T07:53:07.242Z [ERROR]: No approval matrix configured for docType='GRN', projectId='8c3a8847-0a41-460b-8757-14487e43c3d8', amount=1000. Contact the ERP administrator.
+2026-02-20T07:56:24.789Z [ERROR]: No approval matrix configured for docType='GRN', projectId='8c3a8847-0a41-460b-8757-14487e43c3d8', amount=1000. Contact the ERP administrator.
+2026-02-20T07:56:38.817Z [ERROR]: No approval matrix configured for docType='GRN', projectId='8c3a8847-0a41-460b-8757-14487e43c3d8', amount=10. Contact the ERP administrator.
+2026-02-20T08:04:08.910Z [ERROR]: No pending approval step found for you at the current step
+2026-02-20T08:04:10.188Z [ERROR]: No pending approval step found for you at the current step
+2026-02-20T08:12:56.923Z [ERROR]: No pending approval step found for you at the current step
+2026-02-20T08:17:17.660Z [ERROR]: 
+Invalid `tx.approvalRequest.create()` invocation in
+C:\Users\zaibi\Projects\Construction ERP\erp-server\src\modules\approvals\approvals.service.js:102:46
+
+   99 
+  100 // Create approval_request + approval_steps in a single transaction
+  101 const approvalRequest = await prisma.$transaction(async (tx) => {
+→ 102     const req = await tx.approvalRequest.create({
+            data: {
+              doc_type: "PO",
+              doc_id: "PR-2024-002",
+              project_id: "91219b09-9908-4cf7-8e0f-4a1dbd763deb",
+              ~~~~~~~~~~
+              requested_by: "791a168f-1a71-46c1-8ade-edfab58538ae",
+              current_status: "in_progress",
+              total_steps: 1,
+              current_step: 1,
+              amount: 1000,
+              department: null,
+              is_completed: false,
+              created_at: new Date("2026-02-20T08:17:17.626Z"),
+          ?   id?: String,
+          ?   completed_at?: DateTime | Null,
+          ?   approval_steps?: ApprovalStepCreateNestedManyWithoutApproval_requestsInput,
+          ?   projects?: ProjectCreateNestedOneWithoutApproval_requestsInput
+            }
+          })
+
+Unknown argument `project_id`. Did you mean `projects`? Available options are marked with ?.
+2026-02-20T08:18:39.416Z [ERROR]: 
+Invalid `tx.approvalRequest.create()` invocation in
+C:\Users\zaibi\Projects\Construction ERP\erp-server\src\modules\approvals\approvals.service.js:102:46
+
+   99 
+  100 // Create approval_request + approval_steps in a single transaction
+  101 const approvalRequest = await prisma.$transaction(async (tx) => {
+→ 102     const req = await tx.approvalRequest.create({
+            data: {
+              doc_type: "PO",
+              doc_id: "PR-2023",
+              project_id: "91219b09-9908-4cf7-8e0f-4a1dbd763deb",
+              ~~~~~~~~~~
+              requested_by: "791a168f-1a71-46c1-8ade-edfab58538ae",
+              current_status: "in_progress",
+              total_steps: 1,
+              current_step: 1,
+              amount: 2000,
+              department: null,
+              is_completed: false,
+              created_at: new Date("2026-02-20T08:18:39.408Z"),
+          ?   id?: String,
+          ?   completed_at?: DateTime | Null,
+          ?   approval_steps?: ApprovalStepCreateNestedManyWithoutApproval_requestsInput,
+          ?   projects?: ProjectCreateNestedOneWithoutApproval_requestsInput
+            }
+          })
+
+Unknown argument `project_id`. Did you mean `projects`? Available options are marked with ?.
+2026-02-20T08:20:44.290Z [ERROR]: 
+Invalid `tx.approvalRequest.create()` invocation in
+C:\Users\zaibi\Projects\Construction ERP\erp-server\src\modules\approvals\approvals.service.js:102:46
+
+   99 
+  100 // Create approval_request + approval_steps in a single transaction
+  101 const approvalRequest = await prisma.$transaction(async (tx) => {
+→ 102     const req = await tx.approvalRequest.create({
+            data: {
+              doc_type: "PO",
+              doc_id: "PR-2023",
+              project_id: "91219b09-9908-4cf7-8e0f-4a1dbd763deb",
+              ~~~~~~~~~~
+              requested_by: "791a168f-1a71-46c1-8ade-edfab58538ae",
+              current_status: "in_progress",
+              total_steps: 1,
+              current_step: 1,
+              amount: 2000,
+              department: null,
+              is_completed: false,
+              created_at: new Date("2026-02-20T08:20:44.252Z"),
+          ?   id?: String,
+          ?   completed_at?: DateTime | Null,
+          ?   approval_steps?: ApprovalStepCreateNestedManyWithoutApproval_requestsInput,
+          ?   projects?: ProjectCreateNestedOneWithoutApproval_requestsInput
+            }
+          })
+
+Unknown argument `project_id`. Did you mean `projects`? Available options are marked with ?.
+2026-02-20T08:21:42.801Z [ERROR]: 
+Invalid `tx.approvalRequest.create()` invocation in
+C:\Users\zaibi\Projects\Construction ERP\erp-server\src\modules\approvals\approvals.service.js:102:46
+
+   99 
+  100 // Create approval_request + approval_steps in a single transaction
+  101 const approvalRequest = await prisma.$transaction(async (tx) => {
+→ 102     const req = await tx.approvalRequest.create({
+            data: {
+              doc_type: "PO",
+              doc_id: "PR-2024-002",
+              project_id: "91219b09-9908-4cf7-8e0f-4a1dbd763deb",
+              ~~~~~~~~~~
+              requested_by: "791a168f-1a71-46c1-8ade-edfab58538ae",
+              current_status: "in_progress",
+              total_steps: 1,
+              current_step: 1,
+              amount: 1000,
+              department: null,
+              is_completed: false,
+              created_at: new Date("2026-02-20T08:21:42.786Z"),
+          ?   id?: String,
+          ?   completed_at?: DateTime | Null,
+          ?   approval_steps?: ApprovalStepCreateNestedManyWithoutApproval_requestsInput,
+          ?   projects?: ProjectCreateNestedOneWithoutApproval_requestsInput
+            }
+          })
+
+Unknown argument `project_id`. Did you mean `projects`? Available options are marked with ?.
+2026-02-20T08:22:20.719Z [ERROR]: 
+Invalid `tx.approvalRequest.create()` invocation in
+C:\Users\zaibi\Projects\Construction ERP\erp-server\src\modules\approvals\approvals.service.js:102:46
+
+   99 
+  100 // Create approval_request + approval_steps in a single transaction
+  101 const approvalRequest = await prisma.$transaction(async (tx) => {
+→ 102     const req = await tx.approvalRequest.create({
+            data: {
+              doc_type: "PO",
+              doc_id: "PR-2024-002",
+              project_id: "91219b09-9908-4cf7-8e0f-4a1dbd763deb",
+              ~~~~~~~~~~
+              requested_by: "791a168f-1a71-46c1-8ade-edfab58538ae",
+              current_status: "in_progress",
+              total_steps: 1,
+              current_step: 1,
+              amount: 1000,
+              department: null,
+              is_completed: false,
+              created_at: new Date("2026-02-20T08:22:20.687Z"),
+          ?   id?: String,
+          ?   completed_at?: DateTime | Null,
+          ?   approval_steps?: ApprovalStepCreateNestedManyWithoutApproval_requestsInput,
+          ?   projects?: ProjectCreateNestedOneWithoutApproval_requestsInput
+            }
+          })
+
+Unknown argument `project_id`. Did you mean `projects`? Available options are marked with ?.
+2026-02-20T09:12:07.052Z [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000
+2026-02-20T09:15:42.474Z [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000
+2026-02-20T09:16:05.196Z [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000

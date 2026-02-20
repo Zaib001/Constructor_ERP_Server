@@ -1,0 +1,404 @@
+{
+    "info": {
+        "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "name": "Construction ERP — Session Management",
+        "description": "Session Management & Account Security API tests.\n\n**Pre-requisites:**\n- Login to get `{{auth_token}}` and note the session_id from `GET /api/sessions/my`\n- Login as admin to get `{{admin_token}}`\n- Set `{{session_id}}` from the list sessions response\n- Set `{{target_user_id}}` for admin logout test\n\nAll tests require `Authorization: Bearer {{auth_token}}` header.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:5000",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "admin_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "second_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "session_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "target_user_id",
+            "value": "REPLACE_WITH_USER_UUID",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "AUTH (Login to create sessions)",
+            "item": [
+                {
+                    "name": "1. Login — Creates Session Record",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Token returned', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data.token).to.be.a('string');",
+                                    "  pm.collectionVariables.set('auth_token', body.data.token);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"admin@erp.com\",\n  \"password\": \"Admin@123\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "2. Login from Second Device (anomaly detection trigger)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Second token created', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.data.token).to.be.a('string');",
+                                    "  pm.collectionVariables.set('second_token', body.data.token);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "User-Agent",
+                                "value": "Mozilla/5.0 (Android; Mobile)"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"admin@erp.com\",\n  \"password\": \"Admin@123\"\n}"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "SESSION MANAGEMENT",
+            "item": [
+                {
+                    "name": "3. Get My Active Sessions",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Sessions listed', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.data).to.be.an('array');",
+                                    "  if (body.data.length > 0) {",
+                                    "    pm.expect(body.data[0]).to.have.property('id');",
+                                    "    pm.expect(body.data[0]).to.have.property('ip_address');",
+                                    "    pm.collectionVariables.set('session_id', body.data[0].id);",
+                                    "  }",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{second_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/sessions/my",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "sessions",
+                                "my"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "4. Revoke Specific Session",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Session revoked', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.message.toLowerCase()).to.include('revoked');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/sessions/{{session_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "sessions",
+                                "{{session_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "5. Revoked Session Blocked — 401",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Session rejected', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "_comment": "Use the second_token whose session was just revoked",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{second_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/sessions/my",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "sessions",
+                                "my"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "6. Terminate All Other Sessions",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Others terminated', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.message).to.include('sessions');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/sessions/terminate-others",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "sessions",
+                                "terminate-others"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "ADMIN",
+            "item": [
+                {
+                    "name": "7. Admin Force Logout User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Force logout success', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.true;",
+                                    "  pm.expect(body.message).to.include('sessions');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{admin_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/sessions/admin/logout-user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "sessions",
+                                "admin",
+                                "logout-user"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"userId\": \"{{target_user_id}}\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "8. Non-Admin Force Logout — 403",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                                    "pm.test('Access denied', () => {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.expect(body.success).to.be.false;",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/sessions/admin/logout-user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "sessions",
+                                "admin",
+                                "logout-user"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"userId\": \"{{target_user_id}}\"\n}"
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

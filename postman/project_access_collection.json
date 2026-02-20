@@ -1,0 +1,473 @@
+{
+    "info": {
+        "_postman_id": "e3f4a5b6-c7d8-9012-cdef-123456789012",
+        "name": "Construction ERP — Project Access Control",
+        "description": "Project-level access control API tests.\n\n**Pre-requisite**: Use `{{auth_token}}` from the Auth collection login.\n\nThe calling user needs `project_access.assign`, `project_access.update`, `project_access.revoke` permissions.\n\nTest scripts auto-capture `{{assignment_id}}` from the assign response.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:5000",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "readonly_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "target_user_id",
+            "value": "REPLACE_WITH_TARGET_USER_UUID",
+            "type": "string"
+        },
+        {
+            "key": "project_id",
+            "value": "REPLACE_WITH_PROJECT_UUID",
+            "type": "string"
+        },
+        {
+            "key": "assignment_id",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Assign Access — Full (Success)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                            "pm.test('Assignment created', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "  pm.expect(body.data).to.have.property('id');",
+                            "  pm.collectionVariables.set('assignment_id', body.data.id);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/project-access/assign",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "project-access",
+                        "assign"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"userId\": \"{{target_user_id}}\",\n  \"projectId\": \"{{project_id}}\",\n  \"accessType\": \"full\"\n}"
+                }
+            }
+        },
+        {
+            "name": "2. Assign Access — Duplicate (Conflict 409)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 409', () => pm.response.to.have.status(409));",
+                            "pm.test('Conflict message', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('already has');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/project-access/assign",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "project-access",
+                        "assign"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"userId\": \"{{target_user_id}}\",\n  \"projectId\": \"{{project_id}}\",\n  \"accessType\": \"read_only\"\n}"
+                }
+            }
+        },
+        {
+            "name": "3. Assign Access — Self-Assignment (403)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                            "pm.test('Self-assign blocked', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('yourself');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/project-access/assign",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "project-access",
+                        "assign"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"userId\": \"REPLACE_WITH_YOUR_OWN_USER_UUID\",\n  \"projectId\": \"{{project_id}}\",\n  \"accessType\": \"full\"\n}"
+                }
+            }
+        },
+        {
+            "name": "4. Get User's Projects",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Projects listed', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "  pm.expect(body.data).to.have.property('projects');",
+                            "  pm.expect(body.data.projects).to.be.an('array');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/project-access/user/{{target_user_id}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "project-access",
+                        "user",
+                        "{{target_user_id}}"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "5. Get Project's Users",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Users listed', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "  pm.expect(body.data).to.be.an('array');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/project-access/project/{{project_id}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "project-access",
+                        "project",
+                        "{{project_id}}"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "6. Update Access — full → read_only",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Access updated', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "  pm.expect(body.data.access_type).to.equal('read_only');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "PATCH",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/project-access/{{assignment_id}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "project-access",
+                        "{{assignment_id}}"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"accessType\": \"read_only\"\n}"
+                }
+            }
+        },
+        {
+            "name": "7. read_only User — POST Blocked (403)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                            "pm.test('Read-only blocked', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('read-only');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "_comment": "Call any POST route that uses requireProjectAccess() with the read_only user's token",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{readonly_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/some-erp-route",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "some-erp-route"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"projectId\": \"{{project_id}}\"\n}"
+                }
+            }
+        },
+        {
+            "name": "8. Revoke Access",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Access revoked', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.true;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('revoked');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "DELETE",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{auth_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/project-access/{{assignment_id}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "project-access",
+                        "{{assignment_id}}"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "9. Revoked Access — Blocked (403)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                            "pm.test('Revoked access blocked', () => {",
+                            "  const body = pm.response.json();",
+                            "  pm.expect(body.success).to.be.false;",
+                            "  pm.expect(body.message.toLowerCase()).to.include('not assigned');",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "_comment": "Try accessing a project-protected route after access was revoked — should fail as the middleware finds no active assignment",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{readonly_token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/some-erp-route?projectId={{project_id}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "some-erp-route"
+                    ],
+                    "query": [
+                        {
+                            "key": "projectId",
+                            "value": "{{project_id}}"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "10. Unauthorized — No Token",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/project-access/user/{{target_user_id}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "project-access",
+                        "user",
+                        "{{target_user_id}}"
+                    ]
+                }
+            }
+        }
+    ]
+}
