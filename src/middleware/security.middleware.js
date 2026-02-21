@@ -8,7 +8,7 @@ const rateLimit = require("express-rate-limit");
 // Allowed CORS origins — extend via CORS_ORIGINS env var (comma-separated)
 // ─────────────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
-    "https://constructor-erp-client.vercel.app",
+    "https://constructor-erp-client.vercel.app/",
     "http://localhost:5173",
     "http://localhost:3000",
 ];
