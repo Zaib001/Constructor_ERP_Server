@@ -8,9 +8,9 @@ const rateLimit = require("express-rate-limit");
 // Allowed CORS origins — extend via CORS_ORIGINS env var (comma-separated)
 // ─────────────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
-    "https://constructor-erp-client.vercel.app",
-    "http://localhost:5173",
-    "http://localhost:3000",
+    "https://constructor-erp-client.vercel.app",  // NO trailing slash
+    "http://localhost:5173",                       // NO trailing slash
+    "http://localhost:3000",                        // NO trailing slash
 ];
 
 const corsOptions = {
@@ -18,8 +18,16 @@ const corsOptions = {
         // Allow requests with no origin (like mobile apps, curl, Postman)
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
+        // Normalize the origin by removing any trailing slash for comparison
+        const normalizedOrigin = origin.replace(/\/$/, '');
+        const normalizedAllowedOrigins = allowedOrigins.map(o => o.replace(/\/$/, ''));
+        
+        if (normalizedAllowedOrigins.includes(normalizedOrigin)) {
+            // Return the original allowed origin (without trailing slash)
+            const matchedOrigin = allowedOrigins.find(o => 
+                o.replace(/\/$/, '') === normalizedOrigin
+            );
+            callback(null, matchedOrigin);
         } else {
             callback(new Error(`CORS: origin '${origin}' not allowed`));
         }
