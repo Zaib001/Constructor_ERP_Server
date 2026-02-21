@@ -7,40 +7,25 @@ const rateLimit = require("express-rate-limit");
 // ─────────────────────────────────────────────────────────────────────────────
 // Allowed CORS origins — extend via CORS_ORIGINS env var (comma-separated)
 // ─────────────────────────────────────────────────────────────────────────────
-const defaultOrigins = [
+const allowedOrigins = [
     "https://constructor-erp-client.vercel.app",
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://staging.construction-erp.com",
-    "https://erp.construction-erp.com",
 ];
 
-const allowedOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(",").map((o) => o.trim())
-    : defaultOrigins;
-
 const corsOptions = {
-    origin(origin, callback) {
-        // Allow server-to-server / Postman requests (no origin header)
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, Postman)
         if (!origin) return callback(null, true);
-
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error(`CORS: origin '${origin}' not allowed`));
         }
-        return callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
-    allowedHeaders: [
-        "Content-Type",
-        "Authorization",
-        "x-company-id",
-        "x-idempotency-key",
-        "Idempotency-Key",
-        "x-request-id",
-    ],
-    exposedHeaders: ["x-request-id"],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
-    optionsSuccessStatus: 204,
+    optionsSuccessStatus: 204
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
