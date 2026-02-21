@@ -8,17 +8,17 @@
   ],
   "routes": [
     {
-      "src": "/api/auth/login",
+      "src": "/api/(.*)",
       "methods": ["OPTIONS"],
-      "dest": "src/app.js",
+      "dest": "/api/options-handler",
+      "status": 204,
       "headers": {
         "Access-Control-Allow-Origin": "https://constructor-erp-client.vercel.app",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, x-company-id, x-idempotency-key, Idempotency-Key, x-request-id",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Max-Age": "86400"
-      },
-      "status": 204
+      }
     },
     {
       "src": "/api/(.*)",
@@ -34,8 +34,5 @@
       "src": "/(.*)",
       "dest": "src/app.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
