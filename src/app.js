@@ -19,7 +19,38 @@ const { helmetConfig, corsOptions, authRateLimit, generalRateLimit } =
 app.use(helmetConfig);
 
 // ─── 3. CORS ──────────────────────────────────────────────────────────────────
-app.use(cors(corsOptions));
+const allowedOrigins = [
+    'https://constructor-erp-client.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+];
+
+// Global CORS middleware
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    
+    // Log all requests for debugging
+    console.log(`${req.method} ${req.url} - Origin: ${origin}`);
+    
+    // Set CORS headers for all responses
+    if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    
+    res.header('Access-Control-Allow-Headers', 
+        'Content-Type, Authorization, x-company-id, x-idempotency-key, Idempotency-Key, x-request-id');
+    res.header('Access-Control-Allow-Methods', 
+        'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle OPTIONS method immediately
+    if (req.method === 'OPTIONS') {
+        console.log('Handling OPTIONS preflight request');
+        return res.status(204).end();
+    }
+    
+    next();
+});
 
 
 // ─── 4. Compression ───────────────────────────────────────────────────────────
