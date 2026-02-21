@@ -19,16 +19,8 @@ const { helmetConfig, corsOptions, authRateLimit, generalRateLimit } =
 app.use(helmetConfig);
 
 // ─── 3. CORS ──────────────────────────────────────────────────────────────────
-app.use(cors({
-    origin: [
-        'https://constructor-erp-client.vercel.app',
-        'http://localhost:5173',
-        'http://localhost:3000'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id']
-}));
+app.use(cors(corsOptions));
+
 
 // ─── 4. Compression ───────────────────────────────────────────────────────────
 app.use(compression());
