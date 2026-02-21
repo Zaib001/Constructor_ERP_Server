@@ -8,9 +8,21 @@
   ],
   "routes": [
     {
+      "src": "/api/auth/login",
+      "methods": ["OPTIONS"],
+      "dest": "src/app.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://constructor-erp-client.vercel.app",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-company-id, x-idempotency-key, Idempotency-Key, x-request-id",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400"
+      },
+      "status": 204
+    },
+    {
       "src": "/api/(.*)",
       "dest": "src/app.js",
-      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
       "headers": {
         "Access-Control-Allow-Origin": "https://constructor-erp-client.vercel.app",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, x-company-id, x-idempotency-key, Idempotency-Key, x-request-id",
@@ -21,18 +33,6 @@
     {
       "src": "/(.*)",
       "dest": "src/app.js"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://constructor-erp-client.vercel.app" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, x-company-id, x-idempotency-key, Idempotency-Key, x-request-id" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH" },
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Max-Age", "value": "86400" }
-      ]
     }
   ],
   "env": {
