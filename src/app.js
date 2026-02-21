@@ -20,6 +20,7 @@ app.use(helmetConfig);
 
 // ─── 3. CORS ──────────────────────────────────────────────────────────────────
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); 
 
 // ─── 4. Compression ───────────────────────────────────────────────────────────
 app.use(compression());
