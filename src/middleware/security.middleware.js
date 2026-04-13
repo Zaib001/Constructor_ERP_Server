@@ -7,33 +7,39 @@ const rateLimit = require("express-rate-limit");
 // ─────────────────────────────────────────────────────────────────────────────
 // Allowed CORS origins — extend via CORS_ORIGINS env var (comma-separated)
 // ─────────────────────────────────────────────────────────────────────────────
-const allowedOrigins = [
-    "https://constructor-erp-client.vercel.app",  // NO trailing slash
-    "http://localhost:5173",                       // NO trailing slash
-    "http://localhost:3000",                        // NO trailing slash
+const defaultOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://staging.construction-erp.com",
+    "https://erp.construction-erp.com",
 ];
 
+const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(",").map((o) => o.trim())
+    : defaultOrigins;
+
 const corsOptions = {
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, Postman)
+    origin(origin, callback) {
+        // Allow server-to-server / Postman requests (no origin header)
         if (!origin) return callback(null, true);
-        
-        // Normalize the origin by removing any trailing slash for comparison
-        const normalizedOrigin = origin.replace(/\/$/, '');
-        const normalizedAllowedOrigins = allowedOrigins.map(o => o.replace(/\/$/, ''));
-        
-        if (normalizedAllowedOrigins.includes(normalizedOrigin)) {
-            // Return the original allowed origin (without trailing slash)
-            const matchedOrigin = allowedOrigins.find(o => 
-                o.replace(/\/$/, '') === normalizedOrigin
-            );
-            callback(null, matchedOrigin);
-        } else {
-            callback(new Error(`CORS: origin '${origin}' not allowed`));
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
         }
+        return callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "x-company-id",
+        "x-idempotency-key",
+        "Idempotency-Key",
+        "x-request-id",
+    ],
+    exposedHeaders: ["x-request-id"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 204,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

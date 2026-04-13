@@ -46,45 +46,82 @@ function requireProjectAccess(options = {}) {
                 });
             }
 
-            // 2. Look up active assignment in auth.user_projects
+            // 2. Resolve User Details (Role & Company)
+            const user = await prisma.user.findFirst({
+                where: { id: req.user.userId },
+                select: {
+                    company_id: true,
+                    roles: { select: { code: true } }
+                }
+            });
+
+            if (!user) {
+                return res.status(401).json({ success: false, message: "User not found" });
+            }
+
+            const roleCode = user.roles?.code;
+            const userCompanyId = user.company_id;
+
+            // 3. Admin Bypass
+            if (roleCode === "super_admin" || roleCode === "erp_admin") {
+                req.projectAccess = { id: null, projectId, accessType: "full" };
+                return next();
+            }
+
+            // 4. Look up active assignment in auth.user_projects
             const assignment = await prisma.userProject.findFirst({
                 where: {
                     user_id: req.user.userId,
                     project_id: projectId,
                     revoked_at: null,
                 },
-                select: { id: true, project_id: true, access_type: true },
+                select: { id: true, projects: { select: { id: true } }, access_type: true },
             });
 
-            if (!assignment) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Access denied: you are not assigned to this project",
+            if (assignment) {
+                // Attach real assignment context
+                req.projectAccess = {
+                    id: assignment.id,
+                    projectId: assignment.projects?.id,
+                    accessType: assignment.access_type,
+                };
+            } else {
+                // 5. Check for Company-wide Access (Department-level visibility)
+                const project = await prisma.project.findFirst({
+                    where: { id: projectId, company_id: userCompanyId, status: "active" },
+                    select: { id: true }
                 });
+
+                if (!project) {
+                    return res.status(403).json({
+                        success: false,
+                        message: "Access denied: you are not assigned to this project and it does not belong to your company",
+                    });
+                }
+
+                // Attach virtual context for company-wide access
+                req.projectAccess = {
+                    id: null,
+                    projectId: project.id,
+                    accessType: "department", // Virtual access type
+                };
             }
 
             // 3. Enforce allowed access types if specified
-            if (allowedTypes && !allowedTypes.includes(assignment.access_type)) {
+            if (allowedTypes && !allowedTypes.includes(req.projectAccess.accessType)) {
                 return res.status(403).json({
                     success: false,
-                    message: `Access denied: your access level '${assignment.access_type}' is not permitted for this action`,
+                    message: `Access denied: your access level '${req.projectAccess.accessType}' is not permitted for this action`,
                 });
             }
 
             // 4. Enforce read_only restriction on mutating methods
-            if (assignment.access_type === "read_only" && ["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+            if (req.projectAccess.accessType === "read_only" && ["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
                 return res.status(403).json({
                     success: false,
                     message: "Access denied: read-only users cannot perform write operations",
                 });
             }
-
-            // 5. Attach access context to request
-            req.projectAccess = {
-                id: assignment.id,
-                projectId: assignment.project_id,
-                accessType: assignment.access_type,
-            };
 
             next();
         } catch (err) {

@@ -56,11 +56,12 @@ async function createRole(data, actorId, ipAddress, deviceInfo) {
 
 // ─── Update Role ──────────────────────────────────────────────────────────────
 
-async function updateRole(id, data, actorId, ipAddress, deviceInfo) {
+async function updateRole(id, data, actorId, ipAddress, deviceInfo, isSuperAdmin = false) {
     const role = await prisma.role.findFirst({ where: { id, deleted_at: null } });
     if (!role) throw createAppError("Role not found", 404);
-    if (role.is_system_role) {
-        throw createAppError("System roles cannot be modified", 403);
+    
+    if (role.is_system_role && !isSuperAdmin) {
+        throw createAppError("System roles can only be modified by a Super Administrator", 403);
     }
 
     const { name, description, isActive } = data;
@@ -174,10 +175,14 @@ async function getRoleById(id) {
 
 // ─── Assign Permissions to Role ───────────────────────────────────────────────
 
-async function assignPermissions(roleId, permissionCodes, actorId, ipAddress, deviceInfo) {
+async function assignPermissions(roleId, permissionCodes, actorId, ipAddress, deviceInfo, isSuperAdmin = false) {
     // Validate role exists & is not soft-deleted
     const role = await prisma.role.findFirst({ where: { id: roleId, deleted_at: null } });
     if (!role) throw createAppError("Role not found", 404);
+
+    if (role.is_system_role && !isSuperAdmin) {
+        throw createAppError("Security matrix for system roles can only be modified by a Super Administrator", 403);
+    }
 
     // Fetch permission records by code
     const permissions = await prisma.permission.findMany({
@@ -195,18 +200,21 @@ async function assignPermissions(roleId, permissionCodes, actorId, ipAddress, de
     // Get current assignments to skip duplicates
     const existing = await prisma.rolePermission.findMany({
         where: { role_id: roleId },
-        select: { permission_id: true },
+        select: { permissions: { select: { id: true } } },
     });
-    const existingPermIds = new Set(existing.map((e) => e.permission_id));
+    const existingPermIds = new Set(existing.map((e) => e.permissions?.id));
 
     const newAssignments = permissions
         .filter((p) => !existingPermIds.has(p.id))
-        .map((p) => ({ role_id: roleId, permission_id: p.id }));
+        .map((p) => ({
+            roles: { connect: { id: roleId } },
+            permissions: { connect: { id: p.id } }
+        }));
 
     if (newAssignments.length > 0) {
         await prisma.$transaction(
-            newAssignments.map((assignment) =>
-                prisma.rolePermission.create({ data: assignment })
+            newAssignments.map((data) =>
+                prisma.rolePermission.create({ data })
             )
         );
     }
@@ -266,3 +274,4 @@ module.exports = {
     assignPermissions,
     getRolePermissions,
 };
+

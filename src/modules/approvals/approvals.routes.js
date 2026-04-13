@@ -6,6 +6,7 @@ const {
     validateRequestApproval,
     validateApproveStep,
     validateRejectStep,
+    validateSendBackStep,
     validateInboxQuery,
     validateHistoryQuery,
 } = require("./approvals.validator");
@@ -35,13 +36,13 @@ router.post(
  * GET /api/approvals/inbox
  * Return pending steps for the authenticated user.
  */
-router.get("/inbox", validateInboxQuery, controller.getInbox);
+router.get("/inbox", requirePermission("approval.read"), validateInboxQuery, controller.getInbox);
 
 /**
  * GET /api/approvals/history
  * Approval history for a given docType + docId.
  */
-router.get("/history", validateHistoryQuery, controller.getHistory);
+router.get("/history", requirePermission("approval.read"), validateHistoryQuery, controller.getHistory);
 
 /**
  * POST /api/approvals/:id/approve
@@ -66,15 +67,26 @@ router.post(
 );
 
 /**
+ * POST /api/approvals/:id/send-back
+ * Send back the request to the originator for correction.
+ */
+router.post(
+    "/:id/send-back",
+    requirePermission("approval.reject"),
+    validateSendBackStep,
+    controller.sendBackStep
+);
+
+/**
  * GET /api/approvals/:id
  * Get full details of a specific approval request (including steps).
  */
-router.get("/:id", controller.getRequest);
+router.get("/:id", requirePermission("approval.read"), controller.getRequest);
 
 /**
  * POST /api/approvals/:id/cancel
  * Cancel an in-progress approval (requester or admin).
  */
-router.post("/:id/cancel", controller.cancelApproval);
+router.post("/:id/cancel", requirePermission("approval.approve"), controller.cancelApproval);
 
 module.exports = router;

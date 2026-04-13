@@ -22,7 +22,14 @@ async function createRole(req, res, next) {
 
 async function updateRole(req, res, next) {
     try {
-        const role = await roleService.updateRole(req.params.id, req.body, req.user.userId, getIp(req), getDevice(req));
+        const role = await roleService.updateRole(
+            req.params.id, 
+            req.body, 
+            req.user.userId, 
+            getIp(req), 
+            getDevice(req),
+            req.user.isSuperAdmin
+        );
         return res.status(200).json({ success: true, message: "Role updated successfully", data: role });
     } catch (err) { next(err); }
 }
@@ -63,7 +70,8 @@ async function assignPermissions(req, res, next) {
             req.body.permissions,
             req.user.userId,
             getIp(req),
-            getDevice(req)
+            getDevice(req),
+            req.user.isSuperAdmin
         );
         return res.status(200).json({
             success: true,

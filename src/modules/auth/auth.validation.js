@@ -59,11 +59,10 @@ const validateRegister = [
         .isUUID()
         .withMessage("roleId must be a valid UUID"),
 
-    body("department")
+    body("department_id")
         .optional()
-        .trim()
-        .isLength({ max: 100 })
-        .withMessage("Department must be at most 100 characters"),
+        .isUUID()
+        .withMessage("Department ID must be a valid UUID"),
 
     body("designation")
         .optional()

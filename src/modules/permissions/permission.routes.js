@@ -25,7 +25,7 @@ router.get("/", controller.getPermissions);
  */
 router.post(
     "/",
-    requirePermission("permission.create"),
+    requirePermission("role.manage"),
     validateCreatePermission,
     controller.createPermission
 );

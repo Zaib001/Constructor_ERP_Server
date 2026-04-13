@@ -76,7 +76,7 @@ async function runEscalation() {
                         id: true,
                         doc_type: true,
                         doc_id: true,
-                        requested_by: true,
+                        requester_id: true,
                         created_at: true,
                         current_status: true,
                     },
@@ -101,7 +101,7 @@ async function runEscalation() {
                         step_order: step.step_order,
                         escalation_hours: { not: null },
                     },
-                    select: { escalation_hours: true, role_id: true },
+                    select: { escalation_hours: true, roles: { select: { id: true } } },
                 });
 
                 if (!matrix?.escalation_hours) continue;

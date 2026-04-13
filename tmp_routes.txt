@@ -1,0 +1,116 @@
+--- purchaseRequisitions/purchaseRequisitions.routes.js ---
+"use strict";
+const express = require("express");
+const router = express.Router();
+const controller = require("./purchaseRequisitions.controller");
+const authenticateJWT = require("../../middleware/authenticateJWT");
+
+router.use(authenticateJWT);
+
+router.get("/", controller.getAllPRs);
+router.post("/", controller.createPR);
+router.get("/:id", controller.getPRById);
+router.post("/:id/approve", controller.approvePR);
+
+module.exports = router;
+
+
+--- rfqs/rfqs.routes.js ---
+"use strict";
+const express = require("express");
+const router = express.Router();
+const controller = require("./rfqs.controller");
+const authenticateJWT = require("../../middleware/authenticateJWT");
+
+router.use(authenticateJWT);
+
+router.get("/", controller.getAllRFQs);
+router.post("/", controller.createRFQ);
+router.get("/:id", controller.getRFQById);
+router.post("/:id/vendors", controller.addVendors);
+router.post("/:id/quotes", controller.submitQuote);
+router.post("/:id/compare", controller.compareQuotes);
+
+module.exports = router;
+
+
+--- quotations/quotations.routes.js ---
+"use strict";
+
+const express = require("express");
+const router = express.Router();
+const quotationsController = require("./quotations.controller");
+const authenticateJWT = require("../../middleware/authenticateJWT");
+
+router.use(authenticateJWT);
+
+router.get("/", quotationsController.getAllQuotations);
+router.get("/:id", quotationsController.getQuotationById);
+router.post("/", quotationsController.createQuotation);
+
+module.exports = router;
+
+
+--- purchaseOrders/purchaseOrders.routes.js ---
+"use strict";
+
+const express = require("express");
+const router = express.Router();
+const purchaseOrdersController = require("./purchaseOrders.controller");
+const authenticateJWT = require("../../middleware/authenticateJWT");
+
+router.use(authenticateJWT);
+
+router.get("/", purchaseOrdersController.getAllPurchaseOrders);
+router.post("/", purchaseOrdersController.createPO);
+router.post("/payment", purchaseOrdersController.processPayment); // Global payment endpoint or PO specific? I'll add specific ones too
+
+router.get("/:id", purchaseOrdersController.getPOById);
+router.post("/:id/issue", purchaseOrdersController.issuePO);
+router.post("/:id/receipt", purchaseOrdersController.recordReceipt);
+router.get("/:id/receipts", purchaseOrdersController.getReceiptsByPO);
+router.post("/:id/invoice", purchaseOrdersController.createInvoice);
+router.get("/:id/invoices", purchaseOrdersController.getInvoicesByPO);
+
+module.exports = router;
+
+
+--- pettyCash/pettyCash.routes.js ---
+"use strict";
+const express = require("express");
+const router = express.Router();
+const controller = require("./pettyCash.controller");
+const authenticateJWT = require("../../middleware/authenticateJWT");
+
+router.use(authenticateJWT);
+
+router.get("/requests", controller.getAllRequests);
+router.post("/requests", controller.createRequest);
+router.get("/requests/:id", controller.getRequestById);
+router.post("/expenses", controller.submitExpense);
+router.get("/expenses", controller.getAllExpenses);
+
+module.exports = router;
+
+
+--- petrolExpenses/petrolExpenses.routes.js ---
+"use strict";
+
+const express = require("express");
+const router = express.Router();
+const controller = require("./petrolExpenses.controller");
+const authenticateJWT = require("../../middleware/authenticateJWT");
+const { hasPermission } = require("../../middleware/security.middleware"); // Not exported from security.middleware usually but wait, the codebase uses `requirePermission` or custom guards.
+// In auth flows, I will assume a standard wrapper or do checks in controller if not sure of the middleware name.
+
+router.use(authenticateJWT);
+
+router.get("/", controller.getAllExpenses);
+router.get("/reports", controller.getReports);
+router.post("/", controller.createExpense);
+router.get("/:id", controller.getExpenseById);
+router.put("/:id", controller.updateExpense);
+router.post("/:id/verify", controller.verifyExpense);
+router.post("/:id/reject", controller.rejectExpense);
+
+module.exports = router;

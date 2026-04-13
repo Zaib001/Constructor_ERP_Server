@@ -1,0 +1,132 @@
+[
+  {
+    "id": "87541520-b7a4-4c86-815d-e83d75ff06fd",
+    "level": "error",
+    "message": "\nInvalid `prisma.item.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\items\\items.service.js:15:21\n\n  12 };\n  13 \n  14 const [data, total] = await Promise.all([\n→ 15     prisma.item.findMany(\nThe table `auth.stocks` does not exist in the current database.",
+    "context": {
+      "url": "/api/items?page=1&pageSize=50",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.item.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\items\\items.service.js:15:21\n\n  12 };\n  13 \n  14 const [data, total] = await Promise.all([\n→ 15     prisma.item.findMany(\nThe table `auth.stocks` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Promise.all (index 0)\n    at async Object.getAllItems (D:\\Conatruction_ERP\\server\\src\\modules\\items\\items.service.js:14:27)\n    at async getAllItems (D:\\Conatruction_ERP\\server\\src\\modules\\items\\items.controller.js:13:24)",
+      "method": "GET",
+      "requestId": "5edc5dfb-ae3e-43d4-a56c-b85c1f063a1c",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:48:39.355Z"
+  },
+  {
+    "id": "f82a8d01-309e-4d35-8740-1d3139410a00",
+    "level": "error",
+    "message": "\nInvalid `prisma.item.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\items\\items.service.js:15:21\n\n  12 };\n  13 \n  14 const [data, total] = await Promise.all([\n→ 15     prisma.item.findMany(\nThe table `auth.stocks` does not exist in the current database.",
+    "context": {
+      "url": "/api/items?page=1&pageSize=50",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.item.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\items\\items.service.js:15:21\n\n  12 };\n  13 \n  14 const [data, total] = await Promise.all([\n→ 15     prisma.item.findMany(\nThe table `auth.stocks` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Promise.all (index 0)\n    at async Object.getAllItems (D:\\Conatruction_ERP\\server\\src\\modules\\items\\items.service.js:14:27)\n    at async getAllItems (D:\\Conatruction_ERP\\server\\src\\modules\\items\\items.controller.js:13:24)",
+      "method": "GET",
+      "requestId": "e07b17ca-1a09-4e39-b1f2-2253d7697284",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:48:07.041Z"
+  },
+  {
+    "id": "4b413b56-8308-4553-a700-3cc5751b3180",
+    "level": "error",
+    "message": "\nInvalid `tx.petrolExpense.create()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:80:48\n\n  77 const costPerKm = total / distance;\n  78 \n  79 // Save expense\n→ 80 const expense = await tx.petrolExpense.create({\n       data: {\n         company_id: \"0b21a6a6-2243-4f3b-a708-19f4619d464c\",\n         bill_no: \"SN-1231\",\n         job_type: \"job\",\n         project_id: \"063e82c4-1fb1-4c39-bcff-e2a5aee0a65b\",\n         job_number: \"\",\n         vehicle_id: \"c95ee0ec-5c16-4b58-8217-f445b9f0daed\",\n         vehicle_plate_no: \"TEST_PLA_A1\",\n         petrol_amount_excl_vat: 1000,\n         vat_amount: 999.81,\n         total_amount: 1999.81,\n         odometer_reading: 9998,\n         last_odometer: 1000,\n         distance_since_last: 8998,\n         cost_per_km: 0.2222505001111358,\n         fuel_date: new Date(\"2026-04-03T00:00:00.000Z\"),\n         created_by: \"0a9a153c-20cf-4f73-8240-ff7e6f755519\",\n         verification_status: \"pending\",\n         remarks: \"\",\n         attachment: {\n           key: \"petrol/1775201490156_image__015.png\",\n           url: \"/uploads/petrol/1775201490156_image__015.png\"\n         }\n         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n       }\n     })\n\nArgument `attachment`: Invalid value provided. Expected String or Null, provided Object.",
+    "context": {
+      "url": "/api/petrol-expenses",
+      "stack": "PrismaClientValidationError: \nInvalid `tx.petrolExpense.create()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:80:48\n\n  77 const costPerKm = total / distance;\n  78 \n  79 // Save expense\n→ 80 const expense = await tx.petrolExpense.create({\n       data: {\n         company_id: \"0b21a6a6-2243-4f3b-a708-19f4619d464c\",\n         bill_no: \"SN-1231\",\n         job_type: \"job\",\n         project_id: \"063e82c4-1fb1-4c39-bcff-e2a5aee0a65b\",\n         job_number: \"\",\n         vehicle_id: \"c95ee0ec-5c16-4b58-8217-f445b9f0daed\",\n         vehicle_plate_no: \"TEST_PLA_A1\",\n         petrol_amount_excl_vat: 1000,\n         vat_amount: 999.81,\n         total_amount: 1999.81,\n         odometer_reading: 9998,\n         last_odometer: 1000,\n         distance_since_last: 8998,\n         cost_per_km: 0.2222505001111358,\n         fuel_date: new Date(\"2026-04-03T00:00:00.000Z\"),\n         created_by: \"0a9a153c-20cf-4f73-8240-ff7e6f755519\",\n         verification_status: \"pending\",\n         remarks: \"\",\n         attachment: {\n           key: \"petrol/1775201490156_image__015.png\",\n           url: \"/uploads/petrol/1775201490156_image__015.png\"\n         }\n         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n       }\n     })\n\nArgument `attachment`: Invalid value provided. Expected String or Null, provided Object.\n    at ar (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:10:1379)\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7815)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:80:25\n    at async Proxy._transactionWithCallback (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:4390)\n    at async Object.createExpense (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:61:12)\n    at async createExpense (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.controller.js:39:24)",
+      "method": "POST",
+      "requestId": "1efc6856-ad4b-4579-b64b-798ec19c16e5",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:31:34.087Z"
+  },
+  {
+    "id": "c702551b-55ee-437a-a081-29957d8190c1",
+    "level": "error",
+    "message": "\nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:49\n\n  178     };\n  179 }\n  180 \n→ 181 const expenses = await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.",
+    "context": {
+      "url": "/api/petrol-expenses/reports",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:49\n\n  178     };\n  179 }\n  180 \n→ 181 const expenses = await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Object.getReports (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:22)\n    at async getReports (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.controller.js:88:24)",
+      "method": "GET",
+      "requestId": "d4f0c89d-0e2c-4bdd-b5ed-2bfbf752f6ec",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:30:49.124Z"
+  },
+  {
+    "id": "51c0f951-063e-4068-9c89-deef0b39ca2e",
+    "level": "error",
+    "message": "\nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:39\n\n  6 const where = { deleted_at: null };\n  7 if (!user.isSuperAdmin) where.company_id = user.companyId;\n  8 \n→ 9 return await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.",
+    "context": {
+      "url": "/api/petrol-expenses?page=1&pageSize=10",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:39\n\n  6 const where = { deleted_at: null };\n  7 if (!user.isSuperAdmin) where.company_id = user.companyId;\n  8 \n→ 9 return await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Object.getAllExpenses (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:12)\n    at async getAllExpenses (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.controller.js:16:24)",
+      "method": "GET",
+      "requestId": "07a78945-b900-4e14-b716-bd123a61915e",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:30:49.085Z"
+  },
+  {
+    "id": "cd4737c7-c6cd-447a-9f59-8e2dbd8f31eb",
+    "level": "error",
+    "message": "\nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:49\n\n  178     };\n  179 }\n  180 \n→ 181 const expenses = await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.",
+    "context": {
+      "url": "/api/petrol-expenses/reports",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:49\n\n  178     };\n  179 }\n  180 \n→ 181 const expenses = await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Object.getReports (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:22)\n    at async getReports (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.controller.js:88:24)",
+      "method": "GET",
+      "requestId": "90abead9-b335-4bcd-9378-e63e789ca69d",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:30:47.955Z"
+  },
+  {
+    "id": "6cd5f2e7-1cda-4d84-b437-f1c9f89400d3",
+    "level": "error",
+    "message": "\nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:39\n\n  6 const where = { deleted_at: null };\n  7 if (!user.isSuperAdmin) where.company_id = user.companyId;\n  8 \n→ 9 return await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.",
+    "context": {
+      "url": "/api/petrol-expenses?page=1&pageSize=10",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:39\n\n  6 const where = { deleted_at: null };\n  7 if (!user.isSuperAdmin) where.company_id = user.companyId;\n  8 \n→ 9 return await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Object.getAllExpenses (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:12)\n    at async getAllExpenses (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.controller.js:16:24)",
+      "method": "GET",
+      "requestId": "0967f704-0466-46e5-b447-cd852cd9865c",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:30:47.945Z"
+  },
+  {
+    "id": "34594d9c-0aec-4a7b-a3c3-6b78b6556542",
+    "level": "error",
+    "message": "\nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:39\n\n  6 const where = { deleted_at: null };\n  7 if (!user.isSuperAdmin) where.company_id = user.companyId;\n  8 \n→ 9 return await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.",
+    "context": {
+      "url": "/api/petrol-expenses?page=1&pageSize=10",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:39\n\n  6 const where = { deleted_at: null };\n  7 if (!user.isSuperAdmin) where.company_id = user.companyId;\n  8 \n→ 9 return await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Object.getAllExpenses (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:12)\n    at async getAllExpenses (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.controller.js:16:24)",
+      "method": "GET",
+      "requestId": "1a7884cf-74c1-4997-8034-d751d8acbf80",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:30:26.596Z"
+  },
+  {
+    "id": "bb6a1ae9-32dc-47d3-9eef-9afcfe928860",
+    "level": "error",
+    "message": "\nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:49\n\n  178     };\n  179 }\n  180 \n→ 181 const expenses = await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.",
+    "context": {
+      "url": "/api/petrol-expenses/reports",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:49\n\n  178     };\n  179 }\n  180 \n→ 181 const expenses = await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Object.getReports (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:181:22)\n    at async getReports (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.controller.js:88:24)",
+      "method": "GET",
+      "requestId": "b2e291d0-8c48-4199-b7e2-61134cebbb8e",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:30:23.345Z"
+  },
+  {
+    "id": "5edde6af-510d-43d0-afd2-7b21a74b89ea",
+    "level": "error",
+    "message": "\nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:39\n\n  6 const where = { deleted_at: null };\n  7 if (!user.isSuperAdmin) where.company_id = user.companyId;\n  8 \n→ 9 return await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.",
+    "context": {
+      "url": "/api/petrol-expenses?page=1&pageSize=10",
+      "stack": "PrismaClientKnownRequestError: \nInvalid `prisma.petrolExpense.findMany()` invocation in\nD:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:39\n\n  6 const where = { deleted_at: null };\n  7 if (!user.isSuperAdmin) where.company_id = user.companyId;\n  8 \n→ 9 return await prisma.petrolExpense.findMany(\nThe table `auth.petrol_expenses` does not exist in the current database.\n    at zr.handleRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:8172)\n    at zr.handleAndLogRequestError (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7467)\n    at zr.request (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:65:7174)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async a (D:\\Conatruction_ERP\\server\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Object.getAllExpenses (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.service.js:9:12)\n    at async getAllExpenses (D:\\Conatruction_ERP\\server\\src\\modules\\petrolExpenses\\petrolExpenses.controller.js:16:24)",
+      "method": "GET",
+      "requestId": "4795ffd8-8bc9-4126-8c31-731b43d78eca",
+      "statusCode": 500
+    },
+    "created_at": "2026-04-03T07:30:22.245Z"
+  }
+]

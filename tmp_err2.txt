@@ -1,0 +1,16 @@
+PrismaClientKnownRequestError: 
+Invalid `prisma.item.findMany()` invocation in
+D:\Conatruction_ERP\Server\src\modules\items\items.service.js:15:21
+
+  12 };
+  13 
+  14 const [data, total] = await Promise.all([
+→ 15     prisma.item.findMany(
+The table `auth.stocks` does not exist in the current database.
+    at zr.handleRequestError (D:\Conatruction_ERP\Server\node_modules\@prisma\client\runtime\client.js:65:8172)
+    at zr.handleAndLogRequestError (D:\Conatruction_ERP\Server\node_modules\@prisma\client\runtime\client.js:65:7467)
+    at zr.request (D:\Conatruction_ERP\Server\node_modules\@prisma\client\runtime\client.js:65:7174)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async a (D:\Conatruction_ERP\Server\node_modules\@prisma\client\runtime\client.js:75:5816)
+    at async Promise.all (index 0)
+    at async Object.getAllItems (D:\Conatruction_ERP\Server\src\modules\items\items.service.js:14:27)

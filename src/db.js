@@ -4,7 +4,14 @@ const { PrismaClient } = require("@prisma/client");
 
 const connectionString = `${process.env.DATABASE_URL}`;
 
-const pool = new Pool({ connectionString });
+const pool = new Pool({ 
+    connectionString,
+    max: 8,
+    ssl: { rejectUnauthorized: false }
+});
+pool.on("error", (err) => {
+    console.error("PostgreSQL Pool Error:", err);
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 

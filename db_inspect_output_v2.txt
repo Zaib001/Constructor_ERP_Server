@@ -1,0 +1,60 @@
+﻿[dotenv@17.3.1] injecting env (5) from .env -- tip: ΓÜÖ∩╕Å  override existing env vars with { override: true }
+--- ROLES ---
+[
+  {
+    "id": "413852b7-f0bc-4b80-a7a7-4b011335e454",
+    "name": "Super Admin",
+    "code": "super_admin"
+  },
+  {
+    "id": "fb8dfe6b-14d9-4dcd-8b8a-f28d70ece041",
+    "name": "ERP Admin",
+    "code": "erp_admin"
+  },
+  {
+    "id": "7677ced0-b62d-4ecd-b98f-3f70ec386508",
+    "name": "Project Manager",
+    "code": "project_manager"
+  },
+  {
+    "id": "5dccde57-804f-4df8-bb62-5c3292115bac",
+    "name": "Site Engineer",
+    "code": "site_engineer"
+  }
+]
+
+--- COMPANIES ---
+[
+  {
+    "id": "098e8997-67ef-4b70-9f98-bfea838324d1",
+    "name": "Antigravity Construction",
+    "code": "ANT-CONS"
+  },
+  {
+    "id": "8012cb06-c492-450d-bfaa-e6977534296b",
+    "name": "MegaBuild Corp",
+    "code": "MB-CORP"
+  }
+]
+
+--- USERS (Sample) ---
+[
+  {
+    "email": "engineer@erp.com",
+    "role_code": "site_engineer",
+    "company_name": "Antigravity Construction"
+  },
+  {
+    "email": "superadmin@erp.com",
+    "role_code": "super_admin",
+    "company_name": "Antigravity Construction"
+  },
+  {
+    "email": "pm@erp.com",
+    "role_code": "project_manager",
+    "company_name": "Antigravity Construction"
+  }
+]
+
+--- SCHEMA CHECK (Isolation) ---
+Tables with company_id: [ 'projects', 'users', 'vendors' ]

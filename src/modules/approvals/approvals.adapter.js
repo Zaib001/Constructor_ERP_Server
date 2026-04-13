@@ -40,9 +40,10 @@ function registerAdapter(docType, handler) {
  * Falls through gracefully if no adapter is registered.
  *
  * @param {{ docType: string, docId: string, status: string }} params
+ * @param {{ id: string, companyId: string }} userCtx
  * @returns {Promise<{ success: boolean, mocked?: boolean }>}
  */
-async function updateDocumentStatus({ docType, docId, status }) {
+async function updateDocumentStatus({ docType, docId, status }, userCtx = {}) {
     const key = (docType || "").toUpperCase();
     const handler = _adapters.get(key);
 
@@ -53,7 +54,13 @@ async function updateDocumentStatus({ docType, docId, status }) {
     }
 
     try {
-        await handler({ docType: key, docId, status });
+        await handler({ 
+            docType: key, 
+            docId, 
+            status, 
+            userId: userCtx.id, 
+            companyId: userCtx.companyId 
+        });
         logger.info(`Document status updated via adapter: docType=${key} docId=${docId} status=${status}`);
         return { success: true };
     } catch (err) {

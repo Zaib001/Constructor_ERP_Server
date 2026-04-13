@@ -1,6 +1,7 @@
 "use strict";
 
 const prisma = require("../../db");
+const { applyDataScope } = require("../../utils/scoping");
 
 // ─── Matrix Loading ───────────────────────────────────────────────────────────
 
@@ -19,8 +20,11 @@ const prisma = require("../../db");
  * @param {number}  amount
  * @param {string|null} department
  */
-async function findMatrices(docType, projectId, amount, department) {
+async function findMatrices(user, docType, projectId, amount, departmentId) {
+    const scopeWhere = applyDataScope(user);
+
     const baseWhere = {
+        ...scopeWhere,
         doc_type: docType,
         AND: [
             { OR: [{ min_amount: null }, { min_amount: { lte: amount } }] },
@@ -30,8 +34,8 @@ async function findMatrices(docType, projectId, amount, department) {
 
     // Optional department filter — only apply when the matrix row has a department set
     // (rows without department match all departments)
-    if (department) {
-        baseWhere.OR = [{ department: null }, { department: department }];
+    if (departmentId) {
+        baseWhere.OR = [{ department_id: null }, { department_id: departmentId }];
     }
 
     // Project-specific
@@ -59,13 +63,18 @@ async function findMatrices(docType, projectId, amount, department) {
  * Return an existing non-terminal approval request for the same docType+docId.
  * Terminal statuses: rejected, approved, cancelled.
  */
-async function findActiveRequest(docType, docId) {
+async function findActiveRequest(user, docType, docId) {
+    const requestFilter = {
+        doc_type: docType,
+        doc_id: docId,
+        current_status: { in: ["pending", "in_progress", "sent_back"] },
+    };
+
+    if (user && !user.isSuperAdmin) requestFilter.company_id = user.companyId;
+
     return prisma.approvalRequest.findFirst({
-        where: {
-            doc_type: docType,
-            doc_id: docId,
-            current_status: { in: ["pending", "in_progress"] },
-        },
+        where: requestFilter,
+        orderBy: { created_at: "desc" }
     });
 }
 
@@ -77,10 +86,14 @@ async function findRequestById(approvalRequestId) {
         include: {
             approval_steps: {
                 orderBy: { step_order: "asc" },
-                include: { roles: { select: { id: true, name: true, code: true } } },
+                include: {
+                roles: { select: { id: true, name: true, code: true } },
             },
         },
-    });
+        department: { select: { id: true, name: true, code: true } },
+        project: { select: { id: true, name: true, code: true } },
+    },
+});
 }
 
 async function findRequestWithSteps(approvalRequestId) {
@@ -104,20 +117,35 @@ async function findRequestWithSteps(approvalRequestId) {
  *
  * We join in JS because Prisma doesn't support cross-model computed filter.
  */
-async function findInboxSteps(userId, userRoleId, statusFilter) {
+async function findInboxSteps(userCtx, userRoleId, statusFilter, departmentId) {
     const stepStatus = statusFilter || "pending";
+    const userId = userCtx.id;
 
-    // Find all pending steps where user is direct assignee OR role matches
+    // Apply data scope to ensure they only see steps for matching companies/projects
+    const requestFilter = applyDataScope(userCtx, { projectFilter: true, prefix: "" });
+
+    // Only enforce "in_progress" for pending steps — approved/rejected steps
+    // live on requests that may have advanced or completed
+    if (stepStatus === "pending") {
+        requestFilter.current_status = "in_progress";
+    }
+
+    if (departmentId) {
+        requestFilter.department_id = departmentId;
+    }
+
+    // Find all steps where user is direct assignee exact match
     const steps = await prisma.approvalStep.findMany({
         where: {
             status: stepStatus,
             OR: [
                 { approver_user: userId },
-                { role_id: userRoleId },
+                { AND: [{ approver_user: null }, { role_id: userRoleId }] }
             ],
+            // Dynamic request-level scoping (status, company, project)
             approval_requests: {
-                current_status: "in_progress",
-            },
+                is: { ...requestFilter }
+            }
         },
         include: {
             approval_requests: {
@@ -125,12 +153,16 @@ async function findInboxSteps(userId, userRoleId, statusFilter) {
                     id: true,
                     doc_type: true,
                     doc_id: true,
-                    project_id: true,
                     requested_by: true,
                     current_step: true,
                     total_steps: true,
                     created_at: true,
-                    projects: { select: { name: true } }
+                    project_id: true,
+                    project: { select: { id: true, name: true } },
+                    department_id: true,
+                    department: { select: { id: true, name: true, code: true } },
+                    amount: true,
+                    current_status: true,
                 },
             },
             roles: { select: { id: true, name: true, code: true } },
@@ -138,16 +170,25 @@ async function findInboxSteps(userId, userRoleId, statusFilter) {
         orderBy: { approval_requests: { created_at: "asc" } },
     });
 
-    // Sequential guard: filter out steps not at current_step unless is_parallel
-    // (is_parallel is on the matrix; re-derive from whether multiple steps share step_order)
-    // We store is_parallel context in the step via the matrix at creation time — but
-    // the step model has no is_parallel. We approximate: allow step if step_order == current_step.
-    return steps.filter((s) => {
-        const req = s.approval_requests;
-        if (!req) return false;
-        // If step_order matches current_step the step is eligible regardless
-        return s.step_order === req.current_step;
-    });
+    // Sequential guard: only apply for pending steps
+    // For approved/rejected tabs, show all matching steps (they are historical)
+    if (stepStatus === "pending") {
+        return steps.filter((s) => {
+            const req = s.approval_requests;
+            const roles = s.roles;
+            if (!req) return false;
+
+            // Self-approval block: Requester cannot see/act on their own request.
+            // Exception: Super Admin can see for system oversight, but standard logic blocks action.
+            if (req.requested_by === userId && roles?.code !== "super_admin") {
+                return false; 
+            }
+
+            return s.step_order === req.current_step;
+        });
+    }
+
+    return steps;
 }
 
 // ─── Steps at Specific Order (for parallel completion check) ──────────────────
@@ -208,11 +249,14 @@ async function findDelegationsForInbox(toUserId, now) {
 
 // ─── Requests initiated by a User ─────────────────────────────────────────────
 
-async function findSentRequests(userId) {
+async function findSentRequests(user) {
+    const scopeWhere = applyDataScope(user);
+
     return prisma.approvalRequest.findMany({
-        where: { requested_by: userId },
+        where: { ...scopeWhere, requested_by: user.id },
         include: {
-            projects: { select: { id: true, name: true, code: true } },
+            project: { select: { id: true, name: true, code: true } },
+            department: { select: { id: true, name: true, code: true } },
             approval_steps: {
                 orderBy: { step_order: "asc" },
                 include: { roles: { select: { id: true, name: true, code: true } } },
@@ -225,26 +269,58 @@ async function findSentRequests(userId) {
 // ─── User Role ────────────────────────────────────────────────────────────────
 
 async function findUserById(userId) {
-    return prisma.user.findFirst({
+    const user = await prisma.user.findFirst({
         where: { id: userId, deleted_at: null, is_active: true },
-        select: { id: true, name: true, email: true, role_id: true, roles: { select: { id: true, code: true } } },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            department_id: true,
+            company_id: true,
+            departments: { select: { id: true, name: true } },
+            roles: { select: { id: true, code: true } }
+        },
     });
+    if (!user) return null;
+    return {
+        ...user,
+        role_id: user.roles?.id,
+        department_id: user.department_id,
+        company_id: user.company_id
+    };
 }
 
 // ─── Users by Role ────────────────────────────────────────────────────────────
 
-async function findUsersByRole(role_id) {
+async function findUsersByRole(role_id, department_id, company_id) {
+    const role = await prisma.role.findUnique({ where: { id: role_id } });
+    const isSuperAdmin = role?.code === "super_admin";
+
+    const whereClause = { role_id, is_active: true, deleted_at: null };
+    
+    // Multi-tenant isolation: every approver must belong to the same company
+    // unless it's a Super Admin or global role.
+    if (company_id && !isSuperAdmin) {
+        whereClause.company_id = company_id;
+    }
+    
+    if (department_id && !isSuperAdmin) {
+        whereClause.department_id = department_id;
+    }
+    
     return prisma.user.findMany({
-        where: { role_id, is_active: true, deleted_at: null },
+        where: whereClause,
         include: { roles: { select: { id: true, code: true } } },
     });
 }
 
 // ─── History ──────────────────────────────────────────────────────────────────
 
-async function findHistoryByDoc(docType, docId) {
+async function findHistoryByDoc(user, docType, docId) {
+    const scopeWhere = applyDataScope(user);
+
     return prisma.approvalRequest.findMany({
-        where: { doc_type: docType, doc_id: docId },
+        where: { ...scopeWhere, doc_type: docType, doc_id: docId },
         orderBy: { created_at: "desc" },
         include: {
             approval_steps: {

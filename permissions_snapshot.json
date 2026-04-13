@@ -1,0 +1,206 @@
+[
+  {
+    "role_code": "super_admin",
+    "permission_code": "masterdata.read"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "masterdata.write"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "project.read"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "project.write"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "project.access.manage"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "personnel.read"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "personnel.write"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "vendor.read"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "vendor.write"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "user.register"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "user.lock"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "role.create"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "role.update"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "role.delete"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "approval.request"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "approval.approve"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "approval.read"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "audit.read"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "settings.read"
+  },
+  {
+    "role_code": "super_admin",
+    "permission_code": "settings.manage"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "masterdata.read"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "masterdata.write"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "project.read"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "project.write"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "project.access.manage"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "personnel.read"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "personnel.write"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "vendor.read"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "vendor.write"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "user.register"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "user.lock"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "role.create"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "role.update"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "approval.request"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "approval.approve"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "approval.read"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "audit.read"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "settings.read"
+  },
+  {
+    "role_code": "erp_admin",
+    "permission_code": "settings.manage"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "masterdata.read"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "project.read"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "personnel.read"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "approval.read"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "approval.approve"
+  },
+  {
+    "role_code": "site_engineer",
+    "permission_code": "masterdata.read"
+  },
+  {
+    "role_code": "site_engineer",
+    "permission_code": "approval.request"
+  },
+  {
+    "role_code": "site_engineer",
+    "permission_code": "approval.read"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "masterdata.write"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "project.write"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "project.access.manage"
+  },
+  {
+    "role_code": "project_manager",
+    "permission_code": "approval.request"
+  }
+]

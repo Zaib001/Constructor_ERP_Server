@@ -1,0 +1,56 @@
+﻿[dotenv@17.3.1] injecting env (5) from .env -- tip: ≡ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+USERS: [
+  {
+    "name": "Sara Engineer",
+    "email": "engineer@erp.com",
+    "designation": null,
+    "role_id": "5dccde57-804f-4df8-bb62-5c3292115bac",
+    "company_id": "098e8997-67ef-4b70-9f98-bfea838324d1",
+    "department_id": "26fef78e-5581-4663-a0cf-45515ad8a861"
+  },
+  {
+    "name": "Super Admin",
+    "email": "superadmin@erp.com",
+    "designation": null,
+    "role_id": "413852b7-f0bc-4b80-a7a7-4b011335e454",
+    "company_id": "098e8997-67ef-4b70-9f98-bfea838324d1",
+    "department_id": "c778747a-e567-4427-9b76-724be3e0bc50"
+  },
+  {
+    "name": "Ahmed Manager",
+    "email": "pm@erp.com",
+    "designation": null,
+    "role_id": "7677ced0-b62d-4ecd-b98f-3f70ec386508",
+    "company_id": "098e8997-67ef-4b70-9f98-bfea838324d1",
+    "department_id": "26fef78e-5581-4663-a0cf-45515ad8a861"
+  }
+]
+DEPARTMENTS (Heads): [
+  {
+    "name": "Civil Engineering",
+    "head_id": null,
+    "company_id": "098e8997-67ef-4b70-9f98-bfea838324d1"
+  },
+  {
+    "name": "MEP & Electrical",
+    "head_id": null,
+    "company_id": "098e8997-67ef-4b70-9f98-bfea838324d1"
+  },
+  {
+    "name": "Procurement & Logistics",
+    "head_id": null,
+    "company_id": "098e8997-67ef-4b70-9f98-bfea838324d1"
+  },
+  {
+    "name": "Administration & HR",
+    "head_id": null,
+    "company_id": "098e8997-67ef-4b70-9f98-bfea838324d1"
+  }
+]
+ORPHAN CHECK: [
+  {
+    "emp_orphans": "0",
+    "veh_orphans": "0",
+    "equ_orphans": "0"
+  }
+]

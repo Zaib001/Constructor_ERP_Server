@@ -1,0 +1,157 @@
+# Final Seeded Test Data Report
+
+## 1. Company B Department Head
+- **Name**: TEST_Civil_Head_B
+- **Email**: civil.head.b+test@skyline.com
+- **Role**: Project Manager
+- **Company**: TEST_Skyline Infrastructure
+- **Department**: TEST_Civil Engineering
+
+## 2. HR / Designation-Based Users
+- **Name**: TEST_HR_A1
+  - **Email**: hr.a1+test@hoopoe.com
+  - **Role**: Site Engineer (HR Officer)
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Department**: TEST_Human Resources A
+- **Name**: TEST_HR_B1
+  - **Email**: hr.b1+test@skyline.com
+  - **Role**: Site Engineer (HR Coordinator)
+  - **Company**: TEST_Skyline Infrastructure
+  - **Department**: TEST_Human Resources B
+
+## 3. Quotations
+- **Quote No**: TEST_QUO_A_1862
+  - **ID**: c48270b1-29bf-4fdd-9c06-f15f6edb40b0
+  - **Amount**: $25000
+  - **Company**: TEST_Hoopoe Construction Ltd
+- **Quote No**: TEST_QUO_B_1862
+  - **ID**: 44c27b97-bcb3-49f4-ace1-1b6d0ae9ecc9
+  - **Amount**: $80000
+  - **Company**: TEST_Skyline Infrastructure
+
+## 4. Payroll Records
+- **Payroll Month**: 03-2026-A1862
+  - **ID**: f1d60e81-7ec3-46ab-9da3-b5c3696c7e28
+  - **Amount**: $55000
+  - **Company**: TEST_Hoopoe Construction Ltd
+- **Payroll Month**: 03-2026-B1862
+  - **ID**: 0a2fe917-32bd-4990-bb0f-f9c08e497569
+  - **Amount**: $88000
+  - **Company**: TEST_Skyline Infrastructure
+
+## 5. Expense Records
+- **Expense No**: TEST_EXP_A1
+  - **ID**: a7482993-73e2-4a0c-aabc-49f66c783c5b
+  - **Amount**: $5000 (Traveling)
+  - **Company**: TEST_Hoopoe Construction Ltd
+- **Expense No**: TEST_EXP_A_1862
+  - **ID**: f3d64ec5-0a18-4384-9fd6-ba83ac55e061
+  - **Amount**: $3500 (Travel)
+  - **Company**: TEST_Hoopoe Construction Ltd
+- **Expense No**: TEST_EXP_B_1862
+  - **ID**: 1ec96f0c-931a-4803-8a5d-a44b62aaa5f0
+  - **Amount**: $4800 (Office)
+  - **Company**: TEST_Skyline Infrastructure
+
+## 6. Approval Requests Generated
+- **Request Type**: Quotation for ID: c48270b1-29bf-4fdd-9c06-f15f6edb40b0
+  - **Request ID**: 0980a5be-2620-487a-abdc-909198de5d42
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Amount**: $25000
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 0837f9d5-5623-44b3-923d-6aa9bf73bbe1)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: Quotation for ID: 44c27b97-bcb3-49f4-ace1-1b6d0ae9ecc9
+  - **Request ID**: a0a15160-a248-48be-ad14-7fa9d3287792
+  - **Company**: TEST_Skyline Infrastructure
+  - **Amount**: $80000
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 653f039a-ba63-44b6-a27e-0385d336d520)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: PO for ID: 46239cc3-fc67-4e6d-babb-d058bf6b6634
+  - **Request ID**: b609f178-5cf8-4dc6-a866-e4a72022fb49
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Amount**: $15000
+  - **Status**: in_progress (Step 1 of 1)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 0837f9d5-5623-44b3-923d-6aa9bf73bbe1)
+- **Request Type**: PO for ID: b481ef40-ef88-4307-a7de-e421d97406b3
+  - **Request ID**: af2903a3-0bf6-48bc-9d3d-aab61f681c11
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Amount**: $75000
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 0837f9d5-5623-44b3-923d-6aa9bf73bbe1)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: PO for ID: 97142451-7150-411d-aad5-7fac8c634043
+  - **Request ID**: 54a4f6ff-3f20-4866-b4f7-38a42ddc4211
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Amount**: $15000
+  - **Status**: in_progress (Step 1 of 1)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 0837f9d5-5623-44b3-923d-6aa9bf73bbe1)
+- **Request Type**: PO for ID: a30ad80a-6742-44a0-abe2-c699085386a8
+  - **Request ID**: 56ff17a8-4456-47f6-8774-7cf2ea76d21d
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Amount**: $75000
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 0837f9d5-5623-44b3-923d-6aa9bf73bbe1)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: PO for ID: 0e621df7-c1dc-4563-b3ae-f36a7d0dac34
+  - **Request ID**: 7048a29d-475b-4a7f-a1c3-ba62ade17bba
+  - **Company**: TEST_Skyline Infrastructure
+  - **Amount**: $20000
+  - **Status**: in_progress (Step 1 of 1)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 653f039a-ba63-44b6-a27e-0385d336d520)
+- **Request Type**: PO for ID: 7e4eadfc-6dfc-4e83-b68c-d4124ccd365b
+  - **Request ID**: 0587d610-2b05-4134-baae-affaa52782c0
+  - **Company**: TEST_Skyline Infrastructure
+  - **Amount**: $120000
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 653f039a-ba63-44b6-a27e-0385d336d520)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: Payroll for ID: f1d60e81-7ec3-46ab-9da3-b5c3696c7e28
+  - **Request ID**: 1ac6a14e-e613-41fc-bd10-e3d57c818ba2
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Amount**: $55000
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 0837f9d5-5623-44b3-923d-6aa9bf73bbe1)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: Payroll for ID: 0a2fe917-32bd-4990-bb0f-f9c08e497569
+  - **Request ID**: b05379ea-8abb-4a8f-84df-605bfdeb8d08
+  - **Company**: TEST_Skyline Infrastructure
+  - **Amount**: $88000
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 653f039a-ba63-44b6-a27e-0385d336d520)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: Expense for ID: a7482993-73e2-4a0c-aabc-49f66c783c5b
+  - **Request ID**: ff0aded4-086e-4e7f-8913-5a1297d0aef8
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Amount**: $5000
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 0837f9d5-5623-44b3-923d-6aa9bf73bbe1)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: Expense for ID: f3d64ec5-0a18-4384-9fd6-ba83ac55e061
+  - **Request ID**: bb9fbab7-9f7e-4014-9d95-c298316ca5e7
+  - **Company**: TEST_Hoopoe Construction Ltd
+  - **Amount**: $3500
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 0837f9d5-5623-44b3-923d-6aa9bf73bbe1)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)
+- **Request Type**: Expense for ID: 1ec96f0c-931a-4803-8a5d-a44b62aaa5f0
+  - **Request ID**: 13a71a43-c233-4ecb-927e-cc4e83410002
+  - **Company**: TEST_Skyline Infrastructure
+  - **Amount**: $4800
+  - **Status**: in_progress (Step 1 of 2)
+  - **Steps**:
+    - Step 1: Pending (Assigned to ID: 653f039a-ba63-44b6-a27e-0385d336d520)
+    - Step 2: Pending (Assigned to ID: 35210735-bff2-4981-b6e5-c2970af9a2b1)

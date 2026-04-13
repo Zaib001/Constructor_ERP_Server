@@ -23,21 +23,21 @@ router.get("/", controller.getRoles);
  * @desc    Create a new role
  * @access  Private — requires role.create
  */
-router.post("/", requirePermission("role.create"), validateCreateRole, controller.createRole);
+router.post("/", requirePermission("role.manage"), validateCreateRole, controller.createRole);
 
 /**
  * @route   PATCH /api/roles/:id
  * @desc    Update a role (system roles blocked)
  * @access  Private — requires role.update
  */
-router.patch("/:id", requirePermission("role.update"), validateUpdateRole, controller.updateRole);
+router.patch("/:id", requirePermission("role.manage"), validateUpdateRole, controller.updateRole);
 
 /**
  * @route   DELETE /api/roles/:id
  * @desc    Soft-delete a role (system roles blocked)
  * @access  Private — requires role.delete
  */
-router.delete("/:id", requirePermission("role.delete"), controller.deleteRole);
+router.delete("/:id", requirePermission("role.manage"), controller.deleteRole);
 
 /**
  * @route   GET /api/roles/:id/permissions
@@ -53,7 +53,7 @@ router.get("/:id/permissions", controller.getRolePermissions);
  */
 router.post(
     "/:id/assign-permissions",
-    requirePermission("role.assign_permission"),
+    requirePermission("role.manage"),
     validateAssignPermissions,
     controller.assignPermissions
 );

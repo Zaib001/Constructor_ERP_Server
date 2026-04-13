@@ -34,7 +34,7 @@ router.post("/terminate-others", controller.terminateOtherSessions);
  */
 router.post(
     "/admin/logout-user",
-    requirePermission("session.admin_logout"),
+    requirePermission("user.update"),
     controller.adminLogoutUser
 );
 

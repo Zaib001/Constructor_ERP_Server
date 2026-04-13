@@ -1,0 +1,69 @@
+{
+  "quotes": [
+    {
+      "doc_id": "c48270b1-29bf-4fdd-9c06-f15f6edb40b0",
+      "current_status": "in_progress",
+      "current_step": 1,
+      "amount": "25000",
+      "is_completed": false
+    },
+    {
+      "doc_id": "44c27b97-bcb3-49f4-ace1-1b6d0ae9ecc9",
+      "current_status": "in_progress",
+      "current_step": 1,
+      "amount": "80000",
+      "is_completed": false
+    }
+  ],
+  "pos": [
+    {
+      "doc_id": "pr-11",
+      "current_status": "approved",
+      "current_step": 1,
+      "amount": "13200",
+      "is_completed": true
+    },
+    {
+      "doc_id": "b481ef40-ef88-4307-a7de-e421d97406b3",
+      "current_status": "in_progress",
+      "current_step": 1,
+      "amount": "75000",
+      "is_completed": false
+    },
+    {
+      "doc_id": "a30ad80a-6742-44a0-abe2-c699085386a8",
+      "current_status": "in_progress",
+      "current_step": 1,
+      "amount": "75000",
+      "is_completed": false
+    },
+    {
+      "doc_id": "7e4eadfc-6dfc-4e83-b68c-d4124ccd365b",
+      "current_status": "in_progress",
+      "current_step": 1,
+      "amount": "120000",
+      "is_completed": false
+    },
+    {
+      "doc_id": "97142451-7150-411d-aad5-7fac8c634043",
+      "current_status": "approved",
+      "current_step": 1,
+      "amount": "15000",
+      "is_completed": true
+    },
+    {
+      "doc_id": "46239cc3-fc67-4e6d-babb-d058bf6b6634",
+      "current_status": "approved",
+      "current_step": 1,
+      "amount": "15000",
+      "is_completed": true
+    },
+    {
+      "doc_id": "0e621df7-c1dc-4563-b3ae-f36a7d0dac34",
+      "current_status": "approved",
+      "current_step": 1,
+      "amount": "20000",
+      "is_completed": true
+    }
+  ]
+}

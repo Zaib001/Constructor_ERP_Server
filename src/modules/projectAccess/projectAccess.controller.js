@@ -15,6 +15,7 @@ async function assignAccess(req, res, next) {
     try {
         const result = await projectAccessService.assignAccess(
             req.body,
+            req.user,
             req.user.userId,
             getIp(req),
             getDevice(req)
@@ -34,6 +35,7 @@ async function updateAccess(req, res, next) {
         const result = await projectAccessService.updateAccess(
             req.params.id,
             req.body.accessType,
+            req.user,
             req.user.userId,
             getIp(req),
             getDevice(req)
@@ -52,6 +54,7 @@ async function revokeAccess(req, res, next) {
     try {
         await projectAccessService.revokeAccess(
             req.params.id,
+            req.user,
             req.user.userId,
             getIp(req),
             getDevice(req)
@@ -67,7 +70,7 @@ async function revokeAccess(req, res, next) {
 
 async function getUserProjects(req, res, next) {
     try {
-        const result = await projectAccessService.getUserProjects(req.params.userId);
+        const result = await projectAccessService.getUserProjects(req.params.userId, req.user);
         return res.status(200).json({ success: true, data: result });
     } catch (err) { next(err); }
 }
@@ -76,21 +79,21 @@ async function getUserProjects(req, res, next) {
 
 async function getProjectUsers(req, res, next) {
     try {
-        const result = await projectAccessService.getProjectUsers(req.params.projectId);
+        const result = await projectAccessService.getProjectUsers(req.params.projectId, req.user);
         return res.status(200).json({ success: true, data: result });
     } catch (err) { next(err); }
 }
 
 async function getAllAssignments(req, res, next) {
     try {
-        const result = await projectAccessService.getAllAssignments();
+        const result = await projectAccessService.getAllAssignments(req.user);
         return res.status(200).json({ success: true, data: result });
     } catch (err) { next(err); }
 }
 
 async function getAllProjects(req, res, next) {
     try {
-        const result = await projectAccessService.getAllProjects();
+        const result = await projectAccessService.getAllProjects(req.user);
         return res.status(200).json({ success: true, data: result });
     } catch (err) { next(err); }
 }

@@ -1,0 +1,654 @@
+{
+  "companies": [
+    {
+      "id": "0b21a6a6-2243-4f3b-a708-19f4619d464c",
+      "name": "TEST_Hoopoe Construction Ltd",
+      "code": "TEST_HOOPOE_A"
+    },
+    {
+      "id": "fa8e9ca6-62c4-48b5-9e17-ae34bcd93856",
+      "name": "TEST_Skyline Infrastructure",
+      "code": "TEST_SKYLINE_B"
+    }
+  ],
+  "departments": [
+    {
+      "id": "a5ba1266-401c-4eca-b531-640f2c325584",
+      "name": "TEST_Procurement",
+      "head_id": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "a140970b-6ec9-4157-bf5c-817d28a70dba",
+      "name": "TEST_Civil Engineering",
+      "head_id": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "2ccfa051-f9bf-4be0-a466-7dead8e1e5b8",
+      "name": "TEST_Human Resources A",
+      "head_id": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "44ecf201-a10e-4108-876c-f6a82b3cc9f7",
+      "name": "TEST_Civil Engineering",
+      "head_id": "653f039a-ba63-44b6-a27e-0385d336d520",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    },
+    {
+      "id": "5f561987-827b-4d44-8383-f82364d66f43",
+      "name": "TEST_Procurement B",
+      "head_id": "653f039a-ba63-44b6-a27e-0385d336d520",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    },
+    {
+      "id": "71ee9b17-708d-4b91-8471-1e1a6bd3fc94",
+      "name": "TEST_Human Resources B",
+      "head_id": "653f039a-ba63-44b6-a27e-0385d336d520",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1",
+      "email": "civil.head.a+test@hoopoe.com",
+      "name": "TEST_Civil_Head_A",
+      "designation": null,
+      "roles": {
+        "name": "Project Manager",
+        "code": "project_manager"
+      },
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      },
+      "departments": {
+        "name": "TEST_Civil Engineering"
+      }
+    },
+    {
+      "id": "896637ae-a83a-4a62-954e-f7ae8d43b289",
+      "email": "pm.a1+test@hoopoe.com",
+      "name": "TEST_PM_A1",
+      "designation": null,
+      "roles": {
+        "name": "Project Manager",
+        "code": "project_manager"
+      },
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      },
+      "departments": {
+        "name": "TEST_Civil Engineering"
+      }
+    },
+    {
+      "id": "a51da48b-77b0-4009-a87d-6324711c349d",
+      "email": "eng.a1+test@hoopoe.com",
+      "name": "TEST_Engineer_A1",
+      "designation": "Site Engineer",
+      "roles": {
+        "name": "Site Engineer",
+        "code": "site_engineer"
+      },
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      },
+      "departments": {
+        "name": "TEST_Civil Engineering"
+      }
+    },
+    {
+      "id": "653f039a-ba63-44b6-a27e-0385d336d520",
+      "email": "civil.head.b+test@skyline.com",
+      "name": "TEST_Civil_Head_B",
+      "designation": null,
+      "roles": {
+        "name": "Project Manager",
+        "code": "project_manager"
+      },
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      },
+      "departments": {
+        "name": "TEST_Civil Engineering"
+      }
+    },
+    {
+      "id": "f68c28ee-ece2-4d83-b489-00c01e3ae548",
+      "email": "hr.a1+test@hoopoe.com",
+      "name": "TEST_HR_A1",
+      "designation": "HR Officer",
+      "roles": {
+        "name": "Site Engineer",
+        "code": "site_engineer"
+      },
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      },
+      "departments": {
+        "name": "TEST_Human Resources A"
+      }
+    },
+    {
+      "id": "25be3e14-8af2-43f8-a5ea-229206857e6f",
+      "email": "pm.b1+test@skyline.com",
+      "name": "TEST_PM_B1",
+      "designation": null,
+      "roles": {
+        "name": "Project Manager",
+        "code": "project_manager"
+      },
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      },
+      "departments": {
+        "name": "TEST_Civil Engineering"
+      }
+    },
+    {
+      "id": "8e1bb91c-2cc2-4cda-b9fe-0a3a37cb0d1b",
+      "email": "hr.b1+test@skyline.com",
+      "name": "TEST_HR_B1",
+      "designation": "HR Coordinator",
+      "roles": {
+        "name": "Site Engineer",
+        "code": "site_engineer"
+      },
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      },
+      "departments": {
+        "name": "TEST_Human Resources B"
+      }
+    },
+    {
+      "id": "35210735-bff2-4981-b6e5-c2970af9a2b1",
+      "email": "superadmin+test@erp.com",
+      "name": "TEST_Global_Superadmin",
+      "designation": null,
+      "roles": {
+        "name": "Super Admin",
+        "code": "super_admin"
+      },
+      "company": null,
+      "departments": null
+    },
+    {
+      "id": "0a9a153c-20cf-4f73-8240-ff7e6f755519",
+      "email": "head.a+test@hoopoe.com",
+      "name": "TEST_Head_A",
+      "designation": null,
+      "roles": {
+        "name": "ERP Admin",
+        "code": "erp_admin"
+      },
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      },
+      "departments": null
+    },
+    {
+      "id": "4ddf55f9-b249-437a-9d9a-60cf86731342",
+      "email": "head.b+test@skyline.com",
+      "name": "TEST_Head_B",
+      "designation": null,
+      "roles": {
+        "name": "ERP Admin",
+        "code": "erp_admin"
+      },
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      },
+      "departments": null
+    }
+  ],
+  "projects": [
+    {
+      "id": "063e82c4-1fb1-4c39-bcff-e2a5aee0a65b",
+      "name": "TEST_Main_Construction_A",
+      "code": "TEST_PRJ_A1",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "51f27170-49f3-4a0c-a3d9-75e87a23944c",
+      "name": "TEST_Bridge_Alpha_B",
+      "code": "TEST_PRJ_B1",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    }
+  ],
+  "vendors": [
+    {
+      "id": "66190ef0-66a5-4700-be40-141c8f2a9ed1",
+      "name": "TEST_Supplier_A",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "1374ce89-75a1-40fa-8720-a83da3121e93",
+      "name": "TEST_Supplier_A",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "2c1869f3-d993-4828-ab0f-5ccd6a3a18ee",
+      "name": "TEST_Supplier_B",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    }
+  ],
+  "quotations": [
+    {
+      "id": "c48270b1-29bf-4fdd-9c06-f15f6edb40b0",
+      "quote_number": "TEST_QUO_A_1862",
+      "amount": "25000",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "44c27b97-bcb3-49f4-ace1-1b6d0ae9ecc9",
+      "quote_number": "TEST_QUO_B_1862",
+      "amount": "80000",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    }
+  ],
+  "pos": [
+    {
+      "id": "46239cc3-fc67-4e6d-babb-d058bf6b6634",
+      "po_number": "TEST_PO_LOW_A",
+      "amount": "15000",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "b481ef40-ef88-4307-a7de-e421d97406b3",
+      "po_number": "TEST_PO_HIGH_A",
+      "amount": "75000",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "97142451-7150-411d-aad5-7fac8c634043",
+      "po_number": "TEST_PO_LOW_A_1862",
+      "amount": "15000",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "a30ad80a-6742-44a0-abe2-c699085386a8",
+      "po_number": "TEST_PO_HIGH_A_1862",
+      "amount": "75000",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "0e621df7-c1dc-4563-b3ae-f36a7d0dac34",
+      "po_number": "TEST_PO_LOW_B_1862",
+      "amount": "20000",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    },
+    {
+      "id": "7e4eadfc-6dfc-4e83-b68c-d4124ccd365b",
+      "po_number": "TEST_PO_HIGH_B_1862",
+      "amount": "120000",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    }
+  ],
+  "payrolls": [
+    {
+      "id": "f1d60e81-7ec3-46ab-9da3-b5c3696c7e28",
+      "payroll_month": "03-2026-A1862",
+      "total_amount": "55000",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "0a2fe917-32bd-4990-bb0f-f9c08e497569",
+      "payroll_month": "03-2026-B1862",
+      "total_amount": "88000",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    }
+  ],
+  "expenses": [
+    {
+      "id": "a7482993-73e2-4a0c-aabc-49f66c783c5b",
+      "expense_number": "TEST_EXP_A1",
+      "amount": "5000",
+      "category": "Traveling",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "f3d64ec5-0a18-4384-9fd6-ba83ac55e061",
+      "expense_number": "TEST_EXP_A_1862",
+      "amount": "3500",
+      "category": "Travel",
+      "company": {
+        "name": "TEST_Hoopoe Construction Ltd"
+      }
+    },
+    {
+      "id": "1ec96f0c-931a-4803-8a5d-a44b62aaa5f0",
+      "expense_number": "TEST_EXP_B_1862",
+      "amount": "4800",
+      "category": "Office",
+      "company": {
+        "name": "TEST_Skyline Infrastructure"
+      }
+    }
+  ],
+  "approval_requests": [
+    {
+      "id": "0980a5be-2620-487a-abdc-909198de5d42",
+      "doc_type": "Quotation",
+      "doc_id": "c48270b1-29bf-4fdd-9c06-f15f6edb40b0",
+      "amount": "25000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "2d21afea-4bd9-487a-bc66-f5b00435879b",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1"
+        },
+        {
+          "id": "dcd7e9d9-ac6e-4488-a53b-33b81675f641",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "a0a15160-a248-48be-ad14-7fa9d3287792",
+      "doc_type": "Quotation",
+      "doc_id": "44c27b97-bcb3-49f4-ace1-1b6d0ae9ecc9",
+      "amount": "80000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "67bef4f7-7669-43ec-bd1e-620888a5fa2b",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "653f039a-ba63-44b6-a27e-0385d336d520"
+        },
+        {
+          "id": "b2b295ae-2fa4-4614-85a5-a1cc5041a056",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "b609f178-5cf8-4dc6-a866-e4a72022fb49",
+      "doc_type": "PO",
+      "doc_id": "46239cc3-fc67-4e6d-babb-d058bf6b6634",
+      "amount": "15000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "5fe204a7-10ea-48b8-8d61-83f8b9d13af6",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1"
+        }
+      ]
+    },
+    {
+      "id": "af2903a3-0bf6-48bc-9d3d-aab61f681c11",
+      "doc_type": "PO",
+      "doc_id": "b481ef40-ef88-4307-a7de-e421d97406b3",
+      "amount": "75000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "61f50196-52f1-4765-9bdc-c9e7861defd0",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1"
+        },
+        {
+          "id": "1b3fe97d-4c30-4549-9399-9c24f89c9103",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "54a4f6ff-3f20-4866-b4f7-38a42ddc4211",
+      "doc_type": "PO",
+      "doc_id": "97142451-7150-411d-aad5-7fac8c634043",
+      "amount": "15000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "c5f2e58a-b5d5-426a-8040-2980fdfb8818",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1"
+        }
+      ]
+    },
+    {
+      "id": "56ff17a8-4456-47f6-8774-7cf2ea76d21d",
+      "doc_type": "PO",
+      "doc_id": "a30ad80a-6742-44a0-abe2-c699085386a8",
+      "amount": "75000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "8a48d6ce-0218-455c-ac14-6af55234dff9",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1"
+        },
+        {
+          "id": "8c228ffe-9e6b-4445-9012-dcb30dffc1fa",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "7048a29d-475b-4a7f-a1c3-ba62ade17bba",
+      "doc_type": "PO",
+      "doc_id": "0e621df7-c1dc-4563-b3ae-f36a7d0dac34",
+      "amount": "20000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "d0514233-7e9c-479c-b980-42cd4c98c6fc",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "653f039a-ba63-44b6-a27e-0385d336d520"
+        }
+      ]
+    },
+    {
+      "id": "0587d610-2b05-4134-baae-affaa52782c0",
+      "doc_type": "PO",
+      "doc_id": "7e4eadfc-6dfc-4e83-b68c-d4124ccd365b",
+      "amount": "120000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "3f37ce40-9344-4c5d-aaa4-ab2872936b9c",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "653f039a-ba63-44b6-a27e-0385d336d520"
+        },
+        {
+          "id": "4cc88a00-ebd5-4bdd-a880-1c1d7ef5a3fa",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "1ac6a14e-e613-41fc-bd10-e3d57c818ba2",
+      "doc_type": "Payroll",
+      "doc_id": "f1d60e81-7ec3-46ab-9da3-b5c3696c7e28",
+      "amount": "55000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "49fa00be-0221-48ff-9b2c-1bf0d509a8ea",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1"
+        },
+        {
+          "id": "0a519588-1db9-48b2-b264-424bdf2571e0",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "b05379ea-8abb-4a8f-84df-605bfdeb8d08",
+      "doc_type": "Payroll",
+      "doc_id": "0a2fe917-32bd-4990-bb0f-f9c08e497569",
+      "amount": "88000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "aa4d81f7-54e6-4fe9-99bf-0bb7b7a47c5a",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "653f039a-ba63-44b6-a27e-0385d336d520"
+        },
+        {
+          "id": "3203e58b-1737-4c68-bd36-2c85034ea706",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "ff0aded4-086e-4e7f-8913-5a1297d0aef8",
+      "doc_type": "Expense",
+      "doc_id": "a7482993-73e2-4a0c-aabc-49f66c783c5b",
+      "amount": "5000",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "fce6a358-b7e8-4be1-8095-18994132cbcc",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1"
+        },
+        {
+          "id": "d6e02ad2-24ab-4992-853b-bf8ea4880f6f",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "bb9fbab7-9f7e-4014-9d95-c298316ca5e7",
+      "doc_type": "Expense",
+      "doc_id": "f3d64ec5-0a18-4384-9fd6-ba83ac55e061",
+      "amount": "3500",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "b53f9859-9ff6-4baf-9d4f-8b0a6d03190c",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "0837f9d5-5623-44b3-923d-6aa9bf73bbe1"
+        },
+        {
+          "id": "afa7b466-5c76-4dc2-be62-ac87c1df9dd0",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    },
+    {
+      "id": "13a71a43-c233-4ecb-927e-cc4e83410002",
+      "doc_type": "Expense",
+      "doc_id": "1ec96f0c-931a-4803-8a5d-a44b62aaa5f0",
+      "amount": "4800",
+      "current_status": "in_progress",
+      "approval_steps": [
+        {
+          "id": "a793168e-94d1-473e-ab3d-055701b1eeab",
+          "step_order": 1,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "653f039a-ba63-44b6-a27e-0385d336d520"
+        },
+        {
+          "id": "c6cbdbb4-3ea3-45f9-9e7e-9673973f34e7",
+          "step_order": 2,
+          "status": "pending",
+          "roles": null,
+          "approver_user": "35210735-bff2-4981-b6e5-c2970af9a2b1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Super Admin",
+    "code": "super_admin"
+  },
+  {
+    "name": "ERP Admin",
+    "code": "erp_admin"
+  },
+  {
+    "name": "Project Manager",
+    "code": "project_manager"
+  },
+  {
+    "name": "Site Engineer",
+    "code": "site_engineer"
+  }
+]

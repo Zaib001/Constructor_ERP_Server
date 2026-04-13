@@ -8,15 +8,14 @@ const logger = require("../../logger");
  */
 async function getAllUsers(req, res, next) {
     try {
-        const users = await usersService.getAllUsers();
+        const users = await usersService.getAllUsers(req.user);
 
-        // Map to the format the frontend expects if necessary, 
-        // though findMany include already does most of the heavy lifting.
+        // Map to the format the frontend expects if necessary
         const formatted = users.map(u => ({
             id: u.id,
             name: u.name,
             email: u.email,
-            department: u.department,
+            department_id: u.department_id,
             designation: u.designation,
             employee_code: u.employee_code,
             role: u.roles, // Nested object { id, name, code }
@@ -38,11 +37,11 @@ async function getAllUsers(req, res, next) {
  */
 async function getUserById(req, res, next) {
     try {
-        const user = await usersService.getUserById(req.params.id);
+        const user = await usersService.getUserById(req.params.id, req.user);
         if (!user) {
             return res.status(404).json({
                 success: false,
-                message: "User not found"
+                message: "User not found or access denied"
             });
         }
 
@@ -60,7 +59,7 @@ async function getUserById(req, res, next) {
  */
 async function updateUser(req, res, next) {
     try {
-        const user = await usersService.updateUser(req.params.id, req.body);
+        const user = await usersService.updateUser(req.params.id, req.body, req.user);
         return res.status(200).json({
             success: true,
             data: user
@@ -76,7 +75,7 @@ async function updateUser(req, res, next) {
  */
 async function deleteUser(req, res, next) {
     try {
-        await usersService.deleteUser(req.params.id);
+        await usersService.deleteUser(req.params.id, req.user);
         return res.status(200).json({
             success: true,
             message: "User deleted successfully"

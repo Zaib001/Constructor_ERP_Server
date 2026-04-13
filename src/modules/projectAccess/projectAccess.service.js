@@ -1,7 +1,6 @@
-"use strict";
-
 const prisma = require("../../db");
 const logger = require("../../logger");
+const { applyDataScope } = require("../../utils/scoping");
 const { logAudit } = require("../../utils/auditLogger");
 
 const ACCESS_TYPES = ["full", "read_only", "approval_only"];
@@ -16,8 +15,14 @@ function createAppError(message, statusCode) {
 
 // ─── Assign User to Project ───────────────────────────────────────────────────
 
-async function assignAccess(data, actorId, ipAddress, deviceInfo) {
+async function assignAccess(data, user, actorId, ipAddress, deviceInfo) {
     const { userId, projectId, accessType } = data;
+
+    // 1. Tenant & Project Security
+    const project = await prisma.project.findFirst({
+        where: { ...applyDataScope(user, { projectFilter: true, projectModel: true }), id: projectId }
+    });
+    if (!project) throw createAppError("Project not found or access denied", 404);
 
     // Prevent self-assignment
     if (userId === actorId) {
@@ -25,11 +30,11 @@ async function assignAccess(data, actorId, ipAddress, deviceInfo) {
     }
 
     // Validate user exists and is active
-    const user = await prisma.user.findFirst({
+    const targetUser = await prisma.user.findFirst({
         where: { id: userId, deleted_at: null, is_active: true },
         select: { id: true, name: true, email: true },
     });
-    if (!user) {
+    if (!targetUser) {
         throw createAppError("User not found or inactive", 404);
     }
 
@@ -46,16 +51,16 @@ async function assignAccess(data, actorId, ipAddress, deviceInfo) {
 
     const assignment = await prisma.userProject.create({
         data: {
-            user_id: userId,
-            project_id: projectId,
+            users: { connect: { id: userId } },
+            projects: { connect: { id: projectId } },
             access_type: accessType,
             assigned_by: actorId,
             assigned_at: new Date(),
         },
         select: {
             id: true,
-            user_id: true,
-            project_id: true,
+            users: { select: { id: true } },
+            projects: { select: { id: true } },
             access_type: true,
             assigned_by: true,
             assigned_at: true,
@@ -75,20 +80,30 @@ async function assignAccess(data, actorId, ipAddress, deviceInfo) {
     });
 
     logger.info(`Project access assigned: user=${userId} project=${projectId} type=${accessType} by=${actorId}`);
-    return { ...assignment, user };
+    return {
+        id: assignment.id,
+        user_id: assignment.users?.id,
+        project_id: assignment.projects?.id,
+        access_type: assignment.access_type,
+        assigned_by: assignment.assigned_by,
+        assigned_at: assignment.assigned_at,
+        user: targetUser
+    };
 }
 
 // ─── Update Access Level ──────────────────────────────────────────────────────
 
-async function updateAccess(id, accessType, actorId, ipAddress, deviceInfo) {
+async function updateAccess(id, accessType, user, actorId, ipAddress, deviceInfo) {
+    const where = applyDataScope(user, { projectFilter: true, prefix: "projects", noSoftDelete: true });
+
     const assignment = await prisma.userProject.findFirst({
-        where: { id, revoked_at: null },
+        where: { id, revoked_at: null, projects: where },
         select: {
-            id: true, user_id: true, project_id: true, access_type: true, assigned_by: true,
+            id: true, users: { select: { id: true } }, projects: { select: { id: true } }, access_type: true, assigned_by: true,
         },
     });
     if (!assignment) {
-        throw createAppError("Assignment not found or already revoked", 404);
+        throw createAppError("Assignment not found or access denied", 404);
     }
 
     const oldType = assignment.access_type;
@@ -96,7 +111,12 @@ async function updateAccess(id, accessType, actorId, ipAddress, deviceInfo) {
     const updated = await prisma.userProject.update({
         where: { id },
         data: { access_type: accessType },
-        select: { id: true, user_id: true, project_id: true, access_type: true },
+        select: {
+            id: true,
+            users: { select: { id: true } },
+            projects: { select: { id: true } },
+            access_type: true
+        },
     });
 
     await logAudit({
@@ -112,18 +132,30 @@ async function updateAccess(id, accessType, actorId, ipAddress, deviceInfo) {
     });
 
     logger.info(`Project access updated: id=${id} from=${oldType} to=${accessType} by=${actorId}`);
-    return updated;
+    return {
+        id: updated.id,
+        user_id: updated.users?.id,
+        project_id: updated.projects?.id,
+        access_type: updated.access_type
+    };
 }
 
 // ─── Revoke Access ────────────────────────────────────────────────────────────
 
-async function revokeAccess(id, actorId, ipAddress, deviceInfo) {
+async function revokeAccess(id, user, actorId, ipAddress, deviceInfo) {
+    const where = applyDataScope(user, { projectFilter: true, prefix: "projects", noSoftDelete: true });
+
     const assignment = await prisma.userProject.findFirst({
-        where: { id, revoked_at: null },
-        select: { id: true, user_id: true, project_id: true, access_type: true },
+        where: { id, revoked_at: null, projects: where },
+        select: {
+            id: true,
+            users: { select: { id: true } },
+            projects: { select: { id: true } },
+            access_type: true
+        },
     });
     if (!assignment) {
-        throw createAppError("Assignment not found or already revoked", 404);
+        throw createAppError("Assignment not found or access denied", 404);
     }
 
     await prisma.userProject.update({
@@ -137,7 +169,7 @@ async function revokeAccess(id, actorId, ipAddress, deviceInfo) {
         entity: "user_project",
         entityId: id,
         action: "REVOKE_ACCESS",
-        beforeData: { user_id: assignment.user_id, project_id: assignment.project_id, access_type: assignment.access_type },
+        beforeData: { user_id: assignment.users?.id, project_id: assignment.projects?.id, access_type: assignment.access_type },
         afterData: { revoked_at: new Date().toISOString() },
         ipAddress,
         deviceInfo,
@@ -148,11 +180,26 @@ async function revokeAccess(id, actorId, ipAddress, deviceInfo) {
 
 // ─── Get Projects for a User ──────────────────────────────────────────────────
 
-async function getUserProjects(userId) {
+async function getUserProjects(userId, caller) {
     // Validate user exists
-    const user = await prisma.user.findFirst({ where: { id: userId, deleted_at: null } });
-    if (!user) throw createAppError("User not found", 404);
+    const targetUser = await prisma.user.findFirst({
+        where: { id: userId, deleted_at: null },
+        select: { id: true, name: true, email: true, company_id: true }
+    });
+    if (!targetUser) throw createAppError("User not found", 404);
 
+    // 1. Get scoped projects based on the CALLER'S permissions
+    // This ensures that restricted roles (like Site Engineers) only see projects they are assigned to.
+    const where = applyDataScope(caller, { projectFilter: true, projectModel: true });
+    where.status = "active";
+    
+    const companyProjects = await prisma.project.findMany({
+        where,
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, code: true }
+    });
+
+    // 2. Get explicit UserProject assignments (for access_type info)
     const assignments = await prisma.userProject.findMany({
         where: { user_id: userId, revoked_at: null },
         orderBy: { assigned_at: "desc" },
@@ -167,24 +214,49 @@ async function getUserProjects(userId) {
         }
     });
 
+    // 3. Merge: company projects + assigned projects (deduplicated by project ID)
+    const assignedMap = new Map();
+    for (const a of assignments) {
+        if (a.projects) {
+            assignedMap.set(a.projects.id, {
+                id: a.projects.id,
+                project_id: a.projects.id,
+                assignment_id: a.id,
+                name: a.projects.name,
+                code: a.projects.code,
+                access_type: a.access_type,
+                assigned_at: a.assigned_at
+            });
+        }
+    }
+
+    // Add company projects that aren't already in assignments
+    for (const p of companyProjects) {
+        if (!assignedMap.has(p.id)) {
+            assignedMap.set(p.id, {
+                id: p.id,
+                project_id: p.id,
+                name: p.name,
+                code: p.code,
+                access_type: "department",
+                assigned_at: null
+            });
+        }
+    }
+
     return {
-        user: { id: user.id, name: user.name, email: user.email },
-        projects: assignments.map(a => ({
-            id: a.id,
-            project_id: a.project_id,
-            name: a.projects?.name || "Site Asset",
-            code: a.projects?.code,
-            access_type: a.access_type,
-            assigned_at: a.assigned_at
-        })),
+        user: { id: targetUser.id, name: targetUser.name, email: targetUser.email },
+        projects: Array.from(assignedMap.values()),
     };
 }
 
 // ─── Get Users for a Project ──────────────────────────────────────────────────
 
-async function getProjectUsers(projectId) {
+async function getProjectUsers(projectId, user) {
+    const where = applyDataScope(user, { projectFilter: true, prefix: "projects", noSoftDelete: true });
+
     const assignments = await prisma.userProject.findMany({
-        where: { project_id: projectId, revoked_at: null },
+        where: { project_id: projectId, revoked_at: null, projects: where },
         orderBy: { assigned_at: "desc" },
         include: {
             users: {
@@ -193,7 +265,7 @@ async function getProjectUsers(projectId) {
                     name: true,
                     email: true,
                     designation: true,
-                    department: true,
+                    departments: { select: { id: true } },
                     roles: { select: { name: true, code: true } },
                 },
             },
@@ -204,15 +276,20 @@ async function getProjectUsers(projectId) {
         assignmentId: a.id,
         accessType: a.access_type,
         assignedAt: a.assigned_at,
-        user: a.users,
+        user: {
+            ...a.users,
+            department_id: a.users?.departments?.id
+        },
     }));
 }
 
 // ─── Get All Assignments (Admin) ──────────────────────────────────────────────
 
-async function getAllAssignments() {
+async function getAllAssignments(user) {
+    const where = applyDataScope(user, { projectFilter: true, userProjectModel: true, prefix: "projects", noSoftDelete: true });
+
     const assignments = await prisma.userProject.findMany({
-        where: { revoked_at: null },
+        where: { ...where, revoked_at: null },
         orderBy: { assigned_at: "desc" },
         include: {
             users: {
@@ -221,7 +298,7 @@ async function getAllAssignments() {
                     name: true,
                     email: true,
                     designation: true,
-                    department: true,
+                    departments: { select: { id: true } },
                     roles: { select: { name: true, code: true } },
                 },
             },
@@ -239,16 +316,22 @@ async function getAllAssignments() {
         id: a.id,
         access_type: a.access_type,
         assigned_at: a.assigned_at,
-        user: a.users,
+        user: {
+            ...a.users,
+            department_id: a.users?.departments?.id
+        },
         project: a.projects,
     }));
 }
 
 // ─── Get All Projects ─────────────────────────────────────────────────────────
 
-async function getAllProjects() {
+async function getAllProjects(user) {
+    const where = applyDataScope(user, { projectFilter: true, projectModel: true });
+    where.status = "active";
+
     return prisma.project.findMany({
-        where: { status: "active" },
+        where,
         orderBy: { name: "asc" },
     });
 }

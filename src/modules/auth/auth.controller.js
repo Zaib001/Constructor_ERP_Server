@@ -25,6 +25,7 @@ async function register(req, res, next) {
         const newUser = await authService.registerUser(
             req.body,
             req.user.userId,
+            req.user.companyId,
             getIp(req),
             getDevice(req)
         );

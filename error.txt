@@ -1,0 +1,31 @@
+﻿[dotenv@17.3.1] injecting env (5) from .env -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+[32minfo[39m: Approval adapter registered for docType: PR
+≡ƒº¬ Starting Final Real-World Approval Scenario Test...
+≡ƒº╣ Cleaning up old PRs and Approval Requests...
+Γ£à Cleanup complete.
+≡ƒöì Finding test users...
+Γ£à Ready: Engineer=649b98e9-b6d5-4012-8c3d-7b050cbffbc5, PM=0881c64b-dc37-4b11-8a39-c44925acb47b, Project=PRJ-NEOM-9
+ΓÜÖ∩╕Å Configuring Approval Matrix for 2-step PR flow...
+≡ƒô¥ Step 1: Site Engineer creating PR...
+[32minfo[39m: Document status updated via adapter: docType=PR docId=87429c99-16d2-43c3-b3cf-172360a8e4ce status=in_approval
+[32minfo[39m: Approval requested: PR 87429c99-16d2-43c3-b3cf-172360a8e4ce ΓåÆ request=5ce34ff0-cb76-4aa9-852b-bf733e45a8d2 steps=2
+Γ£à PR created: 87429c99-16d2-43c3-b3cf-172360a8e4ce, Approval Request: 5ce34ff0-cb76-4aa9-852b-bf733e45a8d2, Status: in_progress
+≡ƒöÖ Step 2: PM sending back request...
+[32minfo[39m: Document status updated via adapter: docType=PR docId=87429c99-16d2-43c3-b3cf-172360a8e4ce status=sent_back
+[32minfo[39m: Step sent_back: request=5ce34ff0-cb76-4aa9-852b-bf733e45a8d2 by=0881c64b-dc37-4b11-8a39-c44925acb47b at step=1
+Γ£à Status after Send Back: Request=sent_back, PR=sent_back
+≡ƒöä Step 3: Site Engineer updating and resubmitting...
+[APPROV-ENGINE] Superseding old sent_back request 5ce34ff0-cb76-4aa9-852b-bf733e45a8d2 for PR 87429c99-16d2-43c3-b3cf-172360a8e4ce with a new cycle.
+[APPROV-ENGINE] Old request 5ce34ff0-cb76-4aa9-852b-bf733e45a8d2 marked as cancelled.
+[32minfo[39m: Document status updated via adapter: docType=PR docId=87429c99-16d2-43c3-b3cf-172360a8e4ce status=in_approval
+[32minfo[39m: Approval requested: PR 87429c99-16d2-43c3-b3cf-172360a8e4ce ΓåÆ request=c4396082-d643-47eb-9688-fde152b2b615 steps=2
+Γ£à New Cycle created: NewRequestID=c4396082-d643-47eb-9688-fde152b2b615, OldRequestStatus=cancelled
+Γ£à Step 4: PM approving...
+[32minfo[39m: Step approved: request=c4396082-d643-47eb-9688-fde152b2b615 by=0881c64b-dc37-4b11-8a39-c44925acb47b ΓåÆ status=in_progress nextStep=2
+Γ£à After PM: Current Step=2, Status=in_progress
+≡ƒÅå Step 5: Dept Head final approval...
+[32minfo[39m: Document status updated via adapter: docType=PR docId=87429c99-16d2-43c3-b3cf-172360a8e4ce status=approved
+[32minfo[39m: Step approved: request=c4396082-d643-47eb-9688-fde152b2b615 by=16526179-2010-4066-a94c-c5b8348e1cbe ΓåÆ status=approved nextStep=null
+Γ£à Scenario Complete: Final Request Status=approved, Final PR Status=approved_for_rfq
+
+Γ£¿ ALL TESTS PASSED! OVERLAPPING HISTORY PRESERVED.

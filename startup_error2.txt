@@ -1,0 +1,42 @@
+﻿[dotenv@17.3.1] injecting env (5) from .env -- tip: ΓÜÖ∩╕Å  override existing env vars with { override: true }
+[32minfo[39m: Loading: authRoutes
+[32minfo[39m: Loading: usersRoutes
+[32minfo[39m: Loading: roleRoutes
+[32minfo[39m: Loading: permissionRoutes
+[32minfo[39m: Loading: projectAccessRoutes
+[32minfo[39m: Loading: approvalRoutes
+[32minfo[39m: Loading: sessionRoutes
+[32minfo[39m: Loading: auditRoutes
+[32minfo[39m: Loading: systemLogRoutes
+[32minfo[39m: Loading: delegationRoutes
+[32minfo[39m: Loading: storageRoutes
+[32minfo[39m: Loading: departmentsRoutes
+[32minfo[39m: Loading: companiesRoutes
+[32minfo[39m: Loading: settingsRoutes
+[32minfo[39m: Loading: profitShareRoutes
+[32minfo[39m: Loading: dashboardRoutes
+[32minfo[39m: Loading: vendorsRoutes
+[32minfo[39m: Approval adapter registered for docType: VENDOR
+[32minfo[39m: Loading: purchaseOrdersRoutes
+[32minfo[39m: Approval adapter registered for docType: PO
+[32minfo[39m: Loading: quotationsRoutes
+[32minfo[39m: Approval adapter registered for docType: QUOTATION
+[32minfo[39m: Loading: payrollRoutes
+[32minfo[39m: Approval adapter registered for docType: PAYROLL
+[32minfo[39m: Loading: expensesRoutes
+[32minfo[39m: Approval adapter registered for docType: EXPENSE
+[32minfo[39m: Loading: projectProgressRoutes
+[32minfo[39m: Loading: wbsRoutes
+[32minfo[39m: Loading: itemsRoutes
+[32minfo[39m: Loading: employeesRoutes
+[32minfo[39m: Loading: vehiclesRoutes
+[32minfo[39m: Loading: equipmentRoutes
+[32minfo[39m: Loading: documentsRoutes
+[32minfo[39m: Loading: projectsRoutes
+[32minfo[39m: Loading: purchaseRequisitionsRoutes
+[32minfo[39m: Approval adapter registered for docType: PR
+[32minfo[39m: Loading: rfqsRoutes
+[32minfo[39m: Loading: pettyCashRoutes
+[32minfo[39m: Approval adapter registered for docType: PETTY_CASH
+[32minfo[39m: Loading: petrolExpensesRoutes
+[31merror[39m: Uncaught Exception: listen EADDRINUSE: address already in use :::5000 {"stack":"Error: listen EADDRINUSE: address already in use :::5000\n    at Server.setupListenHandle [as _listen2] (node:net:1948:16)\n    at listenInCluster (node:net:2005:12)\n    at Server.listen (node:net:2110:7)\n    at Object.<anonymous> (D:\\Conatruction_ERP\\Server\\src\\server.js:11:8)\n    at Module._compile (node:internal/modules/cjs/loader:1812:14)\n    at Object..js (node:internal/modules/cjs/loader:1943:10)\n    at Module.load (node:internal/modules/cjs/loader:1533:32)\n    at Module._load (node:internal/modules/cjs/loader:1335:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)"}

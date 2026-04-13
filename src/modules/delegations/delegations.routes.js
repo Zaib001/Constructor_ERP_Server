@@ -9,13 +9,13 @@ const { validate } = require("../../middleware/validate.middleware");
 const { CreateDelegationSchema } = require("./delegations.validator");
 const controller = require("./delegations.controller");
 
-// All delegation management routes require delegation.manage permission
-const guard = [authenticateJWT, requirePermission("delegation.manage")];
+const readGuard = [authenticateJWT, requirePermission("delegation.read")];
+const writeGuard = [authenticateJWT, requirePermission("delegation.manage")];
 
 // POST /api/delegations
 router.post(
     "/",
-    ...guard,
+    ...writeGuard,
     validate(CreateDelegationSchema),
     controller.createDelegation
 );
@@ -23,14 +23,14 @@ router.post(
 // GET /api/delegations?userId=...&active=true
 router.get(
     "/",
-    ...guard,
+    ...readGuard,
     controller.getDelegations
 );
 
 // PATCH /api/delegations/:id/disable
 router.patch(
     "/:id/disable",
-    ...guard,
+    ...writeGuard,
     controller.disableDelegation
 );
 

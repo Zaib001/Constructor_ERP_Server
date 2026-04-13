@@ -52,12 +52,39 @@ async function authenticateJWT(req, res, next) {
             });
         }
 
-        // Attach decoded payload + sessionId for downstream middleware/controllers
+        // Fetch full user details to have roleCode and companyId available in req.user
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+            include: {
+                roles: { select: { code: true } },
+                company: { select: { id: true } }
+            }
+        });
+
+        if (!user || user.deleted_at !== null || !user.is_active) {
+            return res.status(401).json({
+                success: false,
+                message: "User account is inactive or no longer exists",
+            });
+        }
+
+        // Attach standardized user object
+        const roleCode = user.roles?.code?.toLowerCase();
+        const finalCompanyId = user.company_id || user.company?.id;
+
+        // Attach standardized user object
         req.user = {
-            userId: decoded.userId,
-            roleId: decoded.roleId,
-            email: decoded.email,
-            sessionId: session.id, // Added for session-relative actions
+            id: user.id,
+            userId: user.id, // legacy support
+            roleId: user.role_id,
+            roleCode,
+            companyId: finalCompanyId,
+            company_id: finalCompanyId, // legacy/database column support
+            email: user.email,
+            sessionId: session.id,
+            isSuperAdmin: roleCode === "super_admin",
+            isCompanyHead: roleCode === "erp_admin",
+            departmentId: user.department_id,
         };
         req.token = token;
 

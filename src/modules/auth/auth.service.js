@@ -33,8 +33,8 @@ function createAppError(message, statusCode) {
 /**
  * Register a new user (admin-only action).
  */
-async function registerUser(data, actorId, ipAddress, deviceInfo) {
-    const { employeeCode, name, email, phone, password, roleId, department, designation } = data;
+async function registerUser(data, actorId, companyId, ipAddress, deviceInfo) {
+    const { employeeCode, name, email, phone, password, roleId, departmentId, department_id, department, designation, projectIds } = data;
 
     // Check email uniqueness
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -52,22 +52,39 @@ async function registerUser(data, actorId, ipAddress, deviceInfo) {
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    const newUser = await prisma.user.create({
-        data: {
-            employee_code: employeeCode || null,
-            name,
-            email,
-            phone: phone || null,
-            password_hash: passwordHash,
-            role_id: roleId || null,
-            department: department || null,
-            designation: designation || null,
-            is_active: true,
-            is_locked: false,
-            login_attempts: 0,
-            created_by: actorId,
-        },
-        select: { id: true, name: true, email: true, role_id: true },
+    const newUser = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+            data: {
+                employee_code: data.employeeCode || data.employee_code,
+                name,
+                email,
+                phone: phone || null,
+                password_hash: passwordHash,
+                roles: (data.roleId || data.role_id) ? { connect: { id: data.roleId || data.role_id } } : undefined,
+                designation: data.designation,
+                departments: (data.departmentId || data.department_id || data.department) ? { connect: { id: data.departmentId || data.department_id || data.department } } : undefined,
+                company_id: companyId,
+                is_active: data.is_active !== undefined ? data.is_active : true, // Default to true if not provided
+                is_locked: false,
+                login_attempts: 0,
+                created_by: actorId,
+            },
+            select: { id: true, name: true, email: true },
+        });
+
+        // If projectIds are provided, assign them immediately
+        if (Array.isArray(projectIds) && projectIds.length > 0) {
+            await tx.userProject.createMany({
+                data: projectIds.map(projectId => ({
+                    user_id: user.id,
+                    project_id: projectId,
+                    access_type: "contributor",
+                    assigned_by: actorId
+                }))
+            });
+        }
+
+        return user;
     });
 
     await logAudit({
@@ -77,12 +94,12 @@ async function registerUser(data, actorId, ipAddress, deviceInfo) {
         entityId: newUser.id,
         action: "REGISTER",
         beforeData: null,
-        afterData: { email: newUser.email, name: newUser.name },
+        afterData: { email: newUser.email, name: newUser.name, assignedProjects: projectIds },
         ipAddress,
         deviceInfo,
     });
 
-    logger.info(`User registered: ${email} by ${actorId}`);
+    logger.info(`User registered: ${email} by ${actorId}${projectIds ? ` with ${projectIds.length} projects` : ""}`);
     return newUser;
 }
 
@@ -104,7 +121,9 @@ async function loginUser(email, password, ipAddress, deviceInfo) {
                         }
                     }
                 }
-            }
+            },
+            departments: { select: { id: true, name: true, code: true, head_id: true } },
+            company: { select: { id: true, name: true, code: true } },
         },
     });
 
@@ -226,14 +245,23 @@ async function loginUser(email, password, ipAddress, deviceInfo) {
 
     const permissions = user.roles?.role_permissions?.map(rp => rp.permissions?.code).filter(Boolean) || [];
 
+    const isDeptHead = user.departments && user.departments.head_id === user.id;
+
     return {
         token,
         user: {
             id: user.id,
             name: user.name,
             email: user.email,
+            designation: user.designation || null,
             role: user.roles ? user.roles.name : null,
-            roleCode: user.roles ? user.roles.code : null,
+            roleCode: user.roles ? user.roles.code?.toLowerCase() : null,
+            roleId: user.roles ? user.roles.id : null,
+            department: user.departments ? user.departments.name : null,
+            departmentId: user.departments ? user.departments.id : null,
+            companyId: user.company ? user.company.id : null,
+            companyName: user.company ? user.company.name : null,
+            isDeptHead,
             permissions,
         },
     };
@@ -254,7 +282,9 @@ async function getMe(userId) {
                         }
                     }
                 }
-            }
+            },
+            departments: { select: { id: true, name: true, code: true, head_id: true } },
+            company: { select: { id: true, name: true, code: true } },
         },
     });
 
@@ -264,12 +294,21 @@ async function getMe(userId) {
 
     const permissions = user.roles?.role_permissions?.map(rp => rp.permissions?.code).filter(Boolean) || [];
 
+    const isDeptHead = user.departments && user.departments.head_id === user.id;
+
     return {
         id: user.id,
         name: user.name,
         email: user.email,
+        designation: user.designation || null,
         role: user.roles ? user.roles.name : null,
-        roleCode: user.roles ? user.roles.code : null,
+        roleCode: user.roles ? user.roles.code?.toLowerCase() : null,
+        roleId: user.roles ? user.roles.id : null,
+        department: user.departments ? user.departments.name : null,
+        departmentId: user.departments ? user.departments.id : null,
+        companyId: user.company ? user.company.id : null,
+        companyName: user.company ? user.company.name : null,
+        isDeptHead,
         permissions,
     };
 }

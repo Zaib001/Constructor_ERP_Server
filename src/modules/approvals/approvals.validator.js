@@ -4,7 +4,7 @@ const { body, query, validationResult } = require("express-validator");
 
 const VALID_DOC_TYPES = [
     "PR", "RFQ", "PO", "GRN", "MATERIAL_ISSUE",
-    "AP_INVOICE", "CLIENT_INVOICE", "PAYMENT", "PAYROLL_RUN", "RA_BILL",
+    "AP_INVOICE", "CLIENT_INVOICE", "PAYMENT", "PAYROLL_RUN", "RA_BILL", "DPR"
 ];
 
 function handleValidationErrors(req, res, next) {
@@ -52,6 +52,37 @@ const validateRequestApproval = [
         .trim()
         .isString().withMessage("department must be a string"),
 
+    body("items")
+        .optional()
+        .isArray().withMessage("items must be an array"),
+
+    body("items.*.itemName")
+        .optional()
+        .trim()
+        .notEmpty().withMessage("itemName is required"),
+
+    body("items.*.quantity")
+        .optional()
+        .isNumeric().withMessage("quantity must be a number"),
+
+    body("items.*.unit")
+        .optional()
+        .trim()
+        .isString().withMessage("unit must be a string"),
+
+    body("items.*.unitPrice")
+        .optional()
+        .isNumeric().withMessage("unitPrice must be a number"),
+
+    body("items.*.totalPrice")
+        .optional()
+        .isNumeric().withMessage("totalPrice must be a number"),
+
+    body("items.*.remarks")
+        .optional()
+        .trim()
+        .isString().withMessage("remarks must be a string"),
+
     handleValidationErrors,
 ];
 
@@ -73,6 +104,17 @@ const validateRejectStep = [
     body("remarks")
         .trim()
         .notEmpty().withMessage("Rejection reason (remarks) is required")
+        .isLength({ max: 1000 }).withMessage("remarks too long (max 1000 chars)"),
+
+    handleValidationErrors,
+];
+
+// ─── Send Back Step ───────────────────────────────────────────────────────────
+
+const validateSendBackStep = [
+    body("remarks")
+        .trim()
+        .notEmpty().withMessage("Reason for send back (remarks) is required")
         .isLength({ max: 1000 }).withMessage("remarks too long (max 1000 chars)"),
 
     handleValidationErrors,
@@ -112,6 +154,7 @@ module.exports = {
     validateRequestApproval,
     validateApproveStep,
     validateRejectStep,
+    validateSendBackStep,
     validateInboxQuery,
     validateHistoryQuery,
     VALID_DOC_TYPES,

@@ -1,0 +1,100 @@
+﻿[dotenv@17.3.1] injecting env (5) from .env -- tip: ΓÜÖ∩╕Å  specify custom .env file path with { path: '/custom/path/.env' }
+[32minfo[39m: Loading: authRoutes
+[32minfo[39m: Loading: usersRoutes
+[32minfo[39m: Loading: roleRoutes
+[32minfo[39m: Loading: permissionRoutes
+[32minfo[39m: Loading: projectAccessRoutes
+[32minfo[39m: Loading: approvalRoutes
+[32minfo[39m: Loading: sessionRoutes
+[32minfo[39m: Loading: auditRoutes
+[32minfo[39m: Loading: systemLogRoutes
+[32minfo[39m: Loading: delegationRoutes
+[32minfo[39m: Loading: storageRoutes
+[32minfo[39m: Loading: departmentsRoutes
+[32minfo[39m: Loading: companiesRoutes
+[32minfo[39m: Loading: settingsRoutes
+[32minfo[39m: Loading: profitShareRoutes
+[32minfo[39m: Loading: dashboardRoutes
+[32minfo[39m: Loading: vendorsRoutes
+[32minfo[39m: Approval adapter registered for docType: VENDOR
+[32minfo[39m: Loading: purchaseOrdersRoutes
+[32minfo[39m: Approval adapter registered for docType: PO
+[32minfo[39m: Loading: quotationsRoutes
+[32minfo[39m: Approval adapter registered for docType: QUOTATION
+[32minfo[39m: Loading: payrollRoutes
+[32minfo[39m: Approval adapter registered for docType: PAYROLL
+[32minfo[39m: Loading: expensesRoutes
+[32minfo[39m: Approval adapter registered for docType: EXPENSE
+[32minfo[39m: Loading: projectProgressRoutes
+[32minfo[39m: Loading: wbsRoutes
+[32minfo[39m: Loading: itemsRoutes
+[32minfo[39m: Loading: employeesRoutes
+[32minfo[39m: Loading: vehiclesRoutes
+[32minfo[39m: Loading: equipmentRoutes
+[32minfo[39m: Loading: documentsRoutes
+[32minfo[39m: Loading: projectsRoutes
+[32minfo[39m: Loading: purchaseRequisitionsRoutes
+[32minfo[39m: Approval adapter registered for docType: PR
+[32minfo[39m: Loading: rfqsRoutes
+[32minfo[39m: Loading: pettyCashRoutes
+node : D:\Conatruction_E
+RP\Server\src\modules\pe
+ttyCash\pettyCash.servic
+e.js:107
+At line:1 char:1
++ node src/server.js 
+2>&1 | Out-File 
+-Encoding utf8 
+startup_error.txt;  ...
++ 
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo      
+        : NotSpecified: 
+(D:\    
+Conatruction....servic  
+  e.js:107:String) [], 
+R    emoteException
+    + 
+FullyQualifiedErrorI    
+d : NativeCommandError
+ 
+
+
+
+SyntaxError: Unexpected 
+end of input
+    at wrapSafe (node:in
+ternal/modules/cjs/loade
+r:1743:18)
+    at Module._compile (
+node:internal/modules/cj
+s/loader:1786:20)
+    at Object..js (node:
+internal/modules/cjs/loa
+der:1943:10)
+    at Module.load (node
+:internal/modules/cjs/lo
+ader:1533:32)
+    at Module._load (nod
+e:internal/modules/cjs/l
+oader:1335:12)
+    at wrapModuleLoad (n
+ode:internal/modules/cjs
+/loader:255:19)
+    at Module.require (n
+ode:internal/modules/cjs
+/loader:1556:12)
+    at require (node:int
+ernal/modules/helpers:15
+2:16)
+    at 
+Object.<anonymous> (D:\C
+onatruction_ERP\Server\s
+rc\modules\pettyCash\pet
+tyCash.controller.js:2:1
+7)
+    at Module._compile (
+node:internal/modules/cj
+s/loader:1812:14)
+
+Node.js v24.14.0
