@@ -1,6 +1,6 @@
 "use strict";
 
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("node:crypto");
 
 /**
  * requestContext middleware
@@ -17,7 +17,7 @@ const { v4: uuidv4 } = require("uuid");
  * Mount this FIRST in app.js before all routes and other middleware.
  */
 function requestContext(req, res, next) {
-    const requestId = uuidv4();
+    const requestId = randomUUID();
     const ipAddress =
         req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
         req.socket?.remoteAddress ||
