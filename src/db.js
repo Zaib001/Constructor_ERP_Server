@@ -2,14 +2,26 @@ const { Pool } = require("pg");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { PrismaClient } = require("@prisma/client");
 
-const connectionString = `${process.env.DATABASE_URL}`;
+let connectionString = process.env.DATABASE_URL || "";
+
+// Force SSL if missing (Render external connections require this)
+if (connectionString && !connectionString.includes("sslmode=") && !connectionString.includes("ssl=")) {
+    connectionString += (connectionString.includes("?") ? "&" : "?") + "sslmode=require";
+}
+
+if (!connectionString) {
+    console.error("CRITICAL: DATABASE_URL is not defined in environment variables!");
+} else {
+    const maskedUrl = connectionString.replace(/:([^@]+)@/, ":****@");
+    console.log(`[DB] Initializing connection with: ${maskedUrl}`);
+}
 
 const poolConfig = {
     connectionString,
-    max: process.env.NODE_ENV === "production" ? 3 : 8, // Low limit for serverless cold-starts
+    max: process.env.NODE_ENV === "production" ? 3 : 10,
     ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 30000, // Increased to 30s for cross-region stability
+    idleTimeoutMillis: 60000,
     keepalives: true,
 };
 
