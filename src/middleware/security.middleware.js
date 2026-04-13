@@ -23,7 +23,7 @@ const corsOptions = {
         // Allow server-to-server / Postman requests (no origin header)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin)) {
+        if (allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
             return callback(null, true);
         }
         return callback(new Error(`CORS: origin '${origin}' not allowed`));
