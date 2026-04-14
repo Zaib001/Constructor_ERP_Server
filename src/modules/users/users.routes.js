@@ -8,6 +8,9 @@ const requirePermission = require("../../middleware/requirePermission");
 
 router.use(authenticateJWT);
 
+// Create user (admin action)
+router.post("/",    requirePermission(["user.create", "user.register"]), usersController.createUser);
+
 // List and view users
 router.get("/",    requirePermission("user.read"),     usersController.getAllUsers);
 router.get("/:id", requirePermission("user.read"),     usersController.getUserById);

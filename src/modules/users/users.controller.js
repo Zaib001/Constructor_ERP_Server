@@ -4,6 +4,23 @@ const usersService = require("./users.service");
 const logger = require("../../logger");
 
 /**
+ * Controller: Create a new user.
+ */
+async function createUser(req, res, next) {
+    try {
+        const newUser = await usersService.createUser(req.body, req.user);
+        return res.status(201).json({
+            success: true,
+            message: "User created successfully",
+            data: newUser,
+        });
+    } catch (err) {
+        logger.error("Error in createUser controller:", err);
+        next(err);
+    }
+}
+
+/**
  * Controller: Get all users.
  */
 async function getAllUsers(req, res, next) {
@@ -87,6 +104,7 @@ async function deleteUser(req, res, next) {
 }
 
 module.exports = {
+    createUser,
     getAllUsers,
     getUserById,
     updateUser,

@@ -185,6 +185,8 @@ app.use(async (err, req, res, next) => {
 
     if (err.code === "P2002") { statusCode = 400; message = "A record with this value already exists"; }
     else if (err.code === "P2025") { statusCode = 404; message = "Record not found"; }
+    else if (err.code === "P2003") { statusCode = 400; message = "Related record not found. Please check the selected values."; }
+    else if (err.code === "P2014") { statusCode = 400; message = "Invalid relation data provided."; }
 
     if (statusCode >= 500) {
         try {
