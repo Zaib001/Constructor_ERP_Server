@@ -63,7 +63,7 @@ async function registerUser(data, actorId, companyId, ipAddress, deviceInfo) {
                 roles: (data.roleId || data.role_id) ? { connect: { id: data.roleId || data.role_id } } : undefined,
                 designation: data.designation,
                 departments: (data.departmentId || data.department_id || data.department) ? { connect: { id: data.departmentId || data.department_id || data.department } } : undefined,
-                company_id: companyId,
+                company: companyId ? { connect: { id: companyId } } : undefined,
                 is_active: data.is_active !== undefined ? data.is_active : true, // Default to true if not provided
                 is_locked: false,
                 login_attempts: 0,

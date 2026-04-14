@@ -48,7 +48,7 @@ async function createUser(data, actorUser) {
                 designation: designation || null,
                 roles: roleId ? { connect: { id: roleId } } : undefined,
                 departments: departmentId ? { connect: { id: departmentId } } : undefined,
-                company_id: companyId,
+                company: companyId ? { connect: { id: companyId } } : undefined,
                 is_active: true,
                 is_locked: false,
                 login_attempts: 0,
