@@ -15,7 +15,7 @@ async function getSuperadminDashboard(req, res, next) {
 
 async function getCompanyHeadDashboard(req, res, next) {
     try {
-        const data = await dashboardService.getCompanyHeadDashboard(req.user.companyId);
+        const data = await dashboardService.getCompanyHeadDashboard(req.user.id, req.user);
         return res.status(200).json({ success: true, data });
     } catch (err) {
         logger.error("Error in getCompanyHeadDashboard:", err);

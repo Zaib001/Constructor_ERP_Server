@@ -41,18 +41,7 @@ async function getDepartmentById(req, res, next) {
  */
 async function createDepartment(req, res, next) {
     try {
-        const { isSuperAdmin, companyId: userCompanyId } = req.user;
-        
-        // Non-superadmins must create departments for their own company
-        const targetCompanyId = isSuperAdmin 
-            ? (req.body.companyId || req.body.company_id || userCompanyId) 
-            : userCompanyId;
-
-        if (!targetCompanyId) {
-            return res.status(400).json({ success: false, message: "Company allocation required" });
-        }
-
-        const department = await departmentsService.createDepartment(req.body, targetCompanyId);
+        const department = await departmentsService.createDepartment(req.body, req.user);
         return res.status(201).json({
             success: true,
             data: department

@@ -306,7 +306,7 @@ async function getProjectDashboard(user) {
     const projectIds = projects.map(p => p.id);
 
     // 1. Bulk Aggregations & Global Stats
-    const [pendingApprovals, recentPRs, logistics, prAgg, poAgg, pettyAgg, petroAgg, quotAgg] = await Promise.all([
+    const [pendingApprovals, recentPRs, logistics, prAgg, poAgg, pettyAgg, petroAgg, quotAgg, userProjectAgg] = await Promise.all([
         prisma.approvalRequest.count({ where: { project_id: { in: projectIds }, is_completed: false } }),
         prisma.purchaseRequisition.findMany({
             where: { project_id: { in: projectIds }, deleted_at: null },
@@ -342,6 +342,11 @@ async function getProjectDashboard(user) {
             by: ['project_id'],
             where: { project_id: { in: projectIds }, status: { in: ["approved", "accepted", "won"] } },
             _sum: { amount: true }
+        }),
+        prisma.userProject.groupBy({
+            by: ['project_id'],
+            where: { project_id: { in: projectIds }, revoked_at: null },
+            _count: { user_id: true }
         })
     ]);
 
@@ -363,6 +368,7 @@ async function getProjectDashboard(user) {
     const pettyMap = new Map(pettyAgg.map(a => [a.project_id, Number(a._sum.estimated_cost || 0)]));
     const petroMap = new Map(petroAgg.map(a => [a.project_id, Number(a._sum.total_amount || 0)]));
     const quotMap = new Map(quotAgg.map(a => [a.project_id, Number(a._sum.amount || 0)]));
+    const memberMap = new Map(userProjectAgg.map(a => [a.project_id, a._count.user_id]));
 
     const projectsWithFinancials = projects.map(p => {
         const prCost = prProjectMap.get(p.id) || 0;
@@ -378,6 +384,7 @@ async function getProjectDashboard(user) {
             id: p.id, name: p.name, code: p.code,
             budget: Number(p.budget || 0), revenue, cost: totalCost,
             profit: revenue - totalCost,
+            memberCount: memberMap.get(p.id) || 0,
             breakdown: { prCommitted: prCost, poIssued: poCost, pettyCash: pettyCost, payroll: 0, petrol: petrolCost }
         };
     });

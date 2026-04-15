@@ -20,7 +20,7 @@ function requirePermission(permissionCode) {
             }
 
             // 1. Admin Overrides (Leverage roleCode from authenticateJWT)
-            if (["super_admin", "erp_admin"].includes(req.user.roleCode)) {
+            if (req.user.roleCode === "super_admin") {
                 return next();
             }
 

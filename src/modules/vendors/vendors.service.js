@@ -61,7 +61,12 @@ async function getVendorById(id, user) {
     });
 }
 
-async function createVendor(data, actorId, companyId) {
+async function createVendor(data, user) {
+    const { id: actorId, isSuperAdmin, companyId: userCompanyId } = user;
+    const companyId = isSuperAdmin ? (data.company_id || data.companyId) : userCompanyId;
+
+    if (!companyId) throw new Error("Company context missing for vendor creation.");
+
     // 1. Validate Required Fields
     if (!data.name) throw new Error("Missing required fields: Vendor name is mandatory.");
 

@@ -30,11 +30,7 @@ async function getQuotationById(req, res, next) {
 
 async function createQuotation(req, res, next) {
     try {
-        const data = {
-            ...req.body,
-            company_id: req.user.roleCode === "super_admin" ? req.body.company_id : req.user.companyId
-        };
-        const quote = await quotationsService.createQuotation(data, req.user.id, req.user.department_id);
+        const quote = await quotationsService.createQuotation(req.body, req.user);
         return res.status(201).json({ success: true, data: quote });
     } catch (err) {
         logger.error("Error in createQuotation:", err);

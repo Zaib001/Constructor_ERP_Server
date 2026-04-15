@@ -18,7 +18,7 @@ async function getAllCompanies(user, page = 1, pageSize = 10, search = "") {
         prisma.company.count({ where }),
         prisma.company.findMany({
             where,
-            orderBy: { name: "asc" },
+            orderBy: { code: "asc" },
             skip,
             take: pageSize,
             include: {

@@ -47,7 +47,7 @@ async function deleteRole(req, res, next) {
 
 async function getRoles(req, res, next) {
     try {
-        const roles = await roleService.getRoles();
+        const roles = await roleService.getRoles(req.user);
         return res.status(200).json({ success: true, data: roles });
     } catch (err) { next(err); }
 }

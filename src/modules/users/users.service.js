@@ -35,7 +35,12 @@ async function createUser(data, actorUser) {
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const companyId = actorUser.companyId || actorUser.company_id || null;
+    
+    // Safety: Super Admin can specify company, others must use their own session company.
+    const companyId = actorUser.isSuperAdmin 
+        ? (data.company_id || data.companyId) 
+        : (actorUser.companyId || actorUser.company_id);
+    
     const actorId = actorUser.userId || actorUser.id;
 
     const newUser = await prisma.$transaction(async (tx) => {

@@ -17,73 +17,46 @@ const prisma = new PrismaClient({ adapter });
 
 const BCRYPT_ROUNDS = 10;
 
+// ─── STEP 1: CLEAR ALL DATA ───────────────────────────────────────────────────
 async function clearAllData() {
-    console.log("🧹 Clearing ALL existing data (full reset)...");
+    console.log("🧹 Clearing ALL existing data from all schemas (full reset)...");
 
-    try {
-        const result = await prisma.$queryRawUnsafe(`
-            SELECT table_schema || '.' || table_name AS table_name
-            FROM information_schema.tables
-            WHERE table_schema IN ('auth', 'audit') AND table_type = 'BASE TABLE'
-        `);
-        
-        const tables = result.map(t => t.table_name);
-        if (tables.length > 0) {
-            await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables.join(', ')} CASCADE`);
-            console.log(`✅ All data truncated successfully via CASCADE (${tables.length} tables).`);
+    // Schemas to clear
+    const schemas = ["public", "auth", "audit", "hr", "procurement", "inventory", "finance", "execution"];
+
+    for (const schema of schemas) {
+        try {
+            const result = await prisma.$queryRawUnsafe(`
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = '${schema}' AND table_type = 'BASE TABLE'
+            `);
+            const tables = result.map(t => `"${schema}"."${t.table_name}"`);
+            if (tables.length > 0) {
+                await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables.join(", ")} RESTART IDENTITY CASCADE`);
+                console.log(`  ✅ Schema '${schema}': ${tables.length} tables truncated.`);
+            }
+        } catch (err) {
+            // Schema may not exist — skip silently
+            console.log(`  ⚠️  Schema '${schema}' skipped: ${err.message.split("\n")[0]}`);
         }
-    } catch (error) {
-        console.error("⚠️ Truncate failed:", error);
-        process.exit(1);
     }
+
+    console.log("✅ All data cleared.\n");
 }
 
+// ─── MAIN ─────────────────────────────────────────────────────────────────────
 async function main() {
-    console.log("🚀 Starting Enterprise RBAC Seed (Full ERP)...");
+    console.log("🚀 Starting Minimal Seed: SuperAdmin + Permissions + Roles...\n");
 
+    // STEP 1: Wipe everything
     await clearAllData();
 
-    // ─── COMPANIES ───────────────────────────────────────────────────────────────
-    console.log("🏢 Seeding Companies...");
-    const mainCo = await prisma.company.create({
-        data: {
-            code: "ANT-CONS",
-            name: "Antigravity Construction",
-            email: "info@antigravity.sa",
-            address: "Riyadh Digital City",
-            vat_number: "300000000000003",
-            registration_number: "1010000001"
-        }
-    });
-    const secondCo = await prisma.company.create({
-        data: {
-            code: "MB-CORP",
-            name: "MegaBuild Corp",
-            email: "contact@megabuild.sa",
-            address: "Jeddah Industrial Gate"
-        }
-    });
-
-    // ─── DEPARTMENTS ─────────────────────────────────────────────────────────────
-    console.log("📂 Seeding Departments...");
-    const depts = {};
-    const deptsData = [
-        { code: "DEPT-CIV", name: "Civil Engineering", company_id: mainCo.id },
-        { code: "DEPT-MEP", name: "MEP & Electrical", company_id: mainCo.id },
-        { code: "DEPT-PRO", name: "Procurement & Logistics", company_id: mainCo.id },
-        { code: "DEPT-ADM", name: "Administration & HR", company_id: mainCo.id },
-        { code: "DEPT-FIN", name: "Finance & Accounts", company_id: mainCo.id },
-        { code: "DEPT-FLT", name: "Fleet & Equipment", company_id: mainCo.id },
-    ];
-    for (const d of deptsData) {
-        depts[d.code] = await prisma.department.create({ data: d });
-    }
-
-    // ─── PERMISSIONS ─────────────────────────────────────────────────────────────
-    console.log("🔐 Seeding Enterprise Permissions...");
+    // ─── PERMISSIONS ─────────────────────────────────────────────────────────
+    console.log("🔐 Seeding all Permissions...");
 
     const allPermissions = [
-        // ── Governance / Admin ──────────────────────────────────────────────────
+        // ── Governance / Admin ──────────────────────────────────────────────
         { code: "approval.read",          module: "approvals",    description: "View approval inbox and history" },
         { code: "approval.request",       module: "approvals",    description: "Submit documents for approval" },
         { code: "approval.approve",       module: "approvals",    description: "Approve assigned workflow steps" },
@@ -110,7 +83,7 @@ async function main() {
         { code: "dashboard.department",   module: "dashboard",    description: "Access department-level metrics dashboard" },
         { code: "dashboard.compliance",   module: "dashboard",    description: "Access global compliance and expiry dashboard" },
 
-        // ── Projects / WBS ──────────────────────────────────────────────────────
+        // ── Projects / WBS ──────────────────────────────────────────────────
         { code: "project.read",           module: "projects",     description: "View projects" },
         { code: "project.create",         module: "projects",     description: "Create new projects" },
         { code: "project.update",         module: "projects",     description: "Update project details" },
@@ -121,7 +94,7 @@ async function main() {
         { code: "wbs.update",             module: "wbs",          description: "Update WBS and budgets" },
         { code: "wbs.archive",            module: "wbs",          description: "Archive WBS entries" },
 
-        // ── Master Data ─────────────────────────────────────────────────────────
+        // ── Master Data ─────────────────────────────────────────────────────
         { code: "item.read",              module: "items",        description: "View item catalog" },
         { code: "item.create",            module: "items",        description: "Create catalog items" },
         { code: "item.update",            module: "items",        description: "Update catalog items" },
@@ -136,13 +109,13 @@ async function main() {
         { code: "document.create",        module: "documents",    description: "Upload documents" },
         { code: "document.update",        module: "documents",    description: "Update document records" },
 
-        // ── Vendors ─────────────────────────────────────────────────────────────
+        // ── Vendors ─────────────────────────────────────────────────────────
         { code: "vendor.read",            module: "vendors",      description: "View vendor directory" },
         { code: "vendor.create",          module: "vendors",      description: "Register new vendors" },
         { code: "vendor.update",          module: "vendors",      description: "Update and manage vendor lifecycle" },
         { code: "vendor.approve",         module: "vendors",      description: "Approve/activate/suspend vendors" },
 
-        // ── Procurement ─────────────────────────────────────────────────────────
+        // ── Procurement ─────────────────────────────────────────────────────
         { code: "procurement.pr.read",           module: "procurement", description: "View purchase requisitions" },
         { code: "procurement.pr.create",         module: "procurement", description: "Create purchase requisitions" },
         { code: "procurement.pr.update",         module: "procurement", description: "Update draft PRs" },
@@ -165,19 +138,19 @@ async function main() {
         { code: "procurement.po.approve",        module: "procurement", description: "Approve purchase orders" },
         { code: "procurement.po.issue",          module: "procurement", description: "Issue PO to vendor" },
 
-        // ── Petty Cash ──────────────────────────────────────────────────────────
+        // ── Petty Cash ──────────────────────────────────────────────────────
         { code: "pettycash.read",                module: "pettycash",   description: "View petty cash requests and expenses" },
         { code: "pettycash.create",              module: "pettycash",   description: "Create petty cash requests" },
         { code: "pettycash.approve",             module: "pettycash",   description: "Approve petty cash requests" },
         { code: "pettycash.expense.create",      module: "pettycash",   description: "Submit petty cash expense bills" },
         { code: "pettycash.expense.verify",      module: "pettycash",   description: "Verify/reject petty cash expense bills" },
 
-        // ── Petrol ──────────────────────────────────────────────────────────────
+        // ── Petrol ──────────────────────────────────────────────────────────
         { code: "petrol.read",                   module: "petrol",      description: "View petrol expenses" },
         { code: "petrol.create",                 module: "petrol",      description: "Log petrol fill entries" },
         { code: "petrol.verify",                 module: "petrol",      description: "Verify and lock petrol entries" },
 
-        // ── Inventory (Week 5) ───────────────────────────────────────────────────
+        // ── Inventory ───────────────────────────────────────────────────────
         { code: "inventory.read",                module: "inventory",   description: "View inventory stock balances" },
         { code: "inventory.store.manage",         module: "inventory",   description: "Create and manage warehouses/stores" },
         { code: "inventory.grn.create",          module: "inventory",   description: "Create goods receipt notes" },
@@ -187,7 +160,7 @@ async function main() {
         { code: "inventory.ledger.read",         module: "inventory",   description: "View full stock ledger" },
         { code: "inventory.consume.read",        module: "inventory",   description: "View material consumption records" },
 
-        // ── Finance (Week 6) ─────────────────────────────────────────────────────
+        // ── Finance ─────────────────────────────────────────────────────────
         { code: "finance.invoice.read",          module: "finance",     description: "View invoices" },
         { code: "finance.invoice.create",        module: "finance",     description: "Create and record invoices" },
         { code: "finance.invoice.verify",        module: "finance",     description: "Verify invoice for payment" },
@@ -195,12 +168,12 @@ async function main() {
         { code: "finance.payment.prepare",       module: "finance",     description: "Prepare payment run" },
         { code: "finance.payment.approve",       module: "finance",     description: "Approve payment" },
 
-        // ── Execution Engine (Week 6) ────────────────────────────────────────────
-        { code: "execution.read",                module: "execution",   description: "View project execution, DPRs, and dashbaords" },
+        // ── Execution Engine ────────────────────────────────────────────────
+        { code: "execution.read",                module: "execution",   description: "View project execution, DPRs, and dashboards" },
         { code: "execution.manage",              module: "execution",   description: "Create and manage execution entries (DPR, HSE, Issues)" },
         { code: "execution.approve",             module: "execution",   description: "Final approval for variations, billing, and progress reports" },
 
-        // ── HR / Payroll / Expenses ──────────────────────────────────────────────
+        // ── HR / Payroll / Expenses ──────────────────────────────────────────
         { code: "payroll.read",                  module: "payroll",     description: "View payroll records" },
         { code: "payroll.process",               module: "payroll",     description: "Process payroll run" },
         { code: "expense.read",                  module: "expenses",    description: "View expense records" },
@@ -217,10 +190,10 @@ async function main() {
             create: p
         });
     }
-    console.log(`✅ ${Object.keys(permissions).length} permissions seeded.`);
+    console.log(`✅ ${Object.keys(permissions).length} permissions seeded.\n`);
 
-    // ─── ROLES ───────────────────────────────────────────────────────────────────
-    console.log("🏛️ Seeding Roles...");
+    // ─── ROLES ───────────────────────────────────────────────────────────────
+    console.log("🏛️  Seeding all Roles...");
     const roleDefinitions = [
         { code: "super_admin",         name: "Super Admin",          is_system_role: true },
         { code: "erp_admin",           name: "ERP Admin",            is_system_role: true },
@@ -243,23 +216,22 @@ async function main() {
             create: r
         });
     }
-    console.log(`✅ ${Object.keys(roles).length} roles seeded.`);
+    console.log(`✅ ${Object.keys(roles).length} roles seeded.\n`);
 
-    // ─── ROLE-PERMISSION MATRIX ───────────────────────────────────────────────────
+    // ─── ROLE-PERMISSION MATRIX ──────────────────────────────────────────────
     console.log("🔗 Mapping Role-Permission Matrix...");
-
     const permCodes = Object.keys(permissions);
 
     const rolePermMatrix = {
         // Super Admin: ALL permissions
         "super_admin": permCodes,
 
-        // ERP Admin: all business permissions within own company
-        "erp_admin": permCodes.filter(p => 
+        // ERP Admin: all except cross-company/superadmin privileges
+        "erp_admin": permCodes.filter(p =>
             !["company.create", "company.manage", "dashboard.superadmin", "system.read"].includes(p)
         ).concat(["dashboard.company"]),
 
-        // Auditor: read-only everywhere relevant
+        // Auditor: read-only
         "auditor_readonly": [
             "approval.read", "audit.read", "delegation.read",
             "company.read", "department.read",
@@ -282,7 +254,7 @@ async function main() {
             "employee.read", "fleet.read", "document.read",
             "vendor.read", "payroll.read", "expense.read", "expense.verify",
             "procurement.pr.read", "procurement.po.read", "pettycash.read",
-            "user.read", "dashboard.department", "dashboard.compliance"
+            "user.read", "dashboard.department"
         ],
 
         // Project Manager
@@ -303,7 +275,7 @@ async function main() {
             "expense.read",
             "employee.read", "fleet.read", "vendor.read", "user.read",
             "execution.read", "execution.manage", "execution.approve",
-            "dashboard.project", "dashboard.compliance"
+            "dashboard.project"
         ],
 
         // Site Engineer
@@ -321,7 +293,7 @@ async function main() {
             "dashboard.project",
         ],
 
-        // Site Coordinator (same as site engineer, no RFQ/PO/finance approval)
+        // Site Coordinator
         "site_coordinator": [
             "approval.read", "approval.request",
             "project.read", "wbs.read", "item.read",
@@ -373,7 +345,7 @@ async function main() {
             "user.read", "department.read",
         ],
 
-        // Storekeeper (Week 5 inventory only)
+        // Storekeeper
         "storekeeper": [
             "approval.read",
             "item.read",
@@ -389,12 +361,14 @@ async function main() {
         ],
     };
 
-    let assocCount = 0;
     const rolePermsData = [];
+    let assocCount = 0;
     for (const [roleCode, permList] of Object.entries(rolePermMatrix)) {
         const roleId = roles[roleCode]?.id;
         if (!roleId) continue;
-        for (const permCode of permList) {
+        // Deduplicate permList
+        const uniquePerms = [...new Set(permList)];
+        for (const permCode of uniquePerms) {
             const permId = permissions[permCode]?.id;
             if (!permId) continue;
             rolePermsData.push({ role_id: roleId, permission_id: permId });
@@ -402,243 +376,36 @@ async function main() {
         }
     }
     await prisma.rolePermission.createMany({ data: rolePermsData });
-    console.log(`✅ ${assocCount} role-permission associations mapped.`);
+    console.log(`✅ ${assocCount} role-permission associations mapped.\n`);
 
-    // ─── PROJECTS ─────────────────────────────────────────────────────────────────
-    console.log("🏗️ Seeding Projects...");
-    const projects = {};
-    const projectsData = [
-        { code: "PRJ-NEOM-9",   name: "NEOM Square Infrastructure",  company_id: mainCo.id, status: "active" },
-        { code: "PRJ-METRO-7",  name: "Riyadh Metro Extension",      company_id: mainCo.id, status: "active" },
-        { code: "PRJ-JEDDAH-3", name: "Jeddah Waterfront Tower",     company_id: mainCo.id, status: "active" },
-    ];
-    for (const p of projectsData) {
-        projects[p.code] = await prisma.project.create({ data: p });
-    }
-
-    // ─── WBS & COST CODES ─────────────────────────────────────────────────────────
-    console.log("📐 Seeding WBS...");
-    const neom = projects["PRJ-NEOM-9"];
-    const wbs1 = await prisma.wBS.create({ data: { project_id: neom.id, name: "Site Mobilization" } });
-    const wbs2 = await prisma.wBS.create({ data: { project_id: neom.id, name: "Earthworks", parent_id: wbs1.id } });
-    await prisma.costCode.createMany({
-        data: [
-            { wbs_id: wbs1.id, category: "material" },
-            { wbs_id: wbs1.id, category: "labor" },
-            { wbs_id: wbs2.id, category: "equipment" },
-        ]
-    });
-
-    // ─── ITEM CATALOG ─────────────────────────────────────────────────────────────
-    console.log("📦 Seeding Item Catalog...");
-    const itemsData = [
-        { name: "Portland Cement (50kg Bag)",        category: "cement",  unit: "BAG",   company_id: mainCo.id },
-        { name: "Deformed Steel Bar (12mm)",          category: "steel",   unit: "TON",   company_id: mainCo.id },
-        { name: "Diesel Fuel (Ultra Low Sulfur)",     category: "fuel",    unit: "LITER", company_id: mainCo.id },
-        { name: "PVC Conduit (20mm)",                 category: "electric",unit: "MTR",   company_id: mainCo.id },
-        { name: "Sand (River Washed)",                category: "civil",   unit: "M3",    company_id: mainCo.id },
-    ];
-    for (const i of itemsData) {
-        await prisma.item.create({ data: i });
-    }
-
-    // ─── TEST USERS ───────────────────────────────────────────────────────────────
-    console.log("👥 Seeding Test Users...");
+    // ─── SUPERADMIN USER ─────────────────────────────────────────────────────
+    console.log("👤 Creating SuperAdmin user...");
     const hashedPass = await bcrypt.hash("Password123!", BCRYPT_ROUNDS);
 
-    const usersToCreate = [
-        { email: "superadmin@erp.com",    name: "Super Admin",         role: "super_admin",         dept: "DEPT-ADM",  company: mainCo.id },
-        { email: "admin@erp.com",         name: "Tariq ERP Admin",     role: "erp_admin",            dept: "DEPT-ADM",  company: mainCo.id },
-        { email: "auditor@erp.com",       name: "Nadia Auditor",       role: "auditor_readonly",     dept: "DEPT-FIN",  company: mainCo.id },
-        { email: "pm@erp.com",            name: "Ahmed Manager",       role: "project_manager",      dept: "DEPT-CIV",  company: mainCo.id },
-        { email: "depthead@erp.com",      name: "Hassan Head",         role: "department_head",      dept: "DEPT-CIV",  company: mainCo.id },
-        { email: "engineer@erp.com",      name: "Sara Engineer",       role: "site_engineer",        dept: "DEPT-CIV",  company: mainCo.id },
-        { email: "coordinator@erp.com",   name: "Faisal Coordinator",  role: "site_coordinator",     dept: "DEPT-CIV",  company: mainCo.id },
-        { email: "procurement@erp.com",   name: "Karim Procurement",   role: "procurement_officer",  dept: "DEPT-PRO",  company: mainCo.id },
-        { email: "accounts@erp.com",      name: "Layla Accounts",      role: "accounts_officer",     dept: "DEPT-FIN",  company: mainCo.id },
-        { email: "hr@erp.com",            name: "Mona HR",             role: "hr_admin",             dept: "DEPT-ADM",  company: mainCo.id },
-        { email: "storekeeper@erp.com",   name: "Omar Store",          role: "storekeeper",          dept: "DEPT-PRO",  company: mainCo.id },
-        { email: "fleet@erp.com",         name: "Walid Fleet",         role: "fleet_coordinator",    dept: "DEPT-FLT",  company: mainCo.id },
-        // Second company admin (isolation test)
-        { email: "admin2@megabuild.com",  name: "MegaBuild Admin",     role: "erp_admin",            dept: null,        company: secondCo.id },
-    ];
-
-    const usersCreated = {};
-    for (const u of usersToCreate) {
-        const userData = {
-            email: u.email,
-            name: u.name,
+    // SuperAdmin has no company_id (system-level)
+    const superAdmin = await prisma.user.create({
+        data: {
+            email: "superadmin@erp.com",
+            name: "Super Admin",
             password_hash: hashedPass,
-            role_id: roles[u.role].id,
-            company_id: u.company,
-        };
-        if (u.dept) userData.department_id = depts[u.dept].id;
-        usersCreated[u.email] = await prisma.user.create({ data: userData });
-    }
-    console.log(`✅ ${Object.keys(usersCreated).length} users created.`);
-    
-    // Link Head of Department
-    const deptHead = usersCreated["depthead@erp.com"];
-    if (deptHead) {
-        await prisma.department.update({
-            where: { id: depts["DEPT-CIV"].id },
-            data: { head_id: deptHead.id }
-        });
-    }
-
-    // ─── PROJECT ACCESS ASSIGNMENTS ───────────────────────────────────────────────
-    console.log("🔑 Assigning Project Access...");
-    const pm = usersCreated["pm@erp.com"];
-    const engineer = usersCreated["engineer@erp.com"];
-    const coordinator = usersCreated["coordinator@erp.com"];
-    const procurement = usersCreated["procurement@erp.com"];
-    const accounts = usersCreated["accounts@erp.com"];
-
-    await prisma.userProject.createMany({
-        data: [
-            { user_id: pm.id,          project_id: neom.id,                       access_type: "project_manager" },
-            { user_id: pm.id,          project_id: projects["PRJ-METRO-7"].id,    access_type: "project_manager" },
-            { user_id: engineer.id,    project_id: neom.id,                       access_type: "site_engineer" },
-            { user_id: coordinator.id, project_id: neom.id,                       access_type: "site_coordinator" },
-            { user_id: procurement.id, project_id: neom.id,                       access_type: "procurement_officer" },
-            { user_id: accounts.id,    project_id: neom.id,                       access_type: "accounts_officer" },
-        ]
-    });
-
-    // ─── EMPLOYEES ────────────────────────────────────────────────────────────────
-    console.log("👷 Seeding Employees...");
-    await prisma.employee.createMany({
-        data: [
-            { name: "John Doe",      designation: "Foreman",     project_id: neom.id, iqama_no: "2100000001", saudization_status: "expat",   company_id: mainCo.id },
-            { name: "Khalid Saud",   designation: "Electrician", project_id: neom.id, iqama_no: "1100000002", saudization_status: "citizen", company_id: mainCo.id },
-            { name: "Raj Kumar",     designation: "Carpenter",   project_id: neom.id, iqama_no: "2200000003", saudization_status: "expat",   company_id: mainCo.id },
-        ]
-    });
-
-    // ─── FLEET ────────────────────────────────────────────────────────────────────
-    console.log("🚛 Seeding Fleet...");
-    await prisma.vehicle.create({
-        data: { vehicle_no: "TRUCK-001", plate_no: "ABC-123", running_site: neom.id, department: "DEPT-PRO", company_id: mainCo.id }
-    });
-    await prisma.vehicle.create({
-        data: { vehicle_no: "VAN-002",   plate_no: "XYZ-456", running_site: neom.id, department: "DEPT-FLT", company_id: mainCo.id }
-    });
-    await prisma.equipment.create({
-        data: { equipment_no: "EXCAV-001", name: "Cat Excavator 320", running_site: neom.id, status: "active", company_id: mainCo.id }
-    });
-
-    // ─── COMPLIANCE DOCUMENTS ─────────────────────────────────────────────────────
-    console.log("📜 Seeding Compliance Documents...");
-    await prisma.companyDocument.create({
-        data: {
-            company_id: mainCo.id,
-            type: "Commercial Registration (CR)",
-            document_number: "1010000001",
-            issue_date: new Date("2024-01-01"),
-            expiry_date: new Date("2026-06-01"),
+            role_id: roles["super_admin"].id,
+            // No company_id — superadmin is cross-company
         }
     });
-    await prisma.companyDocument.create({
-        data: {
-            company_id: mainCo.id,
-            type: "VAT Certificate",
-            document_number: "300000000000003",
-            issue_date: new Date("2024-01-01"),
-            expiry_date: new Date("2025-12-31"),
-        }
-    });
+    console.log(`✅ SuperAdmin created: ${superAdmin.email} (id: ${superAdmin.id})\n`);
 
-    // ─── VENDORS ──────────────────────────────────────────────────────────────────
-    console.log("🏭 Seeding Vendors...");
-    const vendors = {};
-    const vendorsData = [
-        { name: "Al-Riyadh Steel Co.",       email: "sales@alriyadhsteel.sa",  phone: "+966-11-2345678", category: "steel",     company_id: mainCo.id, status: "active",  department_id: depts["DEPT-PRO"].id },
-        { name: "Saudi Cement Suppliers",    email: "info@saudicementsup.sa",  phone: "+966-12-3456789", category: "cement",    company_id: mainCo.id, status: "active",  department_id: depts["DEPT-PRO"].id },
-        { name: "National Fuel Distributors",email: "fuel@nationalfuel.sa",    phone: "+966-13-4567890", category: "fuel",      company_id: mainCo.id, status: "pending", department_id: depts["DEPT-PRO"].id },
-    ];
-    for (const v of vendorsData) {
-        vendors[v.name] = await prisma.vendor.create({ data: v });
-    }
-
-    // ─── APPROVAL MATRIX ──────────────────────────────────────────────────────────
-    console.log("📋 Seeding Approval Matrix...");
-    // PR approval: Site Engineer → Project Manager → ERP Admin 
-    await prisma.approvalMatrix.create({
-        data: {
-            company_id: mainCo.id,
-            doc_type: "PR",
-            step_order: 1,
-            role_id: roles["project_manager"].id,
-            min_amount: 0,
-        }
-    });
-    // Petty Cash approval: PM
-    await prisma.approvalMatrix.create({
-        data: {
-            company_id: mainCo.id,
-            doc_type: "PETTY_CASH",
-            step_order: 1,
-            role_id: roles["project_manager"].id,
-            min_amount: 0,
-        }
-    });
-    // PO approval: PM first, ERP Admin if >100k
-    await prisma.approvalMatrix.create({
-        data: {
-            company_id: mainCo.id,
-            doc_type: "PO",
-            step_order: 1,
-            role_id: roles["project_manager"].id,
-            min_amount: 0,
-        }
-    });
-
-    // ─── SAMPLE PR (for testing) ──────────────────────────────────────────────────
-    console.log("📥 Seeding Sample Purchase Requisition...");
-    const sampleItem = await prisma.item.findFirst({ where: { company_id: mainCo.id } });
-    if (sampleItem) {
-        await prisma.purchaseRequisition.create({
-            data: {
-                pr_no: "PR-2024-0001",
-                project_id: neom.id,
-                requested_by: engineer.id,
-                company_id: mainCo.id,
-                status: "submitted",
-                reason: "Urgent cement supply needed for NEOM foundation work",
-                items: {
-                    create: [
-                        { item_id: sampleItem.id, quantity: 500, remarks: "Needs to be delivered ASAP" },
-                    ]
-                }
-            }
-        });
-    }
-
-    // ─── SUMMARY ──────────────────────────────────────────────────────────────────
-    console.log("\n" + "═".repeat(60));
-    console.log("🎉 Enterprise RBAC Seed Complete!");
+    // ─── SUMMARY ─────────────────────────────────────────────────────────────
     console.log("═".repeat(60));
-    console.log("\n📊 Summary:");
-    console.log(`  Companies:    2`);
-    console.log(`  Departments:  ${Object.keys(depts).length}`);
-    console.log(`  Roles:        ${Object.keys(roles).length}`);
+    console.log("🎉 Minimal Seed Complete!");
+    console.log("═".repeat(60));
+    console.log(`\n📊 Summary:`);
     console.log(`  Permissions:  ${Object.keys(permissions).length}`);
-    console.log(`  Users:        ${Object.keys(usersCreated).length}`);
-    console.log(`  Projects:     ${Object.keys(projects).length}`);
-    console.log("\n🔑 Test Credentials (all use: Password123!)");
-    console.log("  superadmin@erp.com    → super_admin");
-    console.log("  admin@erp.com         → erp_admin");
-    console.log("  auditor@erp.com       → auditor_readonly");
-    console.log("  pm@erp.com            → project_manager");
-    console.log("  depthead@erp.com      → department_head");
-    console.log("  engineer@erp.com      → site_engineer");
-    console.log("  coordinator@erp.com   → site_coordinator");
-    console.log("  procurement@erp.com   → procurement_officer");
-    console.log("  accounts@erp.com      → accounts_officer");
-    console.log("  hr@erp.com            → hr_admin");
-    console.log("  storekeeper@erp.com   → storekeeper");
-    console.log("  fleet@erp.com         → fleet_coordinator");
-    console.log("  admin2@megabuild.com  → erp_admin (MegaBuild Co. - isolation test)");
+    console.log(`  Roles:        ${Object.keys(roles).length}`);
+    console.log(`  Users:        1 (superadmin only)`);
+    console.log(`\n🔑 Login Credentials:`);
+    console.log(`  Email:    superadmin@erp.com`);
+    console.log(`  Password: Password123!`);
+    console.log(`  Role:     super_admin (ALL permissions)`);
     console.log("═".repeat(60));
 }
 

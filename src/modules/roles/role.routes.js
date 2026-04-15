@@ -5,6 +5,7 @@ const controller = require("./role.controller");
 const { validateCreateRole, validateUpdateRole, validateAssignPermissions } = require("./role.validation");
 const authenticateJWT = require("../../middleware/authenticateJWT");
 const requirePermission = require("../../middleware/requirePermission");
+const requireSuperAdmin = require("../../middleware/requireSuperAdmin");
 
 const router = Router();
 
@@ -23,21 +24,21 @@ router.get("/", controller.getRoles);
  * @desc    Create a new role
  * @access  Private — requires role.create
  */
-router.post("/", requirePermission("role.manage"), validateCreateRole, controller.createRole);
+router.post("/", requireSuperAdmin, validateCreateRole, controller.createRole);
 
 /**
  * @route   PATCH /api/roles/:id
  * @desc    Update a role (system roles blocked)
  * @access  Private — requires role.update
  */
-router.patch("/:id", requirePermission("role.manage"), validateUpdateRole, controller.updateRole);
+router.patch("/:id", requireSuperAdmin, validateUpdateRole, controller.updateRole);
 
 /**
  * @route   DELETE /api/roles/:id
  * @desc    Soft-delete a role (system roles blocked)
  * @access  Private — requires role.delete
  */
-router.delete("/:id", requirePermission("role.manage"), controller.deleteRole);
+router.delete("/:id", requireSuperAdmin, controller.deleteRole);
 
 /**
  * @route   GET /api/roles/:id/permissions
@@ -53,7 +54,7 @@ router.get("/:id/permissions", controller.getRolePermissions);
  */
 router.post(
     "/:id/assign-permissions",
-    requirePermission("role.manage"),
+    requireSuperAdmin,
     validateAssignPermissions,
     controller.assignPermissions
 );

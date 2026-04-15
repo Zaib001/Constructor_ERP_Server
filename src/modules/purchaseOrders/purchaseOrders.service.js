@@ -134,11 +134,15 @@ async function getPOById(id, user) {
 }
 
 async function createPO(data, user) {
-    const { id: actorId, companyId, roleCode, department_id: actorDeptId } = user;
+    const { id: actorId, isSuperAdmin, companyId: userCompanyId, roleCode, department_id: actorDeptId } = user;
     const allowed = ["procurement_officer", "erp_admin", "super_admin"];
     if (!allowed.includes(roleCode)) {
         throw new Error("Unauthorized: Role not allowed to draft POs.");
     }
+    
+    const companyId = isSuperAdmin ? (data.company_id || data.companyId || userCompanyId) : userCompanyId;
+    if (!companyId) throw new Error("Company context missing for PO creation.");
+
     const items = data.items || [];
     
     // DEBUG: Inspect incoming items to catch ID loss

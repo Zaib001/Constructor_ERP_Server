@@ -30,8 +30,7 @@ async function getVendorById(req, res, next) {
 
 async function createVendor(req, res, next) {
     try {
-        const companyId = req.user.companyId;
-        const vendor = await vendorsService.createVendor(req.body, req.user.id, companyId);
+        const vendor = await vendorsService.createVendor(req.body, req.user);
         return res.status(201).json({ success: true, data: vendor });
     } catch (err) {
         logger.error("Error in createVendor:", err);

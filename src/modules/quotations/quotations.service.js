@@ -64,12 +64,17 @@ async function getQuotationById(id, user) {
     });
 }
 
-async function createQuotation(data, actorId, departmentId) {
+async function createQuotation(data, user) {
+    const { id: actorId, isSuperAdmin, companyId: userCompanyId, departmentId: userDeptId } = user;
+    const companyId = isSuperAdmin ? (data.company_id || data.companyId) : userCompanyId;
+
+    if (!companyId) throw new Error("Company context missing for quotation creation.");
+
     const quote = await prisma.quotation.create({
         data: {
             quote_number: `QTN-${Date.now()}`,
-            company_id: data.company_id,
-            department_id: departmentId,
+            company_id: companyId,
+            department_id: data.department_id || data.departmentId || userDeptId || null,
             project_id: data.project_id || null,
             amount: data.amount,
             status: "draft",

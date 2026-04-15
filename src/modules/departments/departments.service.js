@@ -6,7 +6,7 @@ const { applyDataScope } = require("../../utils/scoping");
  */
 async function getAllDepartments(user) {
     const where = applyDataScope(user);
-    where.is_active = true;
+    where.deleted_at = null;
     
     return await prisma.department.findMany({
         where,
@@ -25,6 +25,7 @@ async function getAllDepartments(user) {
 async function getDepartmentById(id, user) {
     const where = applyDataScope(user);
     where.id = id;
+    where.deleted_at = null;
 
     const dept = await prisma.department.findFirst({
         where,
@@ -52,7 +53,19 @@ async function getDepartmentById(id, user) {
 /**
  * Create a new department.
  */
-async function createDepartment(data, companyId) {
+async function createDepartment(data, user) {
+    const { isSuperAdmin, companyId: userCompanyId } = user;
+    const companyId = isSuperAdmin ? (data.companyId || data.company_id) : userCompanyId;
+
+    if (!companyId) throw new Error("RBAC Error: Company context missing for department creation.");
+
+    // Validate uniqueness of code if not deleting
+    const existing = await prisma.department.findFirst({ where: { code: data.code, company_id: companyId } });
+    if (existing) {
+        if (existing.deleted_at) throw new Error(`Archived Entry: Department code '${data.code}' exists in trash. Please restore it or use a different code.`);
+        throw new Error(`Duplicate Entry: Department code '${data.code}' is already assigned.`);
+    }
+
     return await prisma.department.create({
         data: {
             code: data.code,
@@ -73,18 +86,17 @@ async function updateDepartment(id, data, user) {
     where.id = id;
 
     // Verify existence/ownership
-    const exists = await prisma.department.findFirst({ where });
-    if (!exists) throw new Error("Department not found or access denied");
-
-    const updateData = {};
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.headId || data.head_id) updateData.head_id = data.headId || data.head_id;
-    if (data.is_active !== undefined) updateData.is_active = data.is_active;
+    const dept = await prisma.department.findFirst({ where });
+    if (!dept) throw new Error("Department not found or access denied");
 
     return await prisma.department.update({
         where: { id },
-        data: updateData
+        data: {
+            name: data.name !== undefined ? data.name : dept.name,
+            description: data.description !== undefined ? data.description : dept.description,
+            head_id: (data.headId || data.head_id) !== undefined ? (data.headId || data.head_id) : dept.head_id,
+            is_active: data.is_active !== undefined ? data.is_active : dept.is_active,
+        }
     });
 }
 
@@ -95,13 +107,38 @@ async function deleteDepartment(id, user) {
     const where = applyDataScope(user);
     where.id = id;
 
-    // Verify existence/ownership
-    const exists = await prisma.department.findFirst({ where });
-    if (!exists) throw new Error("Department not found or access denied");
+    // 1. Verify existence and load ACTIVE member counts
+    const dept = await prisma.department.findFirst({ 
+        where,
+        include: { 
+            _count: { 
+                select: { 
+                    users: { 
+                        where: { 
+                            deleted_at: null, 
+                            is_active: true 
+                        } 
+                    } 
+                } 
+            } 
+        }
+    });
+    
+    if (!dept) throw new Error("Department not found or access denied");
 
+    // 2. Safety Check: Only block if there are ACTIVE, non-archived users
+    if (dept._count.users > 0) {
+        throw new Error(`Integrity Error: Cannot archive department '${dept.name}' because it contains ${dept._count.users} active member(s). Reassign them to another unit first. (Note: Archived or inactive members are ignored)`);
+    }
+
+    // 3. Mark as deleted and cleanup references
     return await prisma.department.update({
         where: { id },
-        data: { is_active: false }
+        data: { 
+            deleted_at: new Date(),
+            is_active: false,
+            head_id: null // Clear the head of department link
+        }
     });
 }
 

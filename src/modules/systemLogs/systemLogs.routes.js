@@ -4,6 +4,7 @@ const { Router } = require("express");
 const controller = require("./systemLogs.controller");
 const authenticateJWT = require("../../middleware/authenticateJWT");
 const requirePermission = require("../../middleware/requirePermission");
+const requireSuperAdmin = require("../../middleware/requireSuperAdmin");
 
 const router = Router();
 
@@ -14,7 +15,7 @@ const router = Router();
 router.get(
     "/logs",
     authenticateJWT,
-    requirePermission("audit.read"),
+    requireSuperAdmin,
     controller.getSystemLogs
 );
 

@@ -135,9 +135,16 @@ async function deleteRole(id, actorId, ipAddress, deviceInfo) {
 
 // ─── Get All Roles ────────────────────────────────────────────────────────────
 
-async function getRoles() {
+async function getRoles(user) {
+    const where = { is_active: true, deleted_at: null };
+    
+    // Security: Non-superadmins should not see or be able to assign the super_admin role
+    if (user && !user.isSuperAdmin) {
+        where.code = { not: "super_admin" };
+    }
+
     const roles = await prisma.role.findMany({
-        where: { is_active: true, deleted_at: null },
+        where,
         orderBy: { created_at: "asc" },
         select: {
             id: true,

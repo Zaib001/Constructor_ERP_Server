@@ -87,11 +87,10 @@ const projectsService = {
     },
 
     async update(id, user, data) {
-        const { companyId, isSuperAdmin } = user;
-        const where = { id, deleted_at: null };
-        if (!isSuperAdmin) where.company_id = companyId;
+        const where = applyDataScope(user);
+        where.id = id;
 
-        // 1. Tenant Security
+        // 1. Tenant Security (findFirst with where ensures isolation)
         const project = await prisma.project.findFirst({ where });
         if (!project) throw new Error("Project not found or access denied.");
 
@@ -119,21 +118,38 @@ const projectsService = {
     },
 
     async delete(id, user) {
-        const { companyId, isSuperAdmin } = user;
-        const where = { id, deleted_at: null };
-        if (!isSuperAdmin) where.company_id = companyId;
+        const where = applyDataScope(user);
+        where.id = id;
 
         // 1. Verify Ownership & Existence
         const project = await prisma.project.findFirst({
             where,
-            include: { _count: { select: { wbs: true, employees: true } } }
+            include: { 
+                _count: { 
+                    select: { 
+                        employees: true,
+                        purchase_orders: true,
+                        expenses: true,
+                        purchase_requisitions: true
+                    } 
+                } 
+            }
         });
 
         if (!project) throw new Error("Project not found or access denied");
 
         // 2. Restrict deletion if active sub-entities exist (Safety check)
         if (project._count.employees > 0) {
-            throw new Error(`Constraint Error: Cannot delete project with ${project._count.employees} assigned employees. Reassign them first.`);
+            throw new Error(`Constraint Error: Cannot archive project with ${project._count.employees} assigned employees. Reassign them first.`);
+        }
+        if (project._count.purchase_orders > 0) {
+            throw new Error(`Financial Constraint: Cannot archive project with ${project._count.purchase_orders} active Purchase Orders. Terminate or reassign procurement records first.`);
+        }
+        if (project._count.expenses > 0) {
+            throw new Error(`Accounting Constraint: Cannot archive project with ${project._count.expenses} recorded expenses.`);
+        }
+        if (project._count.purchase_requisitions > 0) {
+            throw new Error(`Procurement Constraint: Cannot archive project with ${project._count.purchase_requisitions} pending requisitions.`);
         }
 
         // 3. Perform Soft Delete within a transaction
@@ -148,7 +164,7 @@ const projectsService = {
             });
 
             // Soft delete associated WBS and Cost Codes
-            await tx.wbs.updateMany({
+            await tx.wBS.updateMany({
                 where: { project_id: id },
                 data: { deleted_at: new Date() }
             });

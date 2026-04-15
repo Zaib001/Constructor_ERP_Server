@@ -45,9 +45,8 @@ async function createItem(data, user) {
 }
 
 async function updateItem(id, data, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user);
+    where.id = id;
 
     const item = await prisma.item.findFirst({ where });
     if (!item) throw new Error("Item not found or access denied.");
@@ -66,9 +65,8 @@ async function updateItem(id, data, user) {
 }
 
 async function deleteItem(id, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user);
+    where.id = id;
 
     const item = await prisma.item.findFirst({ where });
     if (!item) throw new Error("Item not found or access denied.");
