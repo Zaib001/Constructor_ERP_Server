@@ -54,7 +54,7 @@ router.use('/timesheets', canRead, timesheetRoutes);
 // ════════════════════════════════════════════════════════════
 router.get('/progress/:projectId', canRead, async (req, res) => {
   try {
-    const data = await progressSvc.getProjectProgress(req.params.projectId, req.user.company_id);
+    const data = await progressSvc.getProjectProgress(req.params.projectId, req.user);
     res.json({ success: true, data });
   } catch (err) {
     if (err.message === 'Project not found') return res.status(404).json({ success: false, message: err.message });
@@ -64,7 +64,7 @@ router.get('/progress/:projectId', canRead, async (req, res) => {
 
 router.get('/wbs-progress/:projectId', canRead, async (req, res) => {
   try {
-    const data = await progressSvc.getWBSProgress(req.params.projectId, req.user.company_id);
+    const data = await progressSvc.getWBSProgress(req.params.projectId, req.user);
     res.json({ success: true, data });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -74,7 +74,7 @@ router.get('/wbs-progress/:projectId', canRead, async (req, res) => {
 // ════════════════════════════════════════════════════════════
 router.get('/cost-control/:projectId', canRead, async (req, res) => {
   try {
-    const data = await costControlSvc.getCostControl(req.params.projectId, req.user.company_id);
+    const data = await costControlSvc.getCostControl(req.params.projectId, req.user);
     res.json({ success: true, data });
   } catch (err) {
     if (err.message === 'Project not found') return res.status(404).json({ success: false, message: err.message });
@@ -84,7 +84,7 @@ router.get('/cost-control/:projectId', canRead, async (req, res) => {
 
 router.post('/cost-control/close-cycle/:cycleId', canManage, async (req, res) => {
   try {
-    const data = await costControlSvc.closeBillingCycle(req.params.cycleId, req.user.company_id);
+    const data = await costControlSvc.closeBillingCycle(req.params.cycleId, req.user);
     res.json({ success: true, data });
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
@@ -122,26 +122,26 @@ router.delete('/boq/:id', canManage, async (req, res) => {
 // ════════════════════════════════════════════════════════════
 router.get('/billing', canRead, async (req, res) => {
   try {
-    const data = await billingSvc.listInvoices(req.query, req.user.company_id);
+    const data = await billingSvc.listInvoices(req.query, req.user);
     res.json({ success: true, ...data });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 router.post('/billing', canManage, async (req, res) => {
   try {
-    const data = await billingSvc.createProgressInvoice(req.body, req.user.id, req.user.company_id);
+    const data = await billingSvc.createProgressInvoice(req.body, req.user);
     res.status(201).json({ success: true, data });
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
 router.get('/billing/:id', canRead, async (req, res) => {
   try {
-    const data = await billingSvc.getInvoiceById(req.params.id, req.user.company_id);
+    const data = await billingSvc.getInvoiceById(req.params.id, req.user);
     if (!data) return res.status(404).json({ success: false, message: 'Invoice not found' });
     res.json({ success: true, data });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 router.post('/billing/:id/action', canApprove, async (req, res) => {
   try {
-    const data = await billingSvc.updateInvoiceStatus(req.params.id, req.body.action, req.body, req.user.company_id);
+    const data = await billingSvc.updateInvoiceStatus(req.params.id, req.body.action, req.body, req.user);
     res.json({ success: true, data });
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
@@ -149,14 +149,14 @@ router.post('/billing/:id/action', canApprove, async (req, res) => {
 // Billing Cycles
 router.get('/billing-cycles', canRead, async (req, res) => {
   try {
-    const data = await billingSvc.listBillingCycles(req.query.project_id, req.user.company_id);
+    const data = await billingSvc.listBillingCycles(req.query.project_id, req.user);
     res.json({ success: true, data });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 router.post('/billing-cycles', canManage, async (req, res) => {
   try {
-    const data = await billingSvc.createBillingCycle(req.body, req.user.company_id);
+    const data = await billingSvc.createBillingCycle(req.body, req.user);
     res.status(201).json({ success: true, data });
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });

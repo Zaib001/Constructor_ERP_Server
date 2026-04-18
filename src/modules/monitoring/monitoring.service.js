@@ -11,8 +11,8 @@ async function getProjectKPIs(projectId, user) {
         where: { id: projectId },
         include: {
             wbs: {
-                where: { deleted_at: null },
-                include: { cost_codes: { where: { deleted_at: null } } }
+                where: { },
+                include: { cost_codes: { where: { } } }
             },
             hindrance_logs: { where: { status: 'open' } }
         }
@@ -65,8 +65,7 @@ async function getProjectKPIs(projectId, user) {
     const committedPOs = await prisma.purchaseOrder.findMany({
         where: {
             project_id: projectId,
-            status: { in: ['approved', 'issued', 'partially_received', 'received'] },
-            deleted_at: null
+            status: { in: ['approved', 'issued', 'partially_received', 'received'] }
         },
         select: { total_amount: true }
     });
@@ -105,7 +104,7 @@ async function getProjectSCurve(projectId, user) {
     const project = await prisma.project.findUnique({
         where: { id: projectId },
         include: {
-            wbs: { where: { deleted_at: null } }
+            wbs: { where: { } }
         }
     });
 

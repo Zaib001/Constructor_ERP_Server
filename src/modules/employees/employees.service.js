@@ -1,11 +1,15 @@
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES } = require("../../utils/scoping");
 
 async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize = 50) {
     const { companyId, isSuperAdmin } = user;
     
     const skip = (page - 1) * pageSize;
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { 
+        module: MODULES.HR, 
+        isWrite: false, 
+        projectFilter: true 
+    });
     
     if (projectId) where.project_id = projectId;
     if (departmentId) where.department_id = departmentId;
@@ -28,7 +32,11 @@ async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize
 }
 
 async function getEmployeeById(id, user) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { 
+        module: MODULES.HR, 
+        isWrite: false, 
+        projectFilter: true 
+    });
     where.id = id;
 
     return await prisma.employee.findFirst({
@@ -51,7 +59,15 @@ async function createEmployee(data, user) {
     // 2. Tenant & Relation Validation
     if (data.project_id) {
         const project = await prisma.project.findFirst({ 
-            where: { ...applyDataScope(user, { projectFilter: true, projectModel: true }), id: data.project_id } 
+            where: { 
+                ...applyDataScope(user, { 
+                    module: MODULES.PROJECTS, 
+                    isWrite: false, 
+                    projectFilter: true, 
+                    projectModel: true 
+                }), 
+                id: data.project_id 
+            } 
         });
         if (!project) throw new Error("Invalid Relation: Assigned project not found or access denied.");
     }
@@ -95,11 +111,10 @@ async function createEmployee(data, user) {
 }
 
 async function updateEmployee(id, data, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user, { module: MODULES.HR, isWrite: true });
+    where.id = id;
 
-    // 1. Tenant Security
+    // 1. Tenant Security (Already enforced by where)
     const employee = await prisma.employee.findFirst({ where });
     if (!employee) throw new Error("Employee not found or access denied.");
 
@@ -131,9 +146,8 @@ async function updateEmployee(id, data, user) {
 }
 
 async function deleteEmployee(id, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user, { module: MODULES.HR, isWrite: true });
+    where.id = id;
 
     const employee = await prisma.employee.findFirst({ where });
     if (!employee) throw new Error("Employee not found or access denied.");

@@ -45,7 +45,7 @@ async function getCompliance(req, res, next) {
 
 async function getProjectDashboard(req, res, next) {
     try {
-        const data = await dashboardService.getProjectDashboard(req.user);
+        const data = await dashboardService.getProjectDashboard(req.user, req.query.projectId);
         return res.status(200).json({ success: true, data });
     } catch (err) {
         logger.error("Error in getProjectDashboard:", err);

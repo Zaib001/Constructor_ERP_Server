@@ -1,7 +1,7 @@
 "use strict";
 
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES, validateResourceAccess } = require("../../utils/scoping");
 const { registerAdapter } = require("../approvals/approvals.adapter");
 const { requestApproval } = require("../approvals/approvals.service");
 
@@ -86,7 +86,7 @@ registerAdapter("PO", async ({ docId, status }) => {
 });
 
 async function getAllPurchaseOrders(user, page = 1, pageSize = 50, filters = {}) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false, projectFilter: true });
 
     if (filters.status) {
         where.status = filters.status;
@@ -117,7 +117,7 @@ async function getAllPurchaseOrders(user, page = 1, pageSize = 50, filters = {})
 }
 
 async function getPOById(id, user) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false, projectFilter: true });
     where.id = id;
 
     return await prisma.purchaseOrder.findFirst({
@@ -161,7 +161,7 @@ async function createPO(data, user) {
     if (data.project_id) {
         const project = await prisma.project.findFirst({
             where: {
-                ...applyDataScope(user, { projectFilter: true }),
+                ...applyDataScope(user, { module: MODULES.PROJECTS, isWrite: false, projectFilter: true }),
                 id: data.project_id
             }
         });
@@ -172,7 +172,7 @@ async function createPO(data, user) {
 
     if (data.requisition_id) {
         const pr = await prisma.purchaseRequisition.findFirst({
-            where: { id: data.requisition_id, company_id: companyId, deleted_at: null }
+            where: { id: data.requisition_id, company_id: companyId }
         });
         if (!pr) throw new Error("Reference Requisition not found or access denied.");
     }
@@ -243,20 +243,21 @@ async function createPO(data, user) {
     return po;
 }
 
-async function issuePO(id, actorId) {
+async function issuePO(id, user) {
     const po = await prisma.purchaseOrder.findUnique({ where: { id } });
     if (!po) throw new Error("PO not found");
 
-    const actor = await prisma.user.findUnique({ where: { id: actorId }, include: { roles: true }});
+    const actor = await prisma.user.findUnique({ where: { id: user.id }, include: { roles: true }});
     const roleCode = actor.roles?.code || "unknown";
     const allowed = ["procurement_officer", "erp_admin", "super_admin"];
+    
     if (!allowed.includes(roleCode)) {
         throw new Error("Unauthorized: Role not allowed to issue POs.");
     }
-    if (po.status !== "approved") {
-        // Technically the adapter handles transition to 'issued' on approval, 
-        // but if there's a manual step required, this is where it goes.
-    }
+    
+    // Validate scope (Procurement manager horizon allows cross-company issuing if necessary, 
+    // but usually POs are company-specific. applyDataScope handles the logic).
+    await validateResourceAccess(prisma, "purchaseOrder", id, user, { module: MODULES.PROCUREMENT, isWrite: true });
 
     return await prisma.purchaseOrder.update({
         where: { id },
@@ -265,9 +266,8 @@ async function issuePO(id, actorId) {
 }
 
 async function updatePO(id, data, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true });
+    where.id = id;
 
     const po = await prisma.purchaseOrder.findFirst({ where, include: { items: true } });
     if (!po) throw new Error("PO not found or access denied.");

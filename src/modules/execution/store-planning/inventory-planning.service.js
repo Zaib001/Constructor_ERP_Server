@@ -14,8 +14,7 @@ async function listInventoryRequests(filters, user) {
     ...where,
     ...(reservation_status && { reservation_status }),
     ...(project_id && { project_id }),
-    ...(store_id && { store_id }),
-    deleted_at: null
+    ...(store_id && { store_id })
   };
 
   return prisma.inventoryPlanningRequest.findMany({

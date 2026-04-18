@@ -1,0 +1,155 @@
+model Company {
+model Role {
+model Department {
+model User {
+  created_rfqs         RFQ[]                 @relation("RFQCreator")
+  compared_rfqs        ComparisonEngine[]    @relation("RFQComparator")
+model Permission {
+model RolePermission {
+model Project {
+model UserProject {
+model UserSession {
+model PasswordReset {
+model ApprovalMatrix {
+model ApprovalRequest {
+model ApprovalRequestItem {
+model ApprovalStep {
+model ApprovalDelegation {
+model SystemSetting {
+model ProfitShareRule {
+model Vendor {
+  rfq_vendors           RFQVendor[]
+model PurchaseOrder {
+  rfq_id         String?              @db.Uuid
+  rfq            RFQ?                 @relation(fields: [rfq_id], references: [id])
+model PurchaseOrderItem {
+model SupplierInvoice {
+model SupplierPayment {
+model Payroll {
+model Quotation {
+model Expense {
+model ProjectProgress {
+model AuditLog {
+model SystemLog {
+model IdempotencyKey {
+model WBS {
+model CostCode {
+model Item {
+// Week 5: Full inventory models below
+model Store {
+model InventoryStock {
+model Employee {
+model Vehicle {
+model Equipment {
+model CompanyDocument {
+model FacilityDocument {
+model PurchaseRequisition {
+  rfqs                     RFQ[]
+model PurchaseRequisitionItem {
+model PRApproval {
+model RFQ {
+  rfq_no         String    @unique @db.VarChar(100)
+  creator     User?                @relation("RFQCreator", fields: [created_by], references: [id])
+  vendors         RFQVendor[]
+  @@map("rfqs")
+model RFQVendor {
+  rfq_id          String    @db.Uuid
+  rfq    RFQ    @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
+  @@map("rfq_vendors")
+model VendorQuote {
+  rfq_id        String    @db.Uuid
+  rfq    RFQ    @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
+model VendorQuoteItem {
+model ComparisonEngine {
+  rfq_id              String    @db.Uuid
+  rfq             RFQ     @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
+  comparator      User?   @relation("RFQComparator", fields: [compared_by], references: [id])
+model PettyCashRequest {
+model PettyCashExpense {
+model PetrolExpense {
+model GoodsReceiptNote {
+model GRNItem {
+model StockLedger {
+model MaterialIssue {
+model MaterialIssueItem {
+model ExcessMaterial {
+model BOQItem {
+model DPR {
+model DPRItem {
+model DPRMaterialLink {
+model ResourceLog {
+model HindranceLog {
+model ExecutionTask {
+model RiskRegister {
+model SafetyLog {
+model SafetyJSA {
+model DelayRecord {
+model VariationOrder {
+model VOItem {
+model Claim {
+model RFI {
+model Submittal {
+model MeetingLog {
+model Inspection {
+model ITPPlan {
+model NCR {
+model SafetyIncident {
+model HSEInduction {
+model ProgressInvoice {
+model BillingCycle {
+model CostTracking {
+model ProgressInvoiceItem {
+model ProjectPlan {
+model BOQValidation {
+model ProjectSchedule {
+model ProcurementPlanItem {
+model ResourcePlan {
+model ResourceAllocation {
+model ResourceAllocationStatusLog {
+model AllocationAssignmentLog {
+model ServiceRequest {
+model ServiceRequestStatusLog {
+model InventoryPlanningRequest {
+model LogisticsRequest {
+model LogisticsAllocation {
+model DeliveryTracking {
+model MobilizationLog {
+model Timesheet {
+model ProjectStatusLog {
+model PunchListItem {
+model ProjectClosure {
+  deleted_at          DateTime?          @db.Timestamp(6)
+  deleted_at        DateTime?        @db.Timestamp(6)
+  deleted_at         DateTime?            @db.Timestamp(6)
+  deleted_at           DateTime?         @db.Timestamp(6)
+  deleted_at         DateTime?         @db.Timestamp(6)
+  deleted_at       DateTime?   @db.Timestamp(6)
+  deleted_at     DateTime?             @db.Timestamp(6)
+  deleted_at          DateTime?        @db.Timestamp(6)
+  deleted_at     DateTime? @db.Timestamp(6)
+  deleted_at      DateTime? @db.Timestamp(6)
+  deleted_at    DateTime? @db.Timestamp(6)
+  deleted_at    DateTime? @db.Timestamp(6)
+  deleted_at     DateTime? @db.Timestamp(6)
+  deleted_at   DateTime? @db.Timestamp(6)
+  deleted_at    DateTime? @db.Timestamp(6)
+  deleted_at     DateTime? @db.Timestamp(6)
+  deleted_at  DateTime? @db.Timestamp(6)
+  deleted_at             DateTime? @db.Timestamp(6)
+  deleted_at             DateTime? @db.Timestamp(6)
+  deleted_at                         DateTime? @db.Timestamp(6)
+  deleted_at      DateTime? @db.Timestamp(6)
+  deleted_at  DateTime? @db.Timestamp(6)
+  deleted_at   DateTime? @db.Timestamp(6)
+  deleted_at     DateTime? @db.Timestamp(6)
+  deleted_at       DateTime? @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  deleted_at  DateTime? @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  deleted_at      DateTime? @db.Timestamp(6)
+  deleted_at        DateTime? @db.Timestamp(6)
+  deleted_at        DateTime? @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)

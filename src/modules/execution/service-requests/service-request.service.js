@@ -39,8 +39,7 @@ async function listRequests(filters, user) {
   const finalWhere = {
     ...where,
     ...(status && { status }),
-    ...(project_id && { project_id }),
-    deleted_at: null
+    ...(project_id && { project_id })
   };
 
   return prisma.serviceRequest.findMany({

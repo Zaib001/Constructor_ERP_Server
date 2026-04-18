@@ -35,8 +35,7 @@ async function createDPR(data, userId, companyId) {
     where: { 
       project_id, 
       report_date: new Date(report_date), 
-      shift: shift || 'day',
-      deleted_at: null 
+      shift: shift || 'day' 
     }
   });
   if (existing) {
@@ -86,7 +85,7 @@ async function createDPR(data, userId, companyId) {
 
       // Get cumulative actual from previous DPRs
       const prevActual = await tx.dPRItem.aggregate({
-        where: { wbs_id, dpr: { project_id, deleted_at: null, id: { not: dpr.id } } },
+        where: { wbs_id, dpr: { project_id, id: { not: dpr.id } } },
         _sum: { actual_today_qty: true }
       });
       const cumulative_actual = Number(prevActual?._sum?.actual_today_qty || 0) + Number(actual_today_qty || 0);
@@ -227,7 +226,7 @@ async function updateDPR(id, data, userId, companyId) {
   } = data;
 
   const dpr = await prisma.dPR.findFirst({
-    where: { id, company_id: companyId, deleted_at: null }
+    where: { id, company_id: companyId }
   });
 
   if (!dpr) throw new Error('DPR not found');
@@ -254,7 +253,7 @@ async function updateDPR(id, data, userId, companyId) {
       const { wbs_id, boq_item_id, description, unit, planned_today_qty, actual_today_qty, remarks: iRemark } = item;
       
       const prevActual = await tx.dPRItem.aggregate({
-        where: { wbs_id, dpr: { project_id: dpr.project_id, deleted_at: null, id: { not: id } } },
+        where: { wbs_id, dpr: { project_id: dpr.project_id, id: { not: id } } },
         _sum: { actual_today_qty: true }
       });
       const cumulative_actual = Number(prevActual?._sum?.actual_today_qty || 0) + Number(actual_today_qty || 0);
@@ -390,7 +389,7 @@ async function updateDPR(id, data, userId, companyId) {
 // ─── Submit DPR ───────────────────────────────────────────────────────────────
 async function submitDPR(dpr_id, userId, companyId) {
   const dpr = await prisma.dPR.findFirst({ 
-    where: { id: dpr_id, company_id: companyId, deleted_at: null },
+    where: { id: dpr_id, company_id: companyId },
     include: { items: true }
   });
   if (!dpr) throw new Error('DPR not found');
@@ -436,8 +435,7 @@ async function reviewDPR(dpr_id, action, userId, companyId) {
     const dpr = await tx.dPR.findFirst({ 
       where: { 
         id: dpr_id, 
-        ...(companyId && { company_id: companyId }),
-        deleted_at: null 
+        ...(companyId && { company_id: companyId }) 
       },
       include: { items: true }
     });
@@ -499,7 +497,7 @@ async function reviewDPR(dpr_id, action, userId, companyId) {
 // ─── Get DPR by ID ────────────────────────────────────────────────────────────
 async function getDPRById(id, companyId) {
   return prisma.dPR.findFirst({
-    where: { id, company_id: companyId, deleted_at: null },
+    where: { id, company_id: companyId },
     include: {
       project: { select: { id: true, name: true, code: true } },
       creator: { select: { id: true, name: true } },
@@ -532,7 +530,6 @@ async function getDPRById(id, companyId) {
 async function listDPRs({ project_id, status, from_date, to_date, page = 1, limit = 20 }, companyId) {
   const where = {
     company_id: companyId,
-    deleted_at: null,
     ...(project_id && { project_id }),
     ...(status && { status }),
     ...(from_date || to_date ? {
@@ -561,12 +558,12 @@ async function listDPRs({ project_id, status, from_date, to_date, page = 1, limi
   return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
-// ─── Delete DPR (soft) ────────────────────────────────────────────────────────
+// ─── Delete DPR ──────────────────────────────────────────────────────────────
 async function deleteDPR(id, companyId) {
-  return prisma.dPR.update({
-    where: { id },
-    data: { deleted_at: new Date() }
-  });
+  const dpr = await prisma.dPR.findFirst({ where: { id, company_id: companyId } });
+  if (!dpr) throw new Error('DPR not found or access denied');
+  if (dpr.status !== 'draft') throw new Error('Only draft DPRs can be deleted');
+  return prisma.dPR.delete({ where: { id } });
 }
 
 // ─── Approval Adapter Registration ─────────────────────────────────────────────

@@ -270,7 +270,7 @@ async function findSentRequests(user) {
 
 async function findUserById(userId) {
     const user = await prisma.user.findFirst({
-        where: { id: userId, deleted_at: null, is_active: true },
+        where: { id: userId, is_active: true },
         select: {
             id: true,
             name: true,
@@ -296,7 +296,7 @@ async function findUsersByRole(role_id, department_id, company_id) {
     const role = await prisma.role.findUnique({ where: { id: role_id } });
     const isSuperAdmin = role?.code === "super_admin";
 
-    const whereClause = { role_id, is_active: true, deleted_at: null };
+    const whereClause = { role_id, is_active: true };
     
     // Multi-tenant isolation: every approver must belong to the same company
     // unless it's a Super Admin or global role.

@@ -12,7 +12,7 @@ async function getAllEquipment(user, runningSite, departmentId, page = 1, pageSi
         where = {
             OR: [
                 { ...where },
-                { running_site: null, company_id: user.companyId, deleted_at: null }
+                { running_site: null, company_id: user.companyId }
             ]
         };
     }
@@ -45,7 +45,7 @@ async function getEquipmentById(id, user) {
             id,
             OR: [
                 { ...where },
-                { running_site: null, company_id: user.companyId, deleted_at: null }
+                { running_site: null, company_id: user.companyId }
             ]
         };
     } else {
@@ -106,7 +106,7 @@ async function createEquipment(data, user) {
 
 async function updateEquipment(id, data, user) {
     const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
+    const where = { id };
     if (!isSuperAdmin) where.company_id = companyId;
 
     // 1. Tenant Security
@@ -135,7 +135,7 @@ async function updateEquipment(id, data, user) {
 
 async function deleteEquipment(id, user) {
     const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
+    const where = { id };
     if (!isSuperAdmin) where.company_id = companyId;
 
     const equipment = await prisma.equipment.findFirst({ where });

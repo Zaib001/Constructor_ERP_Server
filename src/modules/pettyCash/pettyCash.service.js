@@ -1,5 +1,5 @@
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES, validateResourceAccess } = require("../../utils/scoping");
 const { requestApproval } = require("../approvals/approvals.service");
 const { registerAdapter } = require("../approvals/approvals.adapter");
 const { updateCostCodeActual, recomputeProjectProgress } = require("../wbs/wbs.service");
@@ -17,7 +17,7 @@ registerAdapter("PETTY_CASH", async ({ docId, status }) => {
 });
 
 async function getAllRequests(user, page, pageSize) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.FINANCE, isWrite: false, projectFilter: true });
 
     const skip = (page - 1) * pageSize;
     return prisma.pettyCashRequest.findMany({
@@ -34,7 +34,7 @@ async function getAllRequests(user, page, pageSize) {
 }
 
 async function getRequestById(id, user) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.FINANCE, isWrite: false, projectFilter: true });
     where.id = id;
 
     return prisma.pettyCashRequest.findFirst({
@@ -130,7 +130,7 @@ async function submitExpense(data, user) {
 }
 
 async function getAllExpenses(user, page, pageSize) {
-    const where = applyDataScope(user, { prefix: "request", projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.FINANCE, isWrite: false, prefix: "request", projectFilter: true });
     
     const skip = (page - 1) * pageSize;
     return prisma.pettyCashExpense.findMany({
@@ -150,7 +150,10 @@ async function verifyExpense(id, data, user) {
         throw new Error("Unauthorized: Role not allowed to verify expenses.");
     }
 
-    const curr = await prisma.pettyCashExpense.findUnique({ where: { id } });
+    const where = applyDataScope(user, { module: MODULES.FINANCE, isWrite: true });
+    where.id = id;
+
+    const curr = await prisma.pettyCashExpense.findFirst({ where });
     if (!curr) throw new Error("Expense not found");
     if (curr.verification_status !== "pending") {
         throw new Error("Expense is already verified or rejected.");
@@ -194,7 +197,7 @@ async function verifyExpense(id, data, user) {
 }
 
 async function updateRequest(id, data, user) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.FINANCE, isWrite: true, projectFilter: true });
     where.id = id;
 
     const request = await prisma.pettyCashRequest.findFirst({ where });

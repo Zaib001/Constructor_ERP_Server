@@ -207,6 +207,12 @@ async function main() {
         { code: "expense.create",                module: "expenses",    description: "Submit expense claims" },
         { code: "expense.verify",                module: "expenses",    description: "Verify / approve expenses" },
         { code: "profitshare.read",              module: "profitshare", description: "View profit share rules" },
+
+        // ── Sales & Estimating ──────────────────────────────────────────────────
+        { code: "quotation.read",                module: "sales",       description: "View client quotations" },
+        { code: "quotation.create",              module: "sales",       description: "Prepare and submit quotations" },
+        { code: "quotation.update",              module: "sales",       description: "Revise existing quotations" },
+        { code: "quotation.archive",             module: "sales",       description: "Archive old bids" },
     ];
 
     const permissions = {};
@@ -234,6 +240,12 @@ async function main() {
         { code: "hr_admin",            name: "HR Administrator",     is_system_role: false },
         { code: "storekeeper",         name: "Storekeeper",          is_system_role: false },
         { code: "fleet_coordinator",   name: "Fleet Coordinator",    is_system_role: false },
+
+        // Manager Tier (Global Scope Read / Company Scope Write)
+        { code: "hr_manager",          name: "Global HR Manager",    is_system_role: false },
+        { code: "procurement_manager", name: "Procurement Manager",   is_system_role: false },
+        { code: "accounts_manager",    name: "Accounts Manager",      is_system_role: false },
+        { code: "sales_manager",       name: "Sales Manager",         is_system_role: false },
     ];
     const roles = {};
     for (const r of roleDefinitions) {
@@ -362,15 +374,21 @@ async function main() {
             "expense.read", "expense.verify",
             "payroll.read",
             "vendor.read",
-            "inventory.read", "inventory.ledger.read",
+            "inventory.read", "inventory.ledger.read", "item.read", "inventory.grn.create", "project.read",
         ],
 
         // HR Admin
         "hr_admin": [
-            "employee.read", "employee.create", "employee.update", "employee.archive",
+            "employee.read", "employee.create", "employee.archive",
             "document.read", "document.create", "document.update",
             "payroll.read", "payroll.process",
-            "user.read", "department.read",
+            "user.read", "user.register", "user.update",
+            "vendor.read", "vendor.create", "vendor.update", "vendor.approve",
+            "inventory.grn.create",
+            "petrol.read", "petrol.verify",
+            "fleet.read", "fleet.create", "fleet.update",
+            "project.read", "system.read", "company.read", "department.read", "delegation.read",
+            "dashboard.company", "dashboard.compliance", "dashboard.department"
         ],
 
         // Storekeeper (Week 5 inventory only)
@@ -385,7 +403,50 @@ async function main() {
         // Fleet Coordinator
         "fleet_coordinator": [
             "fleet.read", "fleet.create", "fleet.update",
-            "petrol.read", "petrol.create",
+            "petrol.read", "petrol.create", "project.read",
+        ],
+
+        // HR Manager: Full HR Visibility
+        "hr_manager": [
+            "approval.read",
+            "employee.read", "employee.create", "employee.update", "employee.archive",
+            "document.read", "document.create", "document.update",
+            "payroll.read", "payroll.process",
+            "expense.read", "expense.verify",
+            "dashboard.company", "dashboard.department", "dashboard.compliance"
+        ],
+
+        // Procurement Manager: Oversight across all procurement
+        "procurement_manager": [
+            "approval.read",
+            "procurement.pr.read", "procurement.rfq.read", "procurement.quote.read",
+            "procurement.comparison.read", "procurement.po.read",
+            "vendor.read", "vendor.create", "vendor.update", 
+            "inventory.read", "item.read",
+            "dashboard.company"
+        ],
+
+        // Accounts Manager: Financial Oversight
+        "accounts_manager": [
+            "approval.read",
+            "pettycash.read", "pettycash.approve",
+            "petrol.read", "petrol.verify",
+            "finance.invoice.read", "finance.invoice.create", "finance.invoice.verify",
+            "finance.match.run", "finance.payment.prepare",
+            "expense.read", "expense.verify",
+            "payroll.read", "profitshare.read",
+            "inventory.ledger.read",
+            "execution.read",
+            "dashboard.company"
+        ],
+
+        // Sales Manager: Projects and Bidding
+        "sales_manager": [
+            "approval.read",
+            "project.read", "wbs.read",
+            "quotation.read", "quotation.create", "quotation.update", "quotation.archive",
+            "procurement.quote.read",
+            "dashboard.company", "dashboard.project"
         ],
     };
 
@@ -461,6 +522,10 @@ async function main() {
         { email: "fleet@erp.com",         name: "Walid Fleet",         role: "fleet_coordinator",    dept: "DEPT-FLT",  company: mainCo.id },
         // Second company admin (isolation test)
         { email: "admin2@megabuild.com",  name: "MegaBuild Admin",     role: "erp_admin",            dept: null,        company: secondCo.id },
+
+        // Manager Tier (Global Testing)
+        { email: "hrmanager@erp.com",     name: "Zaid Global HR",      role: "hr_manager",           dept: "DEPT-ADM",  company: mainCo.id },
+        { email: "procmanager@erp.com",   name: "Lina Global Proc",    role: "procurement_manager",  dept: "DEPT-PRO",  company: mainCo.id },
     ];
 
     const usersCreated = {};
@@ -512,6 +577,8 @@ async function main() {
             { name: "John Doe",      designation: "Foreman",     project_id: neom.id, iqama_no: "2100000001", saudization_status: "expat",   company_id: mainCo.id },
             { name: "Khalid Saud",   designation: "Electrician", project_id: neom.id, iqama_no: "1100000002", saudization_status: "citizen", company_id: mainCo.id },
             { name: "Raj Kumar",     designation: "Carpenter",   project_id: neom.id, iqama_no: "2200000003", saudization_status: "expat",   company_id: mainCo.id },
+            // CROSS-COMPANY EMPLOYEE (For Horizon Testing)
+            { name: "Isolde Isolation", designation: "MegaBuild Tech", iqama_no: "9900000099", saudization_status: "expat", company_id: secondCo.id },
         ]
     });
 
@@ -600,12 +667,12 @@ async function main() {
         await prisma.purchaseRequisition.create({
             data: {
                 pr_no: "PR-2024-0001",
-                project_id: neom.id,
-                requested_by: engineer.id,
-                company_id: mainCo.id,
+                project: { connect: { id: neom.id } },
+                requester: { connect: { id: engineer.id } },
+                company: { connect: { id: mainCo.id } },
                 status: "submitted",
                 reason: "Urgent cement supply needed for NEOM foundation work",
-                items: {
+                purchaseRequisitionItems: {
                     create: [
                         { item_id: sampleItem.id, quantity: 500, remarks: "Needs to be delivered ASAP" },
                     ]

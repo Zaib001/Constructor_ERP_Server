@@ -150,8 +150,7 @@ async function listAllocations(filters, companyId) {
     company_id: companyId,
     ...(project_id && { project_id }),
     ...(department_id && { department_id }),
-    ...(status && { status }),
-    deleted_at: null
+    ...(status && { status })
   };
 
   return prisma.resourceAllocation.findMany({

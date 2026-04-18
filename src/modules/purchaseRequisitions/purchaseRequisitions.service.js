@@ -1,6 +1,6 @@
 "use strict";
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES, validateResourceAccess } = require("../../utils/scoping");
 const { requestApproval } = require("../approvals/approvals.service");
 const { registerAdapter } = require("../approvals/approvals.adapter");
 
@@ -18,7 +18,7 @@ registerAdapter("PR", async ({ docId, status }) => {
 });
 
 async function getAllPRs(user, page, pageSize) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false, projectFilter: true });
 
     const skip = (page - 1) * pageSize;
     const prs = await prisma.purchaseRequisition.findMany({
@@ -41,7 +41,7 @@ async function getAllPRs(user, page, pageSize) {
 }
 
 async function getPRById(id, user) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false, projectFilter: true });
     where.id = id;
 
     const pr = await prisma.purchaseRequisition.findFirst({
@@ -80,8 +80,7 @@ async function createPR(data, user) {
     if (!data.items || !data.items.length) throw new Error("PR must contain at least one item");
 
     // Validate Project Assignment & Tenant Integrity
-    const { validateResourceAccess } = require("../../utils/scoping");
-    await validateResourceAccess(prisma, "project", data.project_id, user);
+    await validateResourceAccess(prisma, "project", data.project_id, user, { module: MODULES.PROJECTS, isWrite: false });
 
     const project = await prisma.project.findUnique({ where: { id: data.project_id } });
     if (!project) throw new Error(`Reference project record not found for ID: ${data.project_id}`);
@@ -146,7 +145,10 @@ async function createPR(data, user) {
 }
 
 async function approvePR(id, data, user) {
-    const pr = await prisma.purchaseRequisition.findUnique({ where: { id } });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true, projectFilter: true });
+    where.id = id;
+
+    const pr = await prisma.purchaseRequisition.findFirst({ where });
     if (!pr) throw new Error("PR not found");
 
     const actor = await prisma.user.findUnique({ where: { id: user.id }, include: { roles: true }});
@@ -184,7 +186,7 @@ async function approvePR(id, data, user) {
 
 
 async function updatePR(id, data, user) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true, projectFilter: true });
     where.id = id;
 
     const pr = await prisma.purchaseRequisition.findFirst({ where });
@@ -237,7 +239,7 @@ async function updatePR(id, data, user) {
 }
 
 async function submitPR(id, user) {
-    const where = applyDataScope(user, { projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true, projectFilter: true });
     where.id = id;
 
     const pr = await prisma.purchaseRequisition.findFirst({ where });

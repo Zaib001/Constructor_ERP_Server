@@ -27,7 +27,7 @@ async function getProgressByProject(projectId, user) {
     const [executionOverview, recentLogs] = await Promise.all([
         // 1. Get high-level WBS nodes (Execution Overview)
         prisma.wBS.findMany({
-            where: { project_id: projectId, parent_id: null, deleted_at: null },
+            where: { project_id: projectId, parent_id: null },
             select: { id: true, name: true, progress_pct: true, wbs_code: true },
             orderBy: { wbs_code: "asc" }
         }),

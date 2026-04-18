@@ -46,7 +46,7 @@ async function resolveApprover(roleId, requestedBy, departmentId, companyId) {
         
         if (dept?.head_id && dept.head_id !== requestedBy) {
             const headUser = await prisma.user.findFirst({
-                where: { id: dept.head_id, role_id: roleId, deleted_at: null }
+                where: { id: dept.head_id, role_id: roleId }
             });
             if (headUser) return { userId: headUser.id, delegated: false };
         }
@@ -310,7 +310,7 @@ async function getInbox(userCtx, statusFilter, page = 1, pageSize = 10, reqDepar
 
     // New: Allow Admins to see all sent requests (Isolated by company)
     if (isAdmin && filter === "all_sent") {
-        const where = { deleted_at: null };
+        const where = { };
         if (roleCode === "erp_admin" && user.company_id) {
             where.requestedByRel = { company_id: user.company_id };
         }

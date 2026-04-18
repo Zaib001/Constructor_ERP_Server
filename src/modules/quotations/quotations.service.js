@@ -27,8 +27,7 @@ async function getAllQuotations(user, page = 1, pageSize = 50) {
 
     const skip = (page - 1) * pageSize;
     const where = { 
-        deleted_at: null 
-    };
+        };
 
     if (!isSuperAdmin) {
         where.company_id = companyId;
@@ -48,7 +47,7 @@ async function getAllQuotations(user, page = 1, pageSize = 50) {
 
 async function getQuotationById(id, user) {
     const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
+    const where = { id };
     if (!isSuperAdmin) {
         where.company_id = companyId;
     }
@@ -105,7 +104,7 @@ async function createQuotation(data, user) {
 
 async function updateQuotation(id, data, user) {
     const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
+    const where = { id };
     if (!isSuperAdmin) where.company_id = companyId;
 
     const quote = await prisma.quotation.findFirst({ where });

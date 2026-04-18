@@ -50,7 +50,7 @@ async function createPO(req, res, next) {
 
 async function issuePO(req, res, next) {
     try {
-        const po = await purchaseOrdersService.issuePO(req.params.id, req.user.id);
+        const po = await purchaseOrdersService.issuePO(req.params.id, req.user);
         return res.status(200).json({ success: true, data: po });
     } catch (err) {
         logger.error("Error in issuePO:", err);

@@ -3,7 +3,7 @@ const { applyDataScope } = require("../../utils/scoping");
 
 async function getAllWBS(user, projectId, page = 1, pageSize = 50) {
     const skip = (page - 1) * pageSize;
-    const where = applyDataScope(user, { projectFilter: true, prefix: "project", rootSoftDelete: true });
+    const where = applyDataScope(user, { projectFilter: true, prefix: "project" });
 
     if (projectId) {
         where.project_id = projectId;
@@ -16,7 +16,7 @@ async function getAllWBS(user, projectId, page = 1, pageSize = 50) {
             take: pageSize,
             include: {
                 parent: { select: { name: true, wbs_code: true } },
-                cost_codes: { where: { deleted_at: null } }
+                cost_codes: { where: { } }
             },
             orderBy: { created_at: "asc" } // In a perfect setup, this orders by wbs_code naturally with a numeric sort, but string sort works for most basic schemas.
         }),
@@ -45,15 +45,15 @@ async function getAllWBS(user, projectId, page = 1, pageSize = 50) {
 }
 
 async function getWBSById(id, user) {
-    const where = applyDataScope(user, { projectFilter: true, prefix: "project", rootSoftDelete: true });
+    const where = applyDataScope(user, { projectFilter: true, prefix: "project" });
     where.id = id;
 
     return await prisma.wBS.findFirst({
         where,
         include: {
             parent: { select: { name: true } },
-            children: { where: { deleted_at: null } },
-            cost_codes: { where: { deleted_at: null } },
+            children: { where: { } },
+            cost_codes: { where: { } },
             project: { select: { name: true, code: true } }
         }
     });
@@ -78,17 +78,17 @@ async function createWBS(data, user) {
     let wbsCode = "1";
     if (data.parent_id) {
         const parent = await prisma.wBS.findFirst({
-            where: { id: data.parent_id, project_id: data.project_id, deleted_at: null }
+            where: { id: data.parent_id, project_id: data.project_id }
         });
         if (!parent) throw new Error("Hierarchy Error: Parent WBS node not found in this project.");
 
         const childCount = await prisma.wBS.count({
-            where: { parent_id: data.parent_id, deleted_at: null }
+            where: { parent_id: data.parent_id }
         });
         wbsCode = `${parent.wbs_code || "0"}.${childCount + 1}`;
     } else {
         const rootCount = await prisma.wBS.count({
-            where: { project_id: data.project_id, parent_id: null, deleted_at: null }
+            where: { project_id: data.project_id, parent_id: null }
         });
         wbsCode = `${rootCount + 1}`;
     }
@@ -128,7 +128,7 @@ async function updateWBS(id, data, user) {
     // 2. Circular Hierarchy Check
     if (data.parent_id) {
         let current = await prisma.wBS.findFirst({
-            where: { id: data.parent_id, project_id: node.project_id, deleted_at: null }
+            where: { id: data.parent_id, project_id: node.project_id }
         });
         if (!current) throw new Error("Hierarchy Error: New parent not found or in different project.");
 
@@ -161,34 +161,14 @@ async function updateWBS(id, data, user) {
 }
 
 async function deleteWBS(id, user) {
-    const where = applyDataScope(user, { projectFilter: true, prefix: "project", rootSoftDelete: true });
+    const where = applyDataScope(user, { projectFilter: true, prefix: "project" });
     where.id = id;
 
     const node = await prisma.wBS.findFirst({ where });
     if (!node) throw new Error("WBS node not found or access denied.");
 
-    // 2. Recursive Soft Delete via Transaction
-    return await prisma.$transaction(async (tx) => {
-        const now = new Date();
-
-        // 2a. Identify all descendants (simplified for enterprise scale: just mark direct for now, 
-        // usually would needs a hierarchy query or triggering cascade update)
-        // For Enterprise: We mark current node, and children are effectively "hidden" in reads.
-        const deleted = await tx.wBS.update({
-            where: { id },
-            data: { deleted_at: now }
-        });
-
-        // 2b. Mark cost codes
-        await tx.costCode.updateMany({
-            where: { wbs_id: id },
-            data: { deleted_at: now }
-        });
-
-        // 2c. If enterprise scale requires marking all sub-children, we'd loop or use a CTE.
-        // For this hardening, marking the parent node and filtering by parent.deleted_at in reads is standard.
-        return deleted;
-    });
+    // Hard delete: children and cost codes are cascade-deleted by the DB
+    return await prisma.wBS.delete({ where: { id } });
 }
 
 // Cost Codes
@@ -207,7 +187,7 @@ async function createCostCode(data, user) {
 
     // 2. Prevent duplicate categories (active ones only)
     const existing = await prisma.costCode.findFirst({
-        where: { wbs_id: data.wbs_id, category: data.category, deleted_at: null }
+        where: { wbs_id: data.wbs_id, category: data.category }
     });
     if (existing) throw new Error(`Constraint Error: This WBS node already has a active '${data.category}' cost category.`);
 
@@ -223,14 +203,11 @@ async function deleteCostCode(id, user) {
     const where = applyDataScope(user, { projectFilter: true, prefix: "wbs.project" });
 
     const code = await prisma.costCode.findFirst({
-        where: { id, deleted_at: null, ...where }
+        where: { id, ...where }
     });
     if (!code) throw new Error("Cost code not found or access denied.");
 
-    return await prisma.costCode.update({
-        where: { id },
-        data: { deleted_at: new Date() }
-    });
+    return await prisma.costCode.delete({ where: { id } });
 }
 
 // Update Budget
@@ -238,7 +215,7 @@ async function updateCostCodeBudget(id, amount, user) {
     const where = applyDataScope(user, { projectFilter: true, prefix: "wbs.project" });
 
     const code = await prisma.costCode.findFirst({
-        where: { id, deleted_at: null, ...where },
+        where: { id, ...where },
         include: { wbs: true }
     });
     if (!code) throw new Error("Cost code not found or access denied.");
@@ -274,7 +251,7 @@ async function updateCostCodeActual(tx, wbs_id, category, amount, costCodeId = n
  */
 async function recomputeProjectProgress(tx, project_id) {
     const rootWBS = await tx.wBS.findMany({
-        where: { project_id, parent_id: null, deleted_at: null }
+        where: { project_id, parent_id: null }
     });
     if (!rootWBS.length) return;
 

@@ -1,12 +1,14 @@
 const prisma = require('../../../db');
 const { Prisma } = require('@prisma/client');
+const { applyDataScope, MODULES, validateResourceAccess } = require('../../../utils/scoping');
 
 function generateInvoiceNo(projectCode, count) {
   return `INV-${projectCode || 'PRJ'}-${String(count + 1).padStart(4, '0')}`;
 }
 
 // ─── Billing Cycles ───────────────────────────────────────────────────────────
-async function createBillingCycle(data, companyId) {
+async function createBillingCycle(data, user) {
+  const companyId = user.isSuperAdmin ? (data.company_id || user.companyId) : user.companyId;
   return prisma.billingCycle.create({
     data: {
       ...data,
@@ -17,23 +19,26 @@ async function createBillingCycle(data, companyId) {
   });
 }
 
-async function listBillingCycles(projectId, companyId) {
+async function listBillingCycles(projectId, user) {
+  // BillingCycle has no deleted_at column
+  const where = applyDataScope(user, { module: MODULES.EXECUTION, isWrite: false, noSoftDelete: true });
+  where.project_id = projectId;
+
   return prisma.billingCycle.findMany({
-    where: { project_id: projectId, company_id: companyId },
+    where,
     orderBy: { start_date: 'desc' },
     include: { _count: { select: { invoices: true } } }
   });
 }
 
 // ─── Create Progress Invoice ──────────────────────────────────────────────────
-async function createProgressInvoice(data, userId, companyId) {
+async function createProgressInvoice(data, user) {
+  const { id: userId, companyId } = user;
   const {
     project_id, cycle_id, invoice_date, notes
   } = data;
 
-  const project = await prisma.project.findFirst({
-    where: { id: project_id, company_id: companyId }
-  });
+  await validateResourceAccess(prisma, "project", project_id, user, { module: MODULES.PROJECTS, isWrite: false });
   if (!project) throw new Error('Project not found');
 
   const cycle = cycle_id ? await prisma.billingCycle.findUnique({ where: { id: cycle_id } }) : null;
@@ -139,12 +144,11 @@ async function createProgressInvoice(data, userId, companyId) {
 }
 
 // ─── List Progress Invoices ───────────────────────────────────────────────────
-async function listInvoices({ project_id, status, page = 1, limit = 20 }, companyId) {
-  const where = {
-    company_id: companyId,
-    ...(project_id && { project_id }),
-    ...(status && { status }),
-  };
+async function listInvoices({ project_id, status, page = 1, limit = 20 }, user) {
+  // ProgressInvoice has no deleted_at column
+  const where = applyDataScope(user, { module: MODULES.EXECUTION, isWrite: false, noSoftDelete: true });
+  if (project_id) where.project_id = project_id;
+  if (status) where.status = status;
 
   const [data, total] = await Promise.all([
     prisma.progressInvoice.findMany({
@@ -162,9 +166,13 @@ async function listInvoices({ project_id, status, page = 1, limit = 20 }, compan
 }
 
 // ─── Get Invoice ─────────────────────────────────────────────────────────────
-async function getInvoiceById(id, companyId) {
+async function getInvoiceById(id, user) {
+  // ProgressInvoice has no deleted_at column
+  const where = applyDataScope(user, { module: MODULES.EXECUTION, isWrite: false, noSoftDelete: true });
+  where.id = id;
+
   return prisma.progressInvoice.findFirst({
-    where: { id, company_id: companyId },
+    where,
     include: {
       items: { include: { wbs: { select: { id: true, name: true, wbs_code: true } } } },
       project: { select: { id: true, name: true, code: true, client: true, contract_value: true } },
@@ -174,7 +182,8 @@ async function getInvoiceById(id, companyId) {
 }
 
 // ─── Submit / Certify Invoice ─────────────────────────────────────────────────
-async function updateInvoiceStatus(id, action, data, companyId) {
+async function updateInvoiceStatus(id, action, data, user) {
+  await validateResourceAccess(prisma, "progressInvoice", id, user, { module: MODULES.EXECUTION, isWrite: true });
   const statusMap = { submit: 'submitted', certify: 'certified', pay: 'paid', reject: 'rejected' };
   const newStatus = statusMap[action];
   if (!newStatus) throw new Error('Invalid action');

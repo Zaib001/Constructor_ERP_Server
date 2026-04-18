@@ -1,5 +1,5 @@
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES, validateResourceAccess } = require("../../utils/scoping");
 const { registerAdapter } = require("../approvals/approvals.adapter");
 const { requestApproval } = require("../approvals/approvals.service");
 
@@ -22,7 +22,7 @@ registerAdapter("PAYROLL", async ({ docId, status }) => {
 
 async function getAllPayrolls(user, page = 1, pageSize = 50) {
     const skip = (page - 1) * pageSize;
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.HR, isWrite: false });
     
     return await prisma.payroll.findMany({
         where,
@@ -36,7 +36,7 @@ async function getAllPayrolls(user, page = 1, pageSize = 50) {
 }
 
 async function getPayrollById(id, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.HR, isWrite: false });
     where.id = id;
 
     return await prisma.payroll.findFirst({
@@ -85,7 +85,7 @@ async function createPayroll(data, user) {
 }
 
 async function updatePayroll(id, data, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.HR, isWrite: true });
     where.id = id;
 
     const payroll = await prisma.payroll.findFirst({ where });

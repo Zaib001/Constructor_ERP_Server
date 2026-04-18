@@ -6,7 +6,6 @@ async function getAllCompanies(user, page = 1, pageSize = 10, search = "") {
     if (!user.isSuperAdmin) throw new Error("Unauthorized: Super Admin access required.");
     const skip = (page - 1) * pageSize;
     const where = {
-        deleted_at: null,
         is_active: true,
         OR: search ? [
             { name: { contains: search, mode: "insensitive" } },
@@ -106,7 +105,7 @@ async function getCompanyPerformance(id, user) {
                 }
             },
             users: {
-                where: { deleted_at: null },
+                where: { },
                 select: { id: true, name: true, email: true, designation: true, employee_code: true, phone: true, is_active: true, role_id: true, roles: { select: { id: true, name: true } }, departments: { select: { id: true, name: true } } }
             }
         }

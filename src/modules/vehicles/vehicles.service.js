@@ -12,7 +12,7 @@ async function getAllVehicles(user, runningSite, departmentId, page = 1, pageSiz
         where = {
             OR: [
                 { ...where },
-                { running_site: null, company_id: user.companyId, deleted_at: null }
+                { running_site: null, company_id: user.companyId }
             ]
         };
     }
@@ -45,7 +45,7 @@ async function getVehicleById(id, user) {
             id,
             OR: [
                 { ...where },
-                { running_site: null, company_id: user.companyId, deleted_at: null }
+                { running_site: null, company_id: user.companyId }
             ]
         };
     } else {
@@ -115,7 +115,7 @@ async function createVehicle(data, user) {
 
 async function updateVehicle(id, data, user) {
     const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
+    const where = { id };
     if (!isSuperAdmin) where.company_id = companyId;
 
     // 1. Tenant Security
@@ -147,7 +147,7 @@ async function updateVehicle(id, data, user) {
 
 async function deleteVehicle(id, user) {
     const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
+    const where = { id };
     if (!isSuperAdmin) where.company_id = companyId;
 
     const vehicle = await prisma.vehicle.findFirst({ where });

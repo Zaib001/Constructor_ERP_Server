@@ -71,10 +71,7 @@ async function deleteItem(id, user) {
     const item = await prisma.item.findFirst({ where });
     if (!item) throw new Error("Item not found or access denied.");
 
-    return await prisma.item.update({
-        where: { id },
-        data: { deleted_at: new Date() }
-    });
+    return await prisma.item.delete({ where: { id } });
 }
 
 module.exports = {

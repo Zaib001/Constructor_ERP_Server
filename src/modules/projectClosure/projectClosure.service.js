@@ -11,7 +11,7 @@ async function checkReadiness(projectId, user) {
     const project = await prisma.project.findFirst({
         where: { ...where, id: projectId },
         include: {
-            wbs: { where: { deleted_at: null } },
+            wbs: { where: { } },
             execution_tasks: { where: { status: { notIn: ['completed', 'verified'] } } },
             ncrs: { where: { status: { not: 'closed' } } },
             punch_list_items: { where: { status: { not: 'verified' } } },

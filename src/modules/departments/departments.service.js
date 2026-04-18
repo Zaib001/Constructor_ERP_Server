@@ -32,7 +32,7 @@ async function getDepartmentById(id, user) {
         include: {
             company: { select: { id: true, name: true } },
             users: {
-                where: { deleted_at: null, is_active: true },
+                where: { is_active: true },
                 select: { id: true, name: true, designation: true, email: true }
             }
         }
@@ -115,7 +115,6 @@ async function deleteDepartment(id, user) {
                 select: { 
                     users: { 
                         where: { 
-                            deleted_at: null, 
                             is_active: true 
                         } 
                     } 

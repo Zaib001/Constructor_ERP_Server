@@ -12,7 +12,7 @@ const STATUSES = {
 
 async function getPipelineData(companyId) {
   const projects = await prisma.project.findMany({
-    where: { company_id: companyId, deleted_at: null },
+    where: { company_id: companyId, status: { not: 'archived' } },
     select: {
       id: true,
       code: true,
@@ -123,7 +123,7 @@ async function getStatusHistory(projectId) {
  */
 async function triggerAutoUpdates(companyId) {
     const projects = await prisma.project.findMany({
-        where: { company_id: companyId, deleted_at: null },
+        where: { company_id: companyId, status: { not: 'archived' } },
         include: {
             progress: { orderBy: { created_at: 'desc' }, take: 1 },
             dprs: { take: 1 } // Check if any DPR exists

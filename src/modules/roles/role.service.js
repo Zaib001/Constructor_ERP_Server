@@ -19,7 +19,7 @@ async function createRole(data, actorId, ipAddress, deviceInfo) {
 
     // Enforce unique code (case-insensitive)
     const existing = await prisma.role.findFirst({
-        where: { code: { equals: code, mode: "insensitive" }, deleted_at: null },
+        where: { code: { equals: code, mode: "insensitive" } },
     });
     if (existing) {
         throw createAppError(`Role code '${code}' is already in use`, 400);
@@ -57,7 +57,7 @@ async function createRole(data, actorId, ipAddress, deviceInfo) {
 // ─── Update Role ──────────────────────────────────────────────────────────────
 
 async function updateRole(id, data, actorId, ipAddress, deviceInfo, isSuperAdmin = false) {
-    const role = await prisma.role.findFirst({ where: { id, deleted_at: null } });
+    const role = await prisma.role.findFirst({ where: { id } });
     if (!role) throw createAppError("Role not found", 404);
     
     if (role.is_system_role && !isSuperAdmin) {
@@ -96,7 +96,7 @@ async function updateRole(id, data, actorId, ipAddress, deviceInfo, isSuperAdmin
 // ─── Delete Role (Soft) ───────────────────────────────────────────────────────
 
 async function deleteRole(id, actorId, ipAddress, deviceInfo) {
-    const role = await prisma.role.findFirst({ where: { id, deleted_at: null } });
+    const role = await prisma.role.findFirst({ where: { id } });
     if (!role) throw createAppError("Role not found", 404);
     if (role.is_system_role) {
         throw createAppError("System roles cannot be deleted", 403);
@@ -104,7 +104,7 @@ async function deleteRole(id, actorId, ipAddress, deviceInfo) {
 
     // Check if any active users are still assigned this role
     const usersWithRole = await prisma.user.count({
-        where: { role_id: id, deleted_at: null, is_active: true },
+        where: { role_id: id, is_active: true },
     });
     if (usersWithRole > 0) {
         throw createAppError(
@@ -115,7 +115,7 @@ async function deleteRole(id, actorId, ipAddress, deviceInfo) {
 
     await prisma.role.update({
         where: { id },
-        data: { deleted_at: new Date(), is_active: false, updated_at: new Date() },
+        data: { is_active: false, updated_at: new Date() },
     });
 
     await logAudit({
@@ -125,18 +125,18 @@ async function deleteRole(id, actorId, ipAddress, deviceInfo) {
         entityId: id,
         action: "DELETE_ROLE",
         beforeData: { name: role.name, code: role.code },
-        afterData: { deleted_at: new Date().toISOString() },
+        afterData: { is_active: false },
         ipAddress,
         deviceInfo,
     });
 
-    logger.info(`Role soft-deleted: ${id} by ${actorId}`);
+    logger.info(`Role deactivated: ${id} by ${actorId}`);
 }
 
 // ─── Get All Roles ────────────────────────────────────────────────────────────
 
 async function getRoles(user) {
-    const where = { is_active: true, deleted_at: null };
+    const where = { is_active: true };
     
     // Security: Non-superadmins should not see or be able to assign the super_admin role
     if (user && !user.isSuperAdmin) {
@@ -169,7 +169,7 @@ async function getRoles(user) {
 
 async function getRoleById(id) {
     const role = await prisma.role.findFirst({
-        where: { id, deleted_at: null },
+        where: { id },
         include: {
             role_permissions: {
                 include: { permissions: true },
@@ -184,7 +184,7 @@ async function getRoleById(id) {
 
 async function assignPermissions(roleId, permissionCodes, actorId, ipAddress, deviceInfo, isSuperAdmin = false) {
     // Validate role exists & is not soft-deleted
-    const role = await prisma.role.findFirst({ where: { id: roleId, deleted_at: null } });
+    const role = await prisma.role.findFirst({ where: { id: roleId } });
     if (!role) throw createAppError("Role not found", 404);
 
     if (role.is_system_role && !isSuperAdmin) {
@@ -255,7 +255,7 @@ async function assignPermissions(roleId, permissionCodes, actorId, ipAddress, de
 // ─── Get Role Permissions ─────────────────────────────────────────────────────
 
 async function getRolePermissions(roleId) {
-    const role = await prisma.role.findFirst({ where: { id: roleId, deleted_at: null } });
+    const role = await prisma.role.findFirst({ where: { id: roleId } });
     if (!role) throw createAppError("Role not found", 404);
 
     const rolePerms = await prisma.rolePermission.findMany({

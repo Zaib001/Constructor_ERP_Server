@@ -1,7 +1,7 @@
 "use strict";
 
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES, validateResourceAccess } = require("../../utils/scoping");
 const { logAudit } = require("../../utils/auditLogger");
 const { updateCostCodeActual, recomputeProjectProgress } = require("../wbs/wbs.service");
 
@@ -35,7 +35,7 @@ async function _generateIssueNo(tx, companyId) {
 }
 
 async function _scopedFind(tx, model, id, companyId, extraWhere = {}) {
-    const where = { id, deleted_at: null, ...extraWhere };
+    const where = { id, ...extraWhere };
     
     // Some models (WBS, CostCode) scope through their parents instead of direct company_id
     if (model === "wBS") {
@@ -68,6 +68,11 @@ async function _scopedFind(tx, model, id, companyId, extraWhere = {}) {
  */
 async function createGRN(data, user, ipAddress, deviceInfo) {
     const { poId, storeId, vendorDn, remarks, items } = data;
+    
+    // Validate write access to target records
+    await validateResourceAccess(prisma, "purchaseOrder", poId, user, { module: MODULES.PROCUREMENT, isWrite: true });
+    await validateResourceAccess(prisma, "store", storeId, user, { module: MODULES.INVENTORY, isWrite: true });
+    
     const { companyId, id: userId } = user;
 
     const grn = await prisma.$transaction(async (tx) => {
@@ -228,6 +233,11 @@ async function createGRN(data, user, ipAddress, deviceInfo) {
  */
 async function createMaterialIssue(data, user, ipAddress, deviceInfo) {
     const { projectId, wbsId, storeId, items } = data;
+    
+    // Validate write access to target records
+    await validateResourceAccess(prisma, "project", projectId, user, { module: MODULES.PROJECTS, isWrite: false }); // Reading project context
+    await validateResourceAccess(prisma, "store", storeId, user, { module: MODULES.INVENTORY, isWrite: true });
+    
     const { companyId, id: userId } = user;
 
     const issue = await prisma.$transaction(async (tx) => {
@@ -336,13 +346,10 @@ async function createMaterialIssue(data, user, ipAddress, deviceInfo) {
 // ─── getStockSnapshot ─────────────────────────────────────────────────────────
 async function getStockSnapshot(user, filters = {}) {
     const { storeId, itemId, page = 1, pageSize = 20 } = filters;
-    const { companyId } = user;
+    const where = applyDataScope(user, { module: MODULES.INVENTORY, isWrite: false, noSoftDelete: true });
 
-    const where = {
-        company_id: companyId,
-        ...(storeId && { store_id: storeId }),
-        ...(itemId && { item_id: itemId })
-    };
+    if (storeId) where.store_id = storeId;
+    if (itemId) where.item_id = itemId;
 
     const [data, total] = await Promise.all([
         prisma.inventoryStock.findMany({
@@ -364,14 +371,11 @@ async function getStockSnapshot(user, filters = {}) {
 // ─── getStockLedger ───────────────────────────────────────────────────────────
 async function getStockLedger(user, itemId, filters = {}) {
     const { storeId, moveType, page = 1, pageSize = 50 } = filters;
-    const { companyId } = user;
+    const where = applyDataScope(user, { module: MODULES.INVENTORY, isWrite: false, noSoftDelete: true });
 
-    const where = {
-        company_id: companyId,
-        item_id: itemId,
-        ...(storeId && { store_id: storeId }),
-        ...(moveType && { move_type: moveType })
-    };
+    where.item_id = itemId;
+    if (storeId) where.store_id = storeId;
+    if (moveType) where.move_type = moveType;
 
     const [data, total] = await Promise.all([
         prisma.stockLedger.findMany({
@@ -393,7 +397,7 @@ async function getStockLedger(user, itemId, filters = {}) {
 // ─── getGRNList ───────────────────────────────────────────────────────────────
 async function getGRNList(user, filters = {}) {
     const { poId, storeId, page = 1, pageSize = 20 } = filters;
-    const where = applyDataScope(user, { noSoftDelete: true });
+    const where = applyDataScope(user, { module: MODULES.INVENTORY, isWrite: false, noSoftDelete: true });
 
     if (poId) where.po_id = poId;
     if (storeId) where.store_id = storeId;
@@ -422,7 +426,7 @@ async function getGRNList(user, filters = {}) {
 // ─── getIssueList ─────────────────────────────────────────────────────────────
 async function getIssueList(user, filters = {}) {
     const { projectId, wbsId, storeId, page = 1, pageSize = 20 } = filters;
-    const where = applyDataScope(user, { noSoftDelete: true });
+    const where = applyDataScope(user, { module: MODULES.INVENTORY, isWrite: false, noSoftDelete: true });
 
     if (projectId) where.project_id = projectId;
     if (wbsId) where.wbs_id = wbsId;
@@ -463,7 +467,6 @@ async function getPRs(user, projectId, page = 1, pageSize = 20) {
     const scopeWhere = applyDataScope(user, { projectFilter: true });
     const where = {
         ...scopeWhere,
-        deleted_at: null,
         ...(projectId ? { project_id: projectId } : {})
     };
     const [data, total] = await Promise.all([
@@ -483,22 +486,24 @@ async function getExcess(user, page = 1, pageSize = 20) {
 
     const [data, total] = await Promise.all([
         prisma.excessMaterial.findMany({
-            where: { company_id: companyId, deleted_at: null },
+            where: { company_id: companyId },
             include: { item: { select: { id: true, name: true, unit: true } } },
             orderBy: { created_at: "desc" },
             skip,
             take: pageSize
         }),
-        prisma.excessMaterial.count({ where: { company_id: companyId, deleted_at: null } })
+        prisma.excessMaterial.count({ where: { company_id: companyId } })
     ]);
 
     return { data, total, page, pageSize };
 }
 
 async function getStores(user) {
-    const { companyId } = user;
+    const where = applyDataScope(user, { module: MODULES.INVENTORY, isWrite: false });
+    where.is_active = true;
+    
     return await prisma.store.findMany({
-        where: { company_id: companyId, deleted_at: null, is_active: true },
+        where,
         orderBy: { name: "asc" }
     });
 }
@@ -537,10 +542,8 @@ async function updateStore(user, id, data) {
 
 async function deleteStore(user, id) {
     const { companyId } = user;
-    // Logical soft delete
-    return await prisma.store.updateMany({
-        where: { id, company_id: companyId },
-        data: { deleted_at: new Date() }
+    return await prisma.store.deleteMany({
+        where: { id, company_id: companyId }
     });
 }
 

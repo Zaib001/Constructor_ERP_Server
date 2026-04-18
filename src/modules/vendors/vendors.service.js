@@ -1,6 +1,6 @@
 "use strict";
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES } = require("../../utils/scoping");
 const { registerAdapter } = require("../approvals/approvals.adapter");
 const { requestApproval } = require("../approvals/approvals.service");
 
@@ -22,7 +22,7 @@ registerAdapter("VENDOR", async ({ docId, status }) => {
 });
 
 async function getAllVendors(user, page = 1, pageSize = 50) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false });
 
     const skip = (page - 1) * pageSize;
     
@@ -44,7 +44,7 @@ async function getAllVendors(user, page = 1, pageSize = 50) {
 }
 
 async function getVendorById(id, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false });
     where.id = id;
 
     return await prisma.vendor.findFirst({
@@ -53,7 +53,7 @@ async function getVendorById(id, user) {
             company: { select: { name: true, code: true } },
             creator: { select: { name: true } },
             purchase_orders: {
-                where: { deleted_at: null },
+                where: { },
                 take: 10,
                 orderBy: { created_at: "desc" }
             }
@@ -74,8 +74,7 @@ async function createVendor(data, user) {
     const existing = await prisma.vendor.findFirst({
         where: {
             name: { equals: data.name, mode: "insensitive" },
-            company_id: companyId,
-            deleted_at: null
+            company_id: companyId
         }
     });
     if (existing) {
@@ -117,7 +116,7 @@ async function createVendor(data, user) {
 }
 
 async function updateVendor(id, data, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true });
     where.id = id;
 
     const vendor = await prisma.vendor.findFirst({ where });
@@ -146,7 +145,7 @@ async function updateVendor(id, data, user) {
 }
 
 async function suspendVendor(id, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true });
     where.id = id;
 
     const vendor = await prisma.vendor.findFirst({ where });
@@ -162,7 +161,7 @@ async function suspendVendor(id, user) {
 }
 
 async function deactivateVendor(id, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true });
     where.id = id;
 
     const vendor = await prisma.vendor.findFirst({ where });
@@ -178,7 +177,7 @@ async function deactivateVendor(id, user) {
 }
 
 async function deleteVendor(id, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true });
     where.id = id;
 
     const vendor = await prisma.vendor.findFirst({ where });
@@ -194,7 +193,7 @@ async function deleteVendor(id, user) {
 }
 
 async function approveVendor(id, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true });
     where.id = id;
 
     const vendor = await prisma.vendor.findFirst({ where });

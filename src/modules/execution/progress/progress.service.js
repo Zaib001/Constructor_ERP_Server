@@ -1,5 +1,6 @@
 const prisma = require('../../../db');
 const { Prisma } = require('@prisma/client');
+const { applyDataScope, MODULES } = require('../../../utils/scoping');
 
 /**
  * Full project progress summary with SPI, CPI, planned vs actual.
@@ -15,17 +16,20 @@ const { Prisma } = require('@prisma/client');
  *   - FAC = AC + ((1 - progress_pct/100) * remaining_budget)
  *   - VAC = budget - FAC
  */
-async function getProjectProgress(project_id, company_id) {
+async function getProjectProgress(project_id, user) {
+  const whereProject = applyDataScope(user, { module: MODULES.EXECUTION, isWrite: false });
+  whereProject.id = project_id;
+
   const project = await prisma.project.findFirst({
-    where: { id: project_id, company_id, deleted_at: null },
+    where: whereProject,
     include: {
       wbs: {
-        where: { deleted_at: null },
+        where: { },
         include: {
           cost_codes: true,
           boq_items: true,
           children: {
-            where: { deleted_at: null },
+            where: { },
             include: { cost_codes: true, boq_items: true }
           }
         }
@@ -33,6 +37,8 @@ async function getProjectProgress(project_id, company_id) {
     }
   });
   if (!project) throw new Error('Project not found');
+
+  const company_id = project.company_id;
 
   // BOQ totals
   const allBOQ = await prisma.bOQItem.findMany({ where: { project_id, company_id } });
@@ -78,7 +84,7 @@ async function getProjectProgress(project_id, company_id) {
 
   // DPR history for S-curve (last 90 days)
   const dprHistory = await prisma.dPR.findMany({
-    where: { project_id, company_id, deleted_at: null, status: { in: ['approved', 'submitted'] } },
+    where: { project_id, company_id, status: { in: ['approved', 'submitted'] } },
     orderBy: { report_date: 'asc' },
     select: { report_date: true, items: { select: { actual_today_qty: true, cumulative_actual: true, progress_pct: true } } }
   });
@@ -138,9 +144,15 @@ async function getProjectProgress(project_id, company_id) {
   };
 }
 
-async function getWBSProgress(project_id, company_id) {
+async function getWBSProgress(project_id, user) {
+  const whereProject = applyDataScope(user, { module: MODULES.EXECUTION, isWrite: false });
+  whereProject.id = project_id;
+
+  const projectExists = await prisma.project.findFirst({ where: whereProject });
+  if (!projectExists) throw new Error('Project not found or access denied');
+
   const wbsItems = await prisma.wBS.findMany({
-    where: { project_id, deleted_at: null },
+    where: { project_id },
     include: {
       cost_codes: true,
       boq_items: true,

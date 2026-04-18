@@ -8,8 +8,8 @@ const requireSuperAdmin = require("../../middleware/requireSuperAdmin");
 
 const router = express.Router();
 
-// List all companies (Superadmin only)
-router.get("/", authenticateJWT, requireSuperAdmin, controller.getAllCompanies);
+// List all companies (authorizing company.read instead of requireSuperAdmin for Manager visibility)
+router.get("/", authenticateJWT, requirePermission("company.read"), controller.getAllCompanies);
 
 // Get single company with details
 router.get("/:id", authenticateJWT, requirePermission("company.read"), controller.getCompanyById);

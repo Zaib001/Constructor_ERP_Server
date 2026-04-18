@@ -1,9 +1,9 @@
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES } = require("../../utils/scoping");
 
 async function getAllExpenses(user, page, pageSize) {
     const { isSuperAdmin, roleCode, id: userId } = user;
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.FLEET, isWrite: false });
 
     // Project Scoping: PM, Site Engineer, and Site Coordinator see only assigned projects for 'job' type
     if (!isSuperAdmin && roleCode !== "erp_admin" && ["project_manager", "site_engineer", "site_coordinator"].includes(roleCode)) {
@@ -40,7 +40,7 @@ async function getAllExpenses(user, page, pageSize) {
 
 async function getExpenseById(id, user) {
     const { isSuperAdmin, roleCode, id: userId } = user;
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.FLEET, isWrite: false });
     where.id = id;
 
     if (!isSuperAdmin && roleCode !== "erp_admin" && ["project_manager", "site_engineer", "site_coordinator"].includes(roleCode)) {
@@ -74,7 +74,7 @@ async function getExpenseById(id, user) {
 async function createExpense(data, user) {
     const actor = await prisma.user.findUnique({ where: { id: user.id }, include: { roles: true }});
     const roleCode = actor.roles?.code || "unknown";
-    const allowed = ["site_engineer", "project_manager", "erp_admin", "super_admin"];
+    const allowed = ["site_engineer", "project_manager", "erp_admin", "super_admin", "fleet_coordinator"];
     if (!allowed.includes(roleCode)) {
         throw new Error("Unauthorized: Role not allowed to record petrol expenses.");
     }
@@ -85,7 +85,12 @@ async function createExpense(data, user) {
         if (!data.project_id) throw new Error("jobType 'job' requires a projectId");
         
         // 1. Tenant & Project Scoping
-        const scopedProjectWhere = applyDataScope(user, { projectFilter: true, projectModel: true });
+        const scopedProjectWhere = applyDataScope(user, { 
+            module: MODULES.PROJECTS, 
+            isWrite: false, 
+            projectFilter: true, 
+            projectModel: true 
+        });
         const project = await prisma.project.findFirst({
             where: { ...scopedProjectWhere, id: data.project_id }
         });
@@ -175,7 +180,10 @@ async function createExpense(data, user) {
 }
 
 async function updateExpense(id, data, user) {
-    const expense = await prisma.petrolExpense.findUnique({ where: { id } });
+    const where = applyDataScope(user, { module: MODULES.FLEET, isWrite: true });
+    where.id = id;
+
+    const expense = await prisma.petrolExpense.findUnique({ where });
     if (!expense) throw new Error("Petrol Expense not found");
     
     if (!["pending", "sent_back"].includes(expense.verification_status)) {
@@ -204,7 +212,9 @@ async function verifyExpense(id, user) {
         throw new Error("Unauthorized: Role not allowed to verify petrol expenses.");
     }
 
-    const expense = await prisma.petrolExpense.findUnique({ where: { id } });
+    const expense = await prisma.petrolExpense.findUnique({ 
+        where: { id, ...applyDataScope(user, { module: MODULES.FLEET, isWrite: true }) } 
+    });
     if (!expense) throw new Error("Petrol expense not found");
     if (expense.verification_status === "verified") throw new Error("Already verified");
 
@@ -234,7 +244,12 @@ async function rejectExpense(id, reason, user) {
         throw new Error("Unauthorized: Role not allowed to reject petrol expenses.");
     }
 
-    const expense = await prisma.petrolExpense.findUnique({ where: { id } });
+    const where = applyDataScope(user, { module: MODULES.FLEET, isWrite: true });
+    where.id = id;
+
+    const expense = await prisma.petrolExpense.findFirst({ 
+        where 
+    });
     if (!expense) throw new Error("Petrol expense not found");
     if (expense.verification_status === "verified") throw new Error("Cannot reject an already verified record");
 
@@ -255,7 +270,7 @@ async function rejectExpense(id, reason, user) {
 
 async function getReports(filters, user) {
     const { isSuperAdmin, roleCode, id: userId } = user;
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.FLEET, isWrite: false });
     where.verification_status = "verified";
 
     if (!isSuperAdmin && roleCode !== "erp_admin" && ["project_manager", "site_engineer", "site_coordinator"].includes(roleCode)) {

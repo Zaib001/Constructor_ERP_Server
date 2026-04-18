@@ -1,6 +1,7 @@
 "use strict";
 
 const prisma = require("../../db");
+const { applyDataScope, MODULES, validateResourceAccess } = require("../../utils/scoping");
 const { registerAdapter } = require("../approvals/approvals.adapter");
 const { requestApproval } = require("../approvals/approvals.service");
 
@@ -22,17 +23,8 @@ registerAdapter("EXPENSE", async ({ docId, status }) => {
 });
 
 async function getAllExpenses(user, page = 1, pageSize = 50) {
-    const { companyId, isSuperAdmin } = user;
-    if (!isSuperAdmin && !companyId) throw new Error("Tenant context missing");
-
     const skip = (page - 1) * pageSize;
-    const where = { 
-        deleted_at: null 
-    };
-
-    if (!isSuperAdmin) {
-        where.company_id = companyId;
-    }
+    const where = applyDataScope(user, { module: MODULES.FINANCE, isWrite: false });
     
     return await prisma.expense.findMany({
         where,
@@ -47,11 +39,8 @@ async function getAllExpenses(user, page = 1, pageSize = 50) {
 }
 
 async function getExpenseById(id, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) {
-        where.company_id = companyId;
-    }
+    const where = applyDataScope(user, { module: MODULES.FINANCE, isWrite: false });
+    where.id = id;
 
     return await prisma.expense.findFirst({
         where,
@@ -71,7 +60,7 @@ async function createExpense(data, user) {
     // Tenant Security: Verify project belongs to user's company
     if (data.project_id) {
         const project = await prisma.project.findFirst({
-            where: { id: data.project_id, company_id: targetCompanyId, deleted_at: null }
+            where: { id: data.project_id, company_id: targetCompanyId }
         });
         if (!project) throw new Error("Reference project not found or access denied.");
     }
@@ -113,9 +102,8 @@ async function createExpense(data, user) {
 }
 
 async function updateExpense(id, data, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user, { module: MODULES.FINANCE, isWrite: true });
+    where.id = id;
 
     const expense = await prisma.expense.findFirst({ where });
     if (!expense) throw new Error("Expense not found or access denied.");

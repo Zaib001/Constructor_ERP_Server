@@ -1,8 +1,16 @@
 const prisma = require('../../../db');
 const { Prisma } = require('@prisma/client');
+const { applyDataScope, MODULES } = require('../../../utils/scoping');
 
 // ─── Cost Control Dashboard & Integrated Monitoring ───────────────────────────
-async function getCostControl(project_id, company_id) {
+async function getCostControl(project_id, user) {
+  const whereProject = applyDataScope(user, { module: MODULES.EXECUTION, isWrite: false });
+  whereProject.id = project_id;
+
+  const projectRecord = await prisma.project.findFirst({ where: whereProject });
+  if (!projectRecord) throw new Error('Project not found or access denied');
+  
+  const company_id = projectRecord.company_id; // Anchor to the record's company for internal sub-queries
   const [
     costCodes, 
     materialCosts, 
@@ -20,7 +28,7 @@ async function getCostControl(project_id, company_id) {
     }),
     // Material from inventory issues
     prisma.materialIssueItem.findMany({
-      where: { issue: { project_id, company_id, deleted_at: null } },
+      where: { issue: { project_id, company_id } },
       include: { cost_code: true }
     }),
     // Labor from resource logs
@@ -35,12 +43,12 @@ async function getCostControl(project_id, company_id) {
     }),
     // Petty cash
     prisma.pettyCashRequest.aggregate({
-      where: { project_id, company_id, status: 'approved', deleted_at: null },
+      where: { project_id, company_id, status: 'approved' },
       _sum: { estimated_cost: true }
     }),
     // Petrol
     prisma.petrolExpense.aggregate({
-      where: { project_id, company_id, deleted_at: null },
+      where: { project_id, company_id },
       _sum: { total_amount: true }
     }),
     // Committed Cost (POs)
@@ -117,7 +125,7 @@ async function getCostControl(project_id, company_id) {
 }
 
 // ─── Closure & Snapshots ──────────────────────────────────────────────────────
-async function closeBillingCycle(cycleId, companyId) {
+async function closeBillingCycle(cycleId, user) {
   const cycle = await prisma.billingCycle.findUnique({
     where: { id: cycleId },
     include: { project: true }
@@ -125,12 +133,12 @@ async function closeBillingCycle(cycleId, companyId) {
 
   if (!cycle) throw new Error('Billing cycle not found');
 
-  const currentFinancials = await getCostControl(cycle.project_id, companyId);
+  const currentFinancials = await getCostControl(cycle.project_id, user);
 
   // Take Snapshots for the Dashboard History
   await prisma.costTracking.create({
     data: {
-      company_id: companyId,
+      company_id: cycle.project.company_id,
       project_id: cycle.project_id,
       cycle_id: cycle.id,
       planned_amount: currentFinancials.summary.total_budget,

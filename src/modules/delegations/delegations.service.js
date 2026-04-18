@@ -20,8 +20,8 @@ async function createDelegation({ fromUser, toUser, startDate, endDate }, actorI
 
     // 2. Both users must exist
     const [from, to] = await Promise.all([
-        prisma.user.findFirst({ where: { id: fromUser, deleted_at: null, is_active: true }, select: { id: true, name: true } }),
-        prisma.user.findFirst({ where: { id: toUser, deleted_at: null, is_active: true }, select: { id: true, name: true } }),
+        prisma.user.findFirst({ where: { id: fromUser, is_active: true }, select: { id: true, name: true } }),
+        prisma.user.findFirst({ where: { id: toUser, is_active: true }, select: { id: true, name: true } }),
     ]);
     if (!from) throw createAppError(`fromUser '${fromUser}' not found or inactive`, 404);
     if (!to) throw createAppError(`toUser '${toUser}' not found or inactive`, 404);

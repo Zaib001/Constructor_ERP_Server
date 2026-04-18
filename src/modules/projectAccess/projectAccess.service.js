@@ -31,7 +31,7 @@ async function assignAccess(data, user, actorId, ipAddress, deviceInfo) {
 
     // Validate user exists and is active
     const targetUser = await prisma.user.findFirst({
-        where: { id: userId, deleted_at: null, is_active: true },
+        where: { id: userId, is_active: true },
         select: { id: true, name: true, email: true },
     });
     if (!targetUser) {
@@ -183,7 +183,7 @@ async function revokeAccess(id, user, actorId, ipAddress, deviceInfo) {
 async function getUserProjects(userId, caller) {
     // Validate user exists
     const targetUser = await prisma.user.findFirst({
-        where: { id: userId, deleted_at: null },
+        where: { id: userId },
         select: { id: true, name: true, email: true, company_id: true }
     });
     if (!targetUser) throw createAppError("User not found", 404);

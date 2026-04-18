@@ -1,8 +1,8 @@
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES } = require("../../utils/scoping");
 
 async function getAllRFQs(user, page, pageSize) {
-    const where = applyDataScope(user, { prefix: "requisition", projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false, prefix: "requisition", projectFilter: true });
 
     const skip = (page - 1) * pageSize;
     return prisma.rFQ.findMany({
@@ -18,7 +18,7 @@ async function getAllRFQs(user, page, pageSize) {
 }
 
 async function getRFQById(id, user) {
-    const where = applyDataScope(user, { prefix: "requisition", projectFilter: true });
+    const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false, prefix: "requisition", projectFilter: true });
     where.id = id;
 
     return prisma.rFQ.findFirst({
@@ -34,7 +34,7 @@ async function getRFQById(id, user) {
 async function createRFQ(data, user) {
     if (!data.requisition_id) throw new Error("Requisition ID is required");
     
-    const prWhere = applyDataScope(user);
+    const prWhere = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true });
     prWhere.id = data.requisition_id;
     
     const pr = await prisma.purchaseRequisition.findFirst({ where: prWhere });
@@ -87,7 +87,7 @@ async function compareQuotes(rfqId, data, user) {
     }
 
     // Tenant Security: Verify RFQ belongs to user's company
-    const rfqWhere = applyDataScope(user, { prefix: "requisition" });
+    const rfqWhere = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true, prefix: "requisition" });
     rfqWhere.id = rfqId;
     
     const rfq = await prisma.rFQ.findFirst({ where: rfqWhere });

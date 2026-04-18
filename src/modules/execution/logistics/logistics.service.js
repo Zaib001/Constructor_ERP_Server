@@ -14,8 +14,7 @@ async function listLogisticsRequests(filters, user) {
     ...where,
     ...(status && { status }),
     ...(project_id && { project_id }),
-    ...(request_type && { request_type }),
-    deleted_at: null
+    ...(request_type && { request_type })
   };
 
   return prisma.logisticsRequest.findMany({

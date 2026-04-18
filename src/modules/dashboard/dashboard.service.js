@@ -1,7 +1,8 @@
 "use strict";
 
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES } = require("../../utils/scoping");
+const { logAudit } = require("../../utils/auditLogger");
 const deliverySvc = require("../execution/delivery/delivery.service");
 const mobSvc = require("../execution/mobilization/mobilization.service");
 
@@ -277,21 +278,32 @@ async function getDeptHeadDashboard(userId, userObj) {
 /**
  * Project Manager / Site Dashboard - strictly scoped to assigned projects.
  */
-async function getProjectDashboard(user) {
+async function getProjectDashboard(user, projectId = null) {
     let projects = [];
+    
+    // 1. Determine Scope based on role and provided projectId
+    const getBaseWhere = () => {
+        const where = { };
+        if (projectId) where.id = projectId;
+        return where;
+    };
+
     if (user.isSuperAdmin) {
         projects = await prisma.project.findMany({
-            where: { deleted_at: null },
+            where: getBaseWhere(),
             select: { id: true, name: true, status: true, budget: true, code: true }
         });
     } else if (["erp_admin", "procurement_officer", "accounts_officer", "hr_admin", "auditor_readonly"].includes(user.roleCode)) {
         projects = await prisma.project.findMany({
-            where: { company_id: user.companyId, deleted_at: null },
+            where: { ...getBaseWhere(), company_id: user.companyId },
             select: { id: true, name: true, status: true, budget: true, code: true }
         });
     } else {
+        const assignmentWhere = { user_id: user.id, revoked_at: null };
+        if (projectId) assignmentWhere.project_id = projectId;
+
         const assignments = await prisma.userProject.findMany({
-            where: { user_id: user.id, revoked_at: null },
+            where: assignmentWhere,
             include: {
                 projects: {
                     select: { id: true, name: true, status: true, budget: true, code: true, company_id: true, deleted_at: true }
@@ -300,7 +312,11 @@ async function getProjectDashboard(user) {
         });
         projects = assignments
             .map(up => up.projects)
-            .filter(p => !!p && p.deleted_at === null && p.company_id === user.companyId);
+            .filter(p => !!p && p.deleted_at === null && (!user.companyId || p.company_id === user.companyId));
+    }
+
+    if (projectId && projects.length === 0) {
+        return { error: "Project not found or access denied" };
     }
 
     const projectIds = projects.map(p => p.id);
@@ -309,7 +325,7 @@ async function getProjectDashboard(user) {
     const [pendingApprovals, recentPRs, logistics, prAgg, poAgg, pettyAgg, petroAgg, quotAgg, userProjectAgg] = await Promise.all([
         prisma.approvalRequest.count({ where: { project_id: { in: projectIds }, is_completed: false } }),
         prisma.purchaseRequisition.findMany({
-            where: { project_id: { in: projectIds }, deleted_at: null },
+            where: { project_id: { in: projectIds } },
             take: 10, orderBy: { created_at: "desc" },
             include: { requester: { select: { name: true } } }
         }),
@@ -335,7 +351,7 @@ async function getProjectDashboard(user) {
         }),
         prisma.petrolExpense.groupBy({
             by: ['project_id'],
-            where: { project_id: { in: projectIds }, verification_status: "verified", deleted_at: null },
+            where: { project_id: { in: projectIds }, verification_status: "verified" },
             _sum: { total_amount: true }
         }),
         prisma.quotation.groupBy({
@@ -422,7 +438,7 @@ async function getCompanyHeadDashboard(userId, userObj) {
                 projects: { where: { status: "active" }, select: { id: true, name: true, budget: true } }
             }
         }),
-        prisma.user.findMany({ where: { company_id: companyId, deleted_at: null }, select: { id: true } }),
+        prisma.user.findMany({ where: { company_id: companyId }, select: { id: true } }),
         // Financials
         prisma.quotation.aggregate({
             where: { company_id: companyId, status: { in: ["approved", "accepted", "won"] } },
@@ -510,7 +526,7 @@ async function getComplianceDashboard(user) {
     const windowDate = new Date();
     windowDate.setDate(today.getDate() + 30);
 
-    const baseWhere = applyDataScope(user);
+    const baseWhere = applyDataScope(user, { noSoftDelete: true });
 
     // --- 1. Workforce (Employees) ---
     const employeeCondition = {
@@ -650,14 +666,19 @@ async function getComplianceDashboard(user) {
 async function getWorkspaceSummary(user) {
     const userId = user.id;
 
-    // 1. Get assigned projects
-    const projectScope = applyDataScope(user, { projectFilter: true, projectModel: true });
+    // 1. Get assigned projects / resources based on horizon
+    const projectScope = applyDataScope(user, { module: MODULES.PROJECTS, projectFilter: true, projectModel: true });
     projectScope.status = "active";
     const projects = await prisma.project.findMany({
         where: projectScope,
         select: { id: true }
     });
     const projectIds = projects.map(p => p.id);
+
+    const hrScope = applyDataScope(user, { module: MODULES.HR });
+    const procurementScope = applyDataScope(user, { module: MODULES.PROCUREMENT });
+    const financeScope = applyDataScope(user, { module: MODULES.FINANCE });
+    const fleetScope = applyDataScope(user, { module: MODULES.FLEET });
 
     // 2. Metrics
     const [pendingApprovals, progressCount] = await Promise.all([
@@ -705,12 +726,170 @@ async function getWorkspaceSummary(user) {
         inventoryValuation = inventory.reduce((sum, stock) => sum + (Number(stock.quantity) * Number(stock.item?.standard_price || 0)), 0);
     }
 
+    // 4. Expanded Stats (Financial & HR)
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0,0,0,0);
+
+    // Clone finance scope excluding deleted_at for models that don't support soft deletes
+    const { deleted_at: _, ...financeScopeNoSoftDelete } = financeScope;
+
+    const [
+        totalEmployees,
+        hrAlerts,
+        totalVehicles,
+        totalEquipment,
+        fleetAlerts,
+        pendingInvoices,
+        pendingPettyCash,
+        pettyCashExp,
+        petrolExp,
+        payrollExp,
+        activeRFQs,
+        pendingPRs,
+        openPOs
+    ] = await Promise.all([
+        prisma.employee.count({ where: hrScope }),
+        prisma.employee.count({
+            where: {
+                ...hrScope,
+                OR: [
+                    { iqama_expiry: { lte: windowDate } },
+                    { passport_expiry: { lte: windowDate } },
+                    { insurance_expiry: { lte: windowDate } }
+                ]
+            }
+        }),
+        prisma.vehicle.count({ where: fleetScope }),
+        prisma.equipment.count({ where: fleetScope }),
+        prisma.equipment.count({
+            where: {
+                ...fleetScope,
+                OR: [
+                    { preventive_maintenance_date: { lte: windowDate } },
+                    { third_party_certification_validity: { lte: windowDate } },
+                    { registration_expiry: { lte: windowDate } }
+                ]
+            }
+        }),
+        prisma.progressInvoice.count({ where: { ...financeScopeNoSoftDelete, status: "submitted" } }),
+        prisma.pettyCashRequest.count({ where: { ...financeScope, status: "pending" } }),
+        // MTD Aggregations (Scoped)
+        prisma.pettyCashExpense.aggregate({
+            where: { request: { ...financeScope }, created_at: { gte: monthStart } },
+            _sum: { total_amount: true }
+        }),
+        prisma.petrolExpense.aggregate({
+            where: { ...fleetScope, created_at: { gte: monthStart } },
+            _sum: { total_amount: true }
+        }),
+        prisma.payroll.aggregate({
+            where: { ...hrScope, created_at: { gte: monthStart }, status: "approved" },
+            _sum: { total_amount: true }
+        }),
+        
+        // Clone procurement scope excluding company_id for models like RFQ that use relational bindings
+        (() => { 
+            const { company_id, ...scope } = procurementScope; 
+            return prisma.rFQ.count({ where: { ...scope, status: { notIn: ["draft", "closed", "cancelled"] } } });
+        })(),
+        prisma.purchaseRequisition.count({ where: { ...procurementScope, status: { in: ["submitted", "pending", "approved"] } } }),
+        prisma.purchaseOrder.count({ where: { ...procurementScope, status: { notIn: ["draft", "cancelled"] } } })
+    ]);
+
+    const mtdFuelSpend = Number(petrolExp._sum?.total_amount || 0);
+
+    const mtdExpenditure = 
+        Number(pettyCashExp._sum?.total_amount || 0) + 
+        Number(petrolExp._sum?.total_amount || 0) + 
+        Number(payrollExp._sum?.total_amount || 0);
+
+    // 5. Activity Stats (last 7 days - Scoped Operational Volume)
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    // Robust activity scoping - Bypass Prisma groupBy limitations with soft-delete columns
+    const isGlobal = user.roleCode && ['hr_manager', 'procurement_manager', 'accounts_manager', 'sales_manager'].includes(user.roleCode);
+    const activityBaseWhere = isGlobal ? {} : { company_id: user.companyId };
+
+    const [dailyStaff, dailyPayrolls, dailyPRs] = await Promise.all([
+        prisma.employee.groupBy({
+            by: ['created_at'],
+            where: { ...activityBaseWhere, created_at: { gte: weekAgo } },
+            _count: { id: true }
+        }),
+        prisma.payroll.groupBy({
+            by: ['created_at'],
+            where: { ...activityBaseWhere, created_at: { gte: weekAgo } },
+            _count: { id: true }
+        }),
+        prisma.purchaseRequisition.groupBy({
+            by: ['created_at'],
+            where: { ...activityBaseWhere, created_at: { gte: weekAgo } },
+            _count: { id: true }
+        })
+    ]);
+
+    // Format activity for Chart (Group by day) - Robust Day Labeling
+    const activity = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const dayCode = d.getDay();
+        
+        const staffCount = dailyStaff.filter(x => new Date(x.created_at).getDay() === dayCode).reduce((s, c) => s + c._count.id, 0);
+        const payCount = dailyPayrolls.filter(x => new Date(x.created_at).getDay() === dayCode).reduce((s, c) => s + c._count.id, 0);
+        const prCount = dailyPRs.filter(x => new Date(x.created_at).getDay() === dayCode).reduce((s, c) => s + c._count.id, 0);
+        
+        activity.push({ name: dayLabel, val: staffCount + payCount + prCount });
+    }
+
+    // 6. Focus Data (Pie Chart) & Recent Activity
+    const focusData = [
+        { name: 'Workforce', value: totalEmployees },
+        { name: 'Finance', value: pendingInvoices + pendingPettyCash },
+        { name: 'Assets', value: totalVehicles + totalEquipment },
+        { name: 'Alerts', value: hrAlerts + fleetAlerts }
+    ].filter(f => f.value > 0);
+
+    const auditLogs = await prisma.auditLog.findMany({
+        where: {
+            module: { in: user.roleCode === 'hr_manager' ? ['employees', 'documents', 'payroll'] : ['procurement', 'finance', 'inventory', 'fleet'] }
+        },
+        take: 6,
+        orderBy: { created_at: 'desc' }
+    });
+
     return {
-        activeSites: projectIds.length,
-        pendingApprovals,
-        progressItems: progressCount,
-        alertCount,
-        inventoryValuation
+        stats: {
+            totalEmployees,
+            hrAlerts: hrAlerts || 0,
+            payrollStatus: "Processed",
+            totalVehicles: totalVehicles || 0,
+            totalEquipment: totalEquipment || 0,
+            fleetAlerts: fleetAlerts || 0,
+            pendingInvoices: pendingInvoices || 0,
+            pendingPettyCash: pendingPettyCash || 0,
+            mtdExpenditure: mtdExpenditure || 0,
+            mtdFuelSpend: mtdFuelSpend || 0,
+            pendingApprovals: pendingApprovals || 0,
+            hrPendingApprovals: pendingApprovals,
+            activeRFQs: activeRFQs || 0,
+            pendingPRs: pendingPRs || 0,
+            openPOs: openPOs || 0
+        },
+        activity: activity || [],
+        focusData: focusData || [],
+        recentActivity: (auditLogs || []).map(a => ({
+            title: a.action ? a.action.replace(/_/g, ' ') : "SYSTEM ACTION",
+            status: a.module?.toUpperCase() || "SYSTEM",
+            date: a.created_at,
+            color: a.action?.includes('error') ? 'rose' : (a.action?.includes('create') ? 'emerald' : 'gold')
+        })),
+        inventoryValuation: inventoryValuation || 0,
+        alertCount: alertCount || 0,
+        pendingApprovals: pendingApprovals || 0
     };
 }
 

@@ -1,10 +1,10 @@
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES } = require("../../utils/scoping");
 
 // Company Documents
 async function getAllCompanyDocuments(user, page = 1, pageSize = 50) {
     const skip = (page - 1) * pageSize;
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.DOCUMENTS, isWrite: false });
     
     const [data, total] = await Promise.all([
         prisma.companyDocument.findMany({
@@ -23,7 +23,7 @@ async function getAllCompanyDocuments(user, page = 1, pageSize = 50) {
 }
 
 async function getCompanyDocumentById(id, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.DOCUMENTS, isWrite: false });
     where.id = id;
     return await prisma.companyDocument.findFirst({
         where,
@@ -56,9 +56,8 @@ async function createCompanyDocument(data, companyId) {
 }
 
 async function updateCompanyDocument(id, data, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user, { module: MODULES.DOCUMENTS, isWrite: true });
+    where.id = id;
 
     const doc = await prisma.companyDocument.findFirst({ where });
     if (!doc) throw new Error("Document not found or access denied.");
@@ -77,23 +76,19 @@ async function updateCompanyDocument(id, data, user) {
 }
 
 async function deleteCompanyDocument(id, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user, { module: MODULES.DOCUMENTS, isWrite: true });
+    where.id = id;
 
     const doc = await prisma.companyDocument.findFirst({ where });
     if (!doc) throw new Error("Document not found or access denied.");
 
-    return await prisma.companyDocument.update({
-        where: { id },
-        data: { deleted_at: new Date() }
-    });
+    return await prisma.companyDocument.delete({ where: { id } });
 }
 
 // Facility Documents
 async function getAllFacilityDocuments(user, page = 1, pageSize = 50) {
     const skip = (page - 1) * pageSize;
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.DOCUMENTS, isWrite: false });
     
     const [data, total] = await Promise.all([
         prisma.facilityDocument.findMany({
@@ -109,7 +104,7 @@ async function getAllFacilityDocuments(user, page = 1, pageSize = 50) {
 }
 
 async function getFacilityDocumentById(id, user) {
-    const where = applyDataScope(user);
+    const where = applyDataScope(user, { module: MODULES.DOCUMENTS, isWrite: false });
     where.id = id;
     return await prisma.facilityDocument.findFirst({
         where,
@@ -131,9 +126,8 @@ async function createFacilityDocument(data, companyId) {
 }
 
 async function updateFacilityDocument(id, data, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user, { module: MODULES.DOCUMENTS, isWrite: true });
+    where.id = id;
 
     const doc = await prisma.facilityDocument.findFirst({ where });
     if (!doc) throw new Error("Document not found or access denied.");
@@ -151,17 +145,13 @@ async function updateFacilityDocument(id, data, user) {
 }
 
 async function deleteFacilityDocument(id, user) {
-    const { companyId, isSuperAdmin } = user;
-    const where = { id, deleted_at: null };
-    if (!isSuperAdmin) where.company_id = companyId;
+    const where = applyDataScope(user, { module: MODULES.DOCUMENTS, isWrite: true });
+    where.id = id;
 
     const doc = await prisma.facilityDocument.findFirst({ where });
     if (!doc) throw new Error("Document not found or access denied.");
 
-    return await prisma.facilityDocument.update({
-        where: { id },
-        data: { deleted_at: new Date() }
-    });
+    return await prisma.facilityDocument.delete({ where: { id } });
 }
 
 module.exports = {
