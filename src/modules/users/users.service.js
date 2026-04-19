@@ -87,6 +87,9 @@ async function createUser(data, actorUser) {
 async function getAllUsers(user) {
     const where = applyDataScope(user);
     
+    // Only show active users — inactive = deleted/deactivated
+    where.is_active = true;
+
     // Non-superadmins should NEVER see or be able to manage the super_admin persona
     if (!user.isSuperAdmin) {
         where.roles = {
@@ -166,7 +169,7 @@ async function updateUser(id, data, user) {
 }
 
 /**
- * Delete a user (soft delete).
+ * Delete a user — deactivates the account (User model has no deleted_at column).
  */
 async function deleteUser(id, user) {
     const where = applyDataScope(user);
@@ -176,12 +179,12 @@ async function deleteUser(id, user) {
     const exists = await prisma.user.findFirst({ where });
     if (!exists) throw new Error("User not found or access denied");
 
+    // Deactivate: revoke sessions, mark inactive
+    await prisma.userSession.deleteMany({ where: { user_id: id } });
+
     return await prisma.user.update({
         where: { id },
-        data: {
-            deleted_at: new Date(),
-            is_active: false
-        }
+        data: { is_active: false }
     });
 }
 
