@@ -33,8 +33,7 @@ async function getCompanyDocumentById(req, res, next) {
 
 async function createCompanyDocument(req, res, next) {
     try {
-        const companyId = req.user.company_id;
-        const document = await documentsService.createCompanyDocument(req.body, companyId);
+        const document = await documentsService.createCompanyDocument(req.body, req.user);
         return res.status(201).json({ success: true, data: document });
     } catch (err) {
         logger.error("Error in createCompanyDocument:", err);
@@ -94,8 +93,7 @@ async function getFacilityDocumentById(req, res, next) {
 
 async function createFacilityDocument(req, res, next) {
     try {
-        const companyId = req.user.company_id;
-        const document = await documentsService.createFacilityDocument(req.body, companyId);
+        const document = await documentsService.createFacilityDocument(req.body, req.user);
         return res.status(201).json({ success: true, data: document });
     } catch (err) {
         logger.error("Error in createFacilityDocument:", err);

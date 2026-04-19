@@ -994,6 +994,8 @@ model InventoryStock {
 model Employee {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                   String    @db.VarChar(200)
+  employee_code          String?   @unique @db.VarChar(50)
+  blood_group            String?   @db.VarChar(10)
   department             String?   @db.VarChar(100)
   designation            String?   @db.VarChar(100)
   nationality            String?   @db.VarChar(100)

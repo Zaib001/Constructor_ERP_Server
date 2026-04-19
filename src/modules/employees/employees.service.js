@@ -92,6 +92,11 @@ async function createEmployee(data, user) {
         }
     }
 
+    if (data.employee_code) {
+        const existing = await prisma.employee.findFirst({ where: { employee_code: data.employee_code } });
+        if (existing) throw new Error(`Duplicate Entry: Employee Code '${data.employee_code}' is already assigned to '${existing.name}'.`);
+    }
+
     // 4. Date Logic
     if (data.iqama_expiry && new Date(data.iqama_expiry) < new Date()) {
         throw new Error("Compliance Error: Cannot register employee with an expired Iqama.");
@@ -100,6 +105,8 @@ async function createEmployee(data, user) {
     return await prisma.employee.create({
         data: {
             name: data.name,
+            employee_code: data.employee_code || null,
+            blood_group: data.blood_group || null,
             department: data.department || null,
             designation: data.designation || null,
             nationality: data.nationality || null,
@@ -145,10 +152,14 @@ async function updateEmployee(id, data, user) {
 
     if (data.salary < 0) throw new Error("Financial Error: Salary cannot be negative.");
 
+    const targetCompanyId = user.isSuperAdmin ? (data.company_id || employee.company_id) : employee.company_id;
+
     return await prisma.employee.update({
         where: { id },
         data: {
             name: data.name,
+            employee_code: data.employee_code,
+            blood_group: data.blood_group,
             department: data.department,
             designation: data.designation,
             nationality: data.nationality,
@@ -178,6 +189,7 @@ async function updateEmployee(id, data, user) {
 
             project_id: data.project_id,
             department_id: data.department_id,
+            company_id: targetCompanyId,
             updated_at: new Date()
         }
     });

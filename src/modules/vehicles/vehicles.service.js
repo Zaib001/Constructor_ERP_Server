@@ -122,6 +122,8 @@ async function updateVehicle(id, data, user) {
     const vehicle = await prisma.vehicle.findFirst({ where });
     if (!vehicle) throw new Error("Vehicle not found or access denied.");
 
+    const targetCompanyId = isSuperAdmin ? (data.company_id || vehicle.company_id) : vehicle.company_id;
+
     return await prisma.vehicle.update({
         where: { id },
         data: {
@@ -138,6 +140,7 @@ async function updateVehicle(id, data, user) {
             mileage_calculation: data.mileage_calculation ? parseFloat(data.mileage_calculation) : null,
             authorization_id: data.authorization_id,
             running_site: data.running_site,
+            company_id: targetCompanyId,
             department_id: data.department_id,
             monthly_petrol_expense: data.monthly_petrol_expense ? parseFloat(data.monthly_petrol_expense) : null,
             updated_at: new Date()

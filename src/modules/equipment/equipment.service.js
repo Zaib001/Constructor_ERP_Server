@@ -113,6 +113,8 @@ async function updateEquipment(id, data, user) {
     const equipment = await prisma.equipment.findFirst({ where });
     if (!equipment) throw new Error("Equipment not found or access denied.");
 
+    const targetCompanyId = isSuperAdmin ? (data.company_id || equipment.company_id) : equipment.company_id;
+
     return await prisma.equipment.update({
         where: { id },
         data: {
@@ -127,6 +129,7 @@ async function updateEquipment(id, data, user) {
             authorization_id: data.authorization_id,
             last_inspection_date: data.last_inspection_date ? new Date(data.last_inspection_date) : null,
             status: data.status,
+            company_id: targetCompanyId,
             department_id: data.department_id,
             updated_at: new Date()
         }

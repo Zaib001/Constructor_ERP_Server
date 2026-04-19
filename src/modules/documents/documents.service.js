@@ -33,7 +33,10 @@ async function getCompanyDocumentById(id, user) {
     });
 }
 
-async function createCompanyDocument(data, companyId) {
+async function createCompanyDocument(data, user) {
+    const { companyId, isSuperAdmin } = user;
+    const targetCompanyId = isSuperAdmin ? (data.company_id || companyId) : companyId;
+
     if (!data.type) throw new Error("Missing required fields: Document type is mandatory.");
 
     // Date Logic
@@ -45,7 +48,7 @@ async function createCompanyDocument(data, companyId) {
 
     return await prisma.companyDocument.create({
         data: {
-            company_id: companyId,
+            company_id: targetCompanyId,
             type: data.type,
             document_number: data.document_number || null,
             issue_date: data.issue_date ? new Date(data.issue_date) : null,
@@ -62,6 +65,8 @@ async function updateCompanyDocument(id, data, user) {
     const doc = await prisma.companyDocument.findFirst({ where });
     if (!doc) throw new Error("Document not found or access denied.");
 
+    const targetCompanyId = user.isSuperAdmin ? (data.company_id || doc.company_id) : doc.company_id;
+
     return await prisma.companyDocument.update({
         where: { id },
         data: {
@@ -70,6 +75,7 @@ async function updateCompanyDocument(id, data, user) {
             issue_date: data.issue_date ? new Date(data.issue_date) : null,
             expiry_date: data.expiry_date ? new Date(data.expiry_date) : null,
             filing_date: data.filing_date ? new Date(data.filing_date) : null,
+            company_id: targetCompanyId,
             updated_at: new Date()
         }
     });
@@ -111,12 +117,15 @@ async function getFacilityDocumentById(id, user) {
     });
 }
 
-async function createFacilityDocument(data, companyId) {
+async function createFacilityDocument(data, user) {
+    const { companyId, isSuperAdmin } = user;
+    const targetCompanyId = isSuperAdmin ? (data.company_id || companyId) : companyId;
+
     if (!data.type) throw new Error("Missing required fields: Document type is mandatory.");
 
     return await prisma.facilityDocument.create({
         data: {
-            company_id: companyId,
+            company_id: targetCompanyId,
             department: data.department || null,
             type: data.type,
             expiry_date: data.expiry_date ? new Date(data.expiry_date) : null,
@@ -132,6 +141,8 @@ async function updateFacilityDocument(id, data, user) {
     const doc = await prisma.facilityDocument.findFirst({ where });
     if (!doc) throw new Error("Document not found or access denied.");
 
+    const targetCompanyId = user.isSuperAdmin ? (data.company_id || doc.company_id) : doc.company_id;
+
     return await prisma.facilityDocument.update({
         where: { id },
         data: {
@@ -139,6 +150,7 @@ async function updateFacilityDocument(id, data, user) {
             type: data.type,
             expiry_date: data.expiry_date ? new Date(data.expiry_date) : null,
             notes: data.notes,
+            company_id: targetCompanyId,
             updated_at: new Date()
         }
     });
