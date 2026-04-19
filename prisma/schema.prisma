@@ -1008,6 +1008,18 @@ model Employee {
   salary                 Decimal?  @db.Decimal
   saudization_status     String?   @db.VarChar(50)
   contract_renewal_date  DateTime? @db.Date
+  
+  // New HR & Finance fields
+  joining_date           DateTime? @db.Date
+  insurance_company_name String?   @db.VarChar(200)
+  bank_name              String?   @db.VarChar(200)
+  bank_account_name      String?   @db.VarChar(200)
+  bank_iban              String?   @db.VarChar(100)
+  basic_salary           Decimal?  @db.Decimal
+  housing_allowance      Decimal?  @db.Decimal
+  transportation_allowance Decimal?  @db.Decimal
+  other_allowance        Decimal?  @db.Decimal
+
   project_id             String?   @db.Uuid
   company_id             String?   @db.Uuid
   department_id          String?   @db.Uuid

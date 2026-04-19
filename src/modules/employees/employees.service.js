@@ -54,7 +54,15 @@ async function createEmployee(data, user) {
 
     // 1. Validate Required Fields & Financials
     if (!data.name) throw new Error("Missing required fields: Employee name is mandatory.");
-    if (data.salary < 0) throw new Error("Financial Error: Salary cannot be negative.");
+    
+    // Validate all numeric fields
+    const financials = [
+        'salary', 'basic_salary', 'housing_allowance', 
+        'transportation_allowance', 'other_allowance'
+    ];
+    financials.forEach(field => {
+        if (data[field] < 0) throw new Error(`Financial Error: ${field.replace('_', ' ')} cannot be negative.`);
+    });
 
     // 2. Tenant & Relation Validation
     if (data.project_id) {
@@ -103,6 +111,18 @@ async function createEmployee(data, user) {
             salary: data.salary ? parseFloat(data.salary) : null,
             saudization_status: data.saudization_status || null,
             contract_renewal_date: data.contract_renewal_date ? new Date(data.contract_renewal_date) : null,
+            
+            // New HR & Finance fields
+            joining_date: data.joining_date ? new Date(data.joining_date) : null,
+            insurance_company_name: data.insurance_company_name || null,
+            bank_name: data.bank_name || null,
+            bank_account_name: data.bank_account_name || null,
+            bank_iban: data.bank_iban || null,
+            basic_salary: data.basic_salary ? parseFloat(data.basic_salary) : null,
+            housing_allowance: data.housing_allowance ? parseFloat(data.housing_allowance) : null,
+            transportation_allowance: data.transportation_allowance ? parseFloat(data.transportation_allowance) : null,
+            other_allowance: data.other_allowance ? parseFloat(data.other_allowance) : null,
+
             project_id: data.project_id || null,
             company_id: targetCompanyId,
             department_id: data.department_id || null
@@ -138,6 +158,18 @@ async function updateEmployee(id, data, user) {
             salary: data.salary ? parseFloat(data.salary) : null,
             saudization_status: data.saudization_status,
             contract_renewal_date: data.contract_renewal_date ? new Date(data.contract_renewal_date) : null,
+            
+            // New HR & Finance fields
+            joining_date: data.joining_date ? new Date(data.joining_date) : undefined,
+            insurance_company_name: data.insurance_company_name,
+            bank_name: data.bank_name,
+            bank_account_name: data.bank_account_name,
+            bank_iban: data.bank_iban,
+            basic_salary: data.basic_salary !== undefined ? parseFloat(data.basic_salary) : undefined,
+            housing_allowance: data.housing_allowance !== undefined ? parseFloat(data.housing_allowance) : undefined,
+            transportation_allowance: data.transportation_allowance !== undefined ? parseFloat(data.transportation_allowance) : undefined,
+            other_allowance: data.other_allowance !== undefined ? parseFloat(data.other_allowance) : undefined,
+
             project_id: data.project_id,
             department_id: data.department_id,
             updated_at: new Date()
