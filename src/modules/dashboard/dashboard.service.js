@@ -579,8 +579,7 @@ async function getComplianceDashboard(user) {
         OR: [
             { registration_expiry: { lte: windowDate } },
             { insurance_expiry: { lte: windowDate } },
-            { mvpi_expiry: { lte: windowDate } },
-            { fitness_expiry_date: { lte: windowDate } }
+            { mvpi_expiry: { lte: windowDate } }
         ],
         ...baseWhere
     };

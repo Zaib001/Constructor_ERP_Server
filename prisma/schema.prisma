@@ -1048,7 +1048,7 @@ model Vehicle {
   department             String?   @db.VarChar(100)
   vehicle_no             String    @unique @db.VarChar(50)
   plate_no               String?   @unique @db.VarChar(50)
-  fitness_expiry_date    DateTime? @db.Date
+  brand                  String?   @db.VarChar(100)
   registration_expiry    DateTime? @db.Date
   insurance_expiry       DateTime? @db.Date
   mvpi_expiry            DateTime? @db.Date
