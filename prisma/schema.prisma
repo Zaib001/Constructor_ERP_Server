@@ -996,6 +996,7 @@ model Employee {
   name                   String    @db.VarChar(200)
   department             String?   @db.VarChar(100)
   designation            String?   @db.VarChar(100)
+  nationality            String?   @db.VarChar(100)
   iqama_no               String?   @unique @db.VarChar(50)
   iqama_expiry           DateTime? @db.Date
   passport_no            String?   @unique @db.VarChar(50)
