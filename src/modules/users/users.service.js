@@ -145,17 +145,25 @@ async function updateUser(id, data, user) {
     const exists = await prisma.user.findFirst({ where });
     if (!exists) throw new Error("User not found or access denied");
 
+    // Build update payload
+    const updateData = {
+        name: data.name,
+        email: data.email,
+        designation: data.designation,
+        departments: (data.departmentId || data.department_id || data.department) ? { connect: { id: data.departmentId || data.department_id || data.department } } : undefined,
+        employee_code: data.employeeCode || data.employee_code,
+        is_active: data.is_active !== undefined ? data.is_active : data.isActive,
+        roles: (data.roleId || data.role_id) ? { connect: { id: data.roleId || data.role_id } } : undefined,
+    };
+
+    // Optional password reset
+    if (data.password && data.password.trim().length >= 6) {
+        updateData.password_hash = await bcrypt.hash(data.password.trim(), BCRYPT_ROUNDS);
+    }
+
     return await prisma.user.update({
         where: { id },
-        data: {
-            name: data.name,
-            email: data.email,
-            designation: data.designation,
-            departments: (data.departmentId || data.department_id || data.department) ? { connect: { id: data.departmentId || data.department_id || data.department } } : undefined,
-            employee_code: data.employeeCode || data.employee_code,
-            is_active: data.is_active !== undefined ? data.is_active : data.isActive,
-            roles: (data.roleId || data.role_id) ? { connect: { id: data.roleId || data.role_id } } : undefined,
-        },
+        data: updateData,
         include: {
             roles: {
                 select: {
