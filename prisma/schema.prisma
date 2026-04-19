@@ -1024,9 +1024,9 @@ model Employee {
   project_id             String?   @db.Uuid
   company_id             String?   @db.Uuid
   department_id          String?   @db.Uuid
+  is_active              Boolean?  @default(true)
   created_at             DateTime? @default(now()) @db.Timestamp(6)
   updated_at             DateTime? @db.Timestamp(6)
-  deleted_at             DateTime? @db.Timestamp(6)
 
   company     Company?    @relation(fields: [company_id], references: [id], onDelete: Cascade)
   departments Department? @relation(fields: [department_id], references: [id], onDelete: SetNull)

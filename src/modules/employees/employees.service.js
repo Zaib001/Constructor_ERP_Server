@@ -14,6 +14,9 @@ async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize
     if (projectId) where.project_id = projectId;
     if (departmentId) where.department_id = departmentId;
     
+    // Only return active employees
+    where.is_active = true;
+    
     const [data, total] = await Promise.all([
         prisma.employee.findMany({
             where,
@@ -40,7 +43,7 @@ async function getEmployeeById(id, user) {
     where.id = id;
 
     return await prisma.employee.findFirst({
-        where,
+        where: { ...where, is_active: true },
         include: {
             project: { select: { name: true, code: true } },
             departments: { select: { name: true } }
@@ -84,7 +87,7 @@ async function createEmployee(data, user) {
     if (data.iqama_no) {
         const existing = await prisma.employee.findFirst({ where: { iqama_no: data.iqama_no } });
         if (existing) {
-            if (existing.deleted_at) throw new Error(`Archived Entry: Iqama '${data.iqama_no}' exists in trash. Restore it or use a different number.`);
+            if (!existing.is_active) throw new Error(`Archived Entry: Iqama '${data.iqama_no}' exists in inactive records. Reactivate the profile or use a different number.`);
             throw new Error(`Duplicate Entry: Iqama number '${data.iqama_no}' is already registered to '${existing.name}'.`);
         }
     }
@@ -126,7 +129,8 @@ async function createEmployee(data, user) {
 
             project_id: data.project_id || null,
             company_id: targetCompanyId,
-            department_id: data.department_id || null
+            department_id: data.department_id || null,
+            is_active: true
         }
     });
 }
@@ -189,7 +193,8 @@ async function deleteEmployee(id, user) {
     return await prisma.employee.update({
         where: { id },
         data: { 
-            deleted_at: new Date()
+            is_active: false,
+            updated_at: new Date()
         }
     });
 }
