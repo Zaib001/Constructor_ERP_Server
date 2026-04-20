@@ -1,11 +1,14 @@
 "use strict";
 
 const prisma = require("../../db");
+const { applyDataScope, validateResourceAccess, MODULES } = require("../../utils/scoping");
 
 async function getAllCompanies(user, page = 1, pageSize = 10, search = "") {
-    if (!user.isSuperAdmin) throw new Error("Unauthorized: Super Admin access required.");
+    const scope = applyDataScope(user, { module: MODULES.SYSTEM, companyModel: true });
+    
     const skip = (page - 1) * pageSize;
     const where = {
+        ...scope,
         is_active: true,
         OR: search ? [
             { name: { contains: search, mode: "insensitive" } },
@@ -30,9 +33,7 @@ async function getAllCompanies(user, page = 1, pageSize = 10, search = "") {
 }
 
 async function getCompanyById(id, user) {
-    if (!user.isSuperAdmin && user.companyId !== id) {
-        throw new Error("Unauthorized: Access denied to this company.");
-    }
+    await validateResourceAccess(prisma, "company", id, user, { module: MODULES.SYSTEM, companyModel: true, isWrite: false });
     return await prisma.company.findUnique({
         where: { id },
         include: {
@@ -88,9 +89,7 @@ async function deleteCompany(id, user) {
 }
 
 async function getCompanyPerformance(id, user) {
-    if (!user.isSuperAdmin && user.companyId !== id) {
-        throw new Error("Unauthorized: Access denied to this company performance data.");
-    }
+    await validateResourceAccess(prisma, "company", id, user, { module: MODULES.SYSTEM, companyModel: true, isWrite: false });
     const company = await prisma.company.findUnique({
         where: { id },
         include: {
