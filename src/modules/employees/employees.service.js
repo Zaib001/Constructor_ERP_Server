@@ -1,5 +1,5 @@
 const prisma = require("../../db");
-const { applyDataScope, MODULES } = require("../../utils/scoping");
+const { applyDataScope, MODULES, ROLE_GROUPS } = require("../../utils/scoping");
 
 async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize = 50) {
     const { companyId, isSuperAdmin } = user;
@@ -52,8 +52,9 @@ async function getEmployeeById(id, user) {
 }
 
 async function createEmployee(data, user) {
-    const { companyId, isSuperAdmin } = user;
-    const targetCompanyId = isSuperAdmin ? (data.company_id || companyId) : companyId;
+    const { companyId, isSuperAdmin, roleCode } = user;
+    const isGlobalManager = ROLE_GROUPS.GLOBAL_MANAGERS.includes(roleCode);
+    const targetCompanyId = (isSuperAdmin || isGlobalManager) ? (data.company_id || companyId) : companyId;
 
     // 1. Validate Required Fields & Financials
     if (!data.name) throw new Error("Missing required fields: Employee name is mandatory.");
@@ -143,6 +144,9 @@ async function createEmployee(data, user) {
 }
 
 async function updateEmployee(id, data, user) {
+    const { roleCode } = user;
+    const isGlobalManager = ROLE_GROUPS.GLOBAL_MANAGERS.includes(roleCode);
+    
     const where = applyDataScope(user, { module: MODULES.HR, isWrite: true });
     where.id = id;
 
@@ -152,7 +156,7 @@ async function updateEmployee(id, data, user) {
 
     if (data.salary < 0) throw new Error("Financial Error: Salary cannot be negative.");
 
-    const targetCompanyId = user.isSuperAdmin ? (data.company_id || employee.company_id) : employee.company_id;
+    const targetCompanyId = (user.isSuperAdmin || isGlobalManager) ? (data.company_id || employee.company_id) : employee.company_id;
 
     return await prisma.employee.update({
         where: { id },

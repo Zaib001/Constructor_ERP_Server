@@ -121,8 +121,7 @@ function applyDataScope(user, options = {}) {
     
     // Only permit global access if:
     // a) User is in a manager role and module matches horizon
-    // b) They are performing a READ operation (isWrite: false)
-    if (isManagerInHorizon(roleCode, module) && !isWrite) {
+    if (isManagerInHorizon(roleCode, module)) {
         applyCompanyFilter = false;
     }
 
