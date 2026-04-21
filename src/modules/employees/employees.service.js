@@ -196,8 +196,8 @@ async function updateEmployee(id, data, user) {
             transportation_allowance: data.transportation_allowance !== undefined ? parseFloat(data.transportation_allowance) : undefined,
             other_allowance: data.other_allowance !== undefined ? parseFloat(data.other_allowance) : undefined,
 
-            project_id: data.project_id,
-            department_id: data.department_id,
+            project_id: data.project_id || null,
+            department_id: data.department_id || null,
             company_id: targetCompanyId,
             updated_at: new Date()
         }
