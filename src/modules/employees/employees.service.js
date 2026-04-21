@@ -84,17 +84,20 @@ async function createEmployee(data, user) {
         if (!project) throw new Error("Invalid Relation: Assigned project not found or access denied.");
     }
 
-    // 3. Unique Checks (Including soft-deleted to prevent collisions)
+    // 3. Unique Checks (Enforce only for ACTIVE employees to allow re-entry)
     if (data.iqama_no) {
-        const existing = await prisma.employee.findFirst({ where: { iqama_no: data.iqama_no } });
+        const existing = await prisma.employee.findFirst({ 
+            where: { iqama_no: data.iqama_no, is_active: true } 
+        });
         if (existing) {
-            if (!existing.is_active) throw new Error(`Archived Entry: Iqama '${data.iqama_no}' exists in inactive records. Reactivate the profile or use a different number.`);
             throw new Error(`Duplicate Entry: Iqama number '${data.iqama_no}' is already registered to '${existing.name}'.`);
         }
     }
 
     if (data.employee_code) {
-        const existing = await prisma.employee.findFirst({ where: { employee_code: data.employee_code } });
+        const existing = await prisma.employee.findFirst({ 
+            where: { employee_code: data.employee_code, is_active: true } 
+        });
         if (existing) throw new Error(`Duplicate Entry: Employee Code '${data.employee_code}' is already assigned to '${existing.name}'.`);
     }
 
@@ -206,13 +209,24 @@ async function deleteEmployee(id, user) {
     const employee = await prisma.employee.findFirst({ where });
     if (!employee) throw new Error("Employee not found or access denied.");
 
-    return await prisma.employee.update({
-        where: { id },
-        data: { 
-            is_active: false,
-            updated_at: new Date()
-        }
-    });
+    try {
+        // 1. Attempt hard delete (complete removal)
+        return await prisma.employee.delete({ where: { id } });
+    } catch (err) {
+        // 2. Fallback to soft delete if relations exist (e.g. timesheets, logs)
+        // We 'release' the unique numbers so they can be re-used for new entries
+        const suffix = `_DEL_${Date.now()}`;
+        return await prisma.employee.update({
+            where: { id },
+            data: { 
+                is_active: false,
+                iqama_no: employee.iqama_no ? `${employee.iqama_no}${suffix}` : null,
+                employee_code: employee.employee_code ? `${employee.employee_code}${suffix}` : null,
+                passport_no: employee.passport_no ? `${employee.passport_no}${suffix}` : null,
+                updated_at: new Date()
+            }
+        });
+    }
 }
 
 module.exports = {
