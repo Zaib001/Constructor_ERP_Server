@@ -5,11 +5,11 @@ const logger = require("../../logger");
 
 async function getAllEmployees(req, res, next) {
     try {
-        const { projectId, departmentId, page, pageSize } = req.query;
+        const { projectId, departmentId, page, pageSize, status } = req.query;
         const p = parseInt(page) || 1;
         const ps = parseInt(pageSize) || 50;
 
-        const result = await employeesService.getAllEmployees(req.user, projectId, departmentId, p, ps);
+        const result = await employeesService.getAllEmployees(req.user, projectId, departmentId, p, ps, status);
         return res.status(200).json({ success: true, ...result });
     } catch (err) {
         logger.error("Error in getAllEmployees:", err);
@@ -51,7 +51,7 @@ async function updateEmployee(req, res, next) {
 async function deleteEmployee(req, res, next) {
     try {
         await employeesService.deleteEmployee(req.params.id, req.user);
-        return res.status(200).json({ success: true, message: "Employee archived successfully" });
+        return res.status(200).json({ success: true, message: "Employee deleted permanently" });
     } catch (err) {
         logger.error("Error in deleteEmployee:", err);
         next(err);

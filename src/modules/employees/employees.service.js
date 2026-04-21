@@ -1,7 +1,7 @@
 const prisma = require("../../db");
 const { applyDataScope, MODULES, ROLE_GROUPS } = require("../../utils/scoping");
 
-async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize = 50) {
+async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize = 50, status = "active") {
     const { companyId, isSuperAdmin } = user;
     
     const skip = (page - 1) * pageSize;
@@ -14,8 +14,10 @@ async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize
     if (projectId) where.project_id = projectId;
     if (departmentId) where.department_id = departmentId;
     
-    // Only return active employees
-    where.is_active = true;
+    // Status Filtering
+    if (status === "active") where.is_active = true;
+    else if (status === "inactive") where.is_active = false;
+    // if status is 'all', we don't add is_active to where clause
     
     const [data, total] = await Promise.all([
         prisma.employee.findMany({
