@@ -66,8 +66,8 @@ async function createVehicle(data, user) {
     const targetCompanyId = isSuperAdmin ? (data.company_id || companyId) : companyId;
 
     // 1. Validate Required Fields
-    if (!data.vehicle_no || !data.department_id) {
-        throw new Error("Missing required fields: Vehicle number and Department selection are mandatory.");
+    if (!data.vehicle_no) {
+        throw new Error("Missing required fields: Vehicle number is mandatory.");
     }
 
     // 2. Tenant & Relation Validation
@@ -121,8 +121,6 @@ async function updateVehicle(id, data, user) {
     if (!isSuperAdmin) where.company_id = companyId;
 
     // 1. Tenant Security
-    if (!data.department_id) throw new Error("Validation Error: Department selection is mandatory.");
-    
     const vehicle = await prisma.vehicle.findFirst({ where });
     if (!vehicle) throw new Error("Vehicle not found or access denied.");
 

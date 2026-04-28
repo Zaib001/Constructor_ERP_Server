@@ -66,8 +66,8 @@ async function createEquipment(data, user) {
     const targetCompanyId = isSuperAdmin ? (data.company_id || companyId) : companyId;
 
     // 1. Validate Required Fields
-    if (!data.equipment_no || !data.name || !data.department_id) {
-        throw new Error("Missing required fields: Equipment number, name, and Department selection are mandatory.");
+    if (!data.equipment_no || !data.name) {
+        throw new Error("Missing required fields: Equipment number and name are mandatory.");
     }
 
     // 2. Tenant & Relation Validation
@@ -110,8 +110,6 @@ async function updateEquipment(id, data, user) {
     if (!isSuperAdmin) where.company_id = companyId;
 
     // 1. Tenant Security
-    if (!data.department_id) throw new Error("Validation Error: Department selection is mandatory.");
-    
     const equipment = await prisma.equipment.findFirst({ where });
     if (!equipment) throw new Error("Equipment not found or access denied.");
 
