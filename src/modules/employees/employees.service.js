@@ -3,22 +3,22 @@ const { applyDataScope, MODULES, ROLE_GROUPS } = require("../../utils/scoping");
 
 async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize = 50, status = "active") {
     const { companyId, isSuperAdmin } = user;
-    
+
     const skip = (page - 1) * pageSize;
-    const where = applyDataScope(user, { 
-        module: MODULES.HR, 
-        isWrite: false, 
-        projectFilter: true 
+    const where = applyDataScope(user, {
+        module: MODULES.HR,
+        isWrite: false,
+        projectFilter: true
     });
-    
+
     if (projectId) where.project_id = projectId;
     if (departmentId) where.department_id = departmentId;
-    
+
     // Status Filtering
     if (status === "active") where.is_active = true;
     else if (status === "inactive") where.is_active = false;
     // if status is 'all', we don't add is_active to where clause
-    
+
     const [data, total] = await Promise.all([
         prisma.employee.findMany({
             where,
@@ -37,10 +37,10 @@ async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize
 }
 
 async function getEmployeeById(id, user) {
-    const where = applyDataScope(user, { 
-        module: MODULES.HR, 
-        isWrite: false, 
-        projectFilter: true 
+    const where = applyDataScope(user, {
+        module: MODULES.HR,
+        isWrite: false,
+        projectFilter: true
     });
     where.id = id;
 
@@ -60,10 +60,10 @@ async function createEmployee(data, user) {
 
     // 1. Validate Required Fields & Financials
     if (!data.name) throw new Error("Missing required fields: Employee name is mandatory.");
-    
+
     // Validate all numeric fields
     const financials = [
-        'salary', 'basic_salary', 'housing_allowance', 
+        'salary', 'basic_salary', 'housing_allowance',
         'transportation_allowance', 'other_allowance'
     ];
     financials.forEach(field => {
@@ -72,24 +72,24 @@ async function createEmployee(data, user) {
 
     // 2. Tenant & Relation Validation
     if (data.project_id) {
-        const project = await prisma.project.findFirst({ 
-            where: { 
-                ...applyDataScope(user, { 
-                    module: MODULES.PROJECTS, 
-                    isWrite: false, 
-                    projectFilter: true, 
-                    projectModel: true 
-                }), 
-                id: data.project_id 
-            } 
+        const project = await prisma.project.findFirst({
+            where: {
+                ...applyDataScope(user, {
+                    module: MODULES.PROJECTS,
+                    isWrite: false,
+                    projectFilter: true,
+                    projectModel: true
+                }),
+                id: data.project_id
+            }
         });
         if (!project) throw new Error("Invalid Relation: Assigned project not found or access denied.");
     }
 
     // 3. Unique Checks (Enforce only for ACTIVE employees to allow re-entry)
     if (data.iqama_no) {
-        const existing = await prisma.employee.findFirst({ 
-            where: { iqama_no: data.iqama_no, is_active: true } 
+        const existing = await prisma.employee.findFirst({
+            where: { iqama_no: data.iqama_no, is_active: true }
         });
         if (existing) {
             throw new Error(`Duplicate Entry: Iqama number '${data.iqama_no}' is already registered to '${existing.name}'.`);
@@ -97,8 +97,8 @@ async function createEmployee(data, user) {
     }
 
     if (data.employee_code) {
-        const existing = await prisma.employee.findFirst({ 
-            where: { employee_code: data.employee_code, is_active: true } 
+        const existing = await prisma.employee.findFirst({
+            where: { employee_code: data.employee_code, is_active: true }
         });
         if (existing) throw new Error(`Duplicate Entry: Employee Code '${data.employee_code}' is already assigned to '${existing.name}'.`);
     }
@@ -128,7 +128,7 @@ async function createEmployee(data, user) {
             salary: data.salary ? parseFloat(data.salary) : null,
             saudization_status: data.saudization_status || null,
             contract_renewal_date: data.contract_renewal_date ? new Date(data.contract_renewal_date) : null,
-            
+
             // New HR & Finance fields
             joining_date: data.joining_date ? new Date(data.joining_date) : null,
             insurance_company_name: data.insurance_company_name || null,
@@ -151,7 +151,7 @@ async function createEmployee(data, user) {
 async function updateEmployee(id, data, user) {
     const { roleCode } = user;
     const isGlobalManager = ROLE_GROUPS.GLOBAL_MANAGERS.includes(roleCode);
-    
+
     const where = applyDataScope(user, { module: MODULES.HR, isWrite: true });
     where.id = id;
 
@@ -184,7 +184,7 @@ async function updateEmployee(id, data, user) {
             salary: data.salary ? parseFloat(data.salary) : null,
             saudization_status: data.saudization_status,
             contract_renewal_date: data.contract_renewal_date ? new Date(data.contract_renewal_date) : null,
-            
+
             // New HR & Finance fields
             joining_date: data.joining_date ? new Date(data.joining_date) : undefined,
             insurance_company_name: data.insurance_company_name,
@@ -220,7 +220,7 @@ async function deleteEmployee(id, user) {
         const suffix = `_DEL_${Date.now()}`;
         return await prisma.employee.update({
             where: { id },
-            data: { 
+            data: {
                 is_active: false,
                 iqama_no: employee.iqama_no ? `${employee.iqama_no}${suffix}` : null,
                 employee_code: employee.employee_code ? `${employee.employee_code}${suffix}` : null,
