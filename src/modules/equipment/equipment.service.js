@@ -10,11 +10,14 @@ async function getAllEquipment(user, runningSite, departmentId, page = 1, pageSi
     // Add flexibility: users should see assets assigned to their projects OR unassigned assets
     if (where.project) {
         where = {
+            deleted_at: null,
             OR: [
                 { ...where },
                 { running_site: null, company_id: user.companyId }
             ]
         };
+    } else {
+        where.deleted_at = null;
     }
 
     if (runningSite) where.running_site = runningSite;
@@ -43,6 +46,7 @@ async function getEquipmentById(id, user) {
     if (where.project) {
         where = {
             id,
+            deleted_at: null,
             OR: [
                 { ...where },
                 { running_site: null, company_id: user.companyId }
@@ -50,6 +54,7 @@ async function getEquipmentById(id, user) {
         };
     } else {
         where.id = id;
+        where.deleted_at = null;
     }
 
     return await prisma.equipment.findFirst({
@@ -125,12 +130,12 @@ async function updateEquipment(id, data, user) {
             third_party_certification_validity: data.third_party_certification_validity ? new Date(data.third_party_certification_validity) : null,
             registration_expiry: data.registration_expiry ? new Date(data.registration_expiry) : null,
             insurance_expiry: data.insurance_expiry ? new Date(data.insurance_expiry) : null,
-            running_site: data.running_site,
+            running_site: data.running_site || null,
             authorization_id: data.authorization_id,
             last_inspection_date: data.last_inspection_date ? new Date(data.last_inspection_date) : null,
             status: data.status,
             company_id: targetCompanyId,
-            department_id: data.department_id,
+            department_id: data.department_id || null,
             updated_at: new Date()
         }
     });

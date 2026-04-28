@@ -10,11 +10,14 @@ async function getAllVehicles(user, runningSite, departmentId, page = 1, pageSiz
     // Add flexibility: users should see assets assigned to their projects OR unassigned assets
     if (where.project) {
         where = {
+            deleted_at: null,
             OR: [
                 { ...where },
                 { running_site: null, company_id: user.companyId }
             ]
         };
+    } else {
+        where.deleted_at = null;
     }
 
     if (runningSite) where.running_site = runningSite;
@@ -43,6 +46,7 @@ async function getVehicleById(id, user) {
     if (where.project) {
         where = {
             id,
+            deleted_at: null,
             OR: [
                 { ...where },
                 { running_site: null, company_id: user.companyId }
@@ -50,6 +54,7 @@ async function getVehicleById(id, user) {
         };
     } else {
         where.id = id;
+        where.deleted_at = null;
     }
 
     return await prisma.vehicle.findFirst({
@@ -141,9 +146,9 @@ async function updateVehicle(id, data, user) {
             odometer_reading: data.odometer_reading ? parseInt(data.odometer_reading) : null,
             mileage_calculation: data.mileage_calculation ? parseFloat(data.mileage_calculation) : null,
             authorization_id: data.authorization_id,
-            running_site: data.running_site,
+            running_site: data.running_site || null,
             company_id: targetCompanyId,
-            department_id: data.department_id,
+            department_id: data.department_id || null,
             monthly_petrol_expense: data.monthly_petrol_expense ? parseFloat(data.monthly_petrol_expense) : null,
             updated_at: new Date()
         }
