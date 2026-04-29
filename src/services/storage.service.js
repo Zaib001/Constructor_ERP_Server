@@ -12,7 +12,7 @@ const logger = require("../logger");
  * Can be extended to support AWS S3, Azure Blob, etc.
  */
 
-const UPLOAD_DIR = path.join(__dirname, "../../uploads");
+const UPLOAD_DIR = process.env.VERCEL ? path.join("/tmp", "uploads") : path.join(__dirname, "../../uploads");
 
 // Ensure upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
