@@ -143,6 +143,7 @@ async function createEmployee(data, user) {
             project_id: data.project_id || null,
             company_id: targetCompanyId,
             department_id: data.department_id || null,
+            attachments: data.attachments || null,
             is_active: true
         }
     });
@@ -199,6 +200,7 @@ async function updateEmployee(id, data, user) {
             project_id: data.project_id || null,
             department_id: data.department_id || null,
             company_id: targetCompanyId,
+            attachments: data.attachments !== undefined ? data.attachments : employee.attachments,
             updated_at: new Date()
         }
     });

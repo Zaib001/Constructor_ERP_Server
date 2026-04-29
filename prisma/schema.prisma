@@ -1022,6 +1022,7 @@ model Employee {
   housing_allowance      Decimal?  @db.Decimal
   transportation_allowance Decimal?  @db.Decimal
   other_allowance        Decimal?  @db.Decimal
+  attachments            Json?
 
   project_id             String?   @db.Uuid
   company_id             String?   @db.Uuid
