@@ -155,7 +155,8 @@ app.use("/api/project-pipeline", projectPipelineRoutes);
 app.use("/api/project-closure", projectClosureRoutes);
 
 // ─── 7. Static Files (Uploads) ────────────────────────────────────────────────
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+const UPLOAD_DIR = process.env.VERCEL ? "/tmp/uploads" : path.join(__dirname, "../uploads");
+app.use("/uploads", express.static(UPLOAD_DIR));
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
