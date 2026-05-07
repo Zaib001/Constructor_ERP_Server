@@ -504,13 +504,16 @@ async function getStores(user) {
     
     return await prisma.store.findMany({
         where,
+        include: {
+            store_keeper: { select: { id: true, name: true } }
+        },
         orderBy: { name: "asc" }
     });
 }
 
 async function createStore(user, data) {
     const { companyId } = user;
-    const { name, location, description } = data;
+    const { name, location, description, storeKeeperId } = data;
 
     if (!name) throw new AppError("Store name is required", 400);
 
@@ -520,14 +523,18 @@ async function createStore(user, data) {
             name,
             location,
             description,
+            store_keeper_id: storeKeeperId || null,
             is_active: true
+        },
+        include: {
+            store_keeper: { select: { id: true, name: true } }
         }
     });
 }
 
 async function updateStore(user, id, data) {
     const { companyId } = user;
-    const { name, location, description } = data;
+    const { name, location, description, storeKeeperId } = data;
 
     // Verify ownership before update
     return await prisma.store.update({
@@ -535,7 +542,11 @@ async function updateStore(user, id, data) {
         data: {
             name,
             location,
-            description
+            description,
+            store_keeper_id: storeKeeperId || null
+        },
+        include: {
+            store_keeper: { select: { id: true, name: true } }
         }
     });
 }

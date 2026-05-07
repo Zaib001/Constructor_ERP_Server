@@ -241,6 +241,7 @@ model User {
   raised_punches         PunchListItem[]               @relation("PunchRaiser")
   assigned_punches       PunchListItem[]               @relation("PunchAssignee")
   prepared_closures      ProjectClosure[]              @relation("ClosurePreparer")
+  managed_stores         Store[]                       @relation("StoreKeeper")
 
   @@map("users")
   @@schema("auth")
@@ -957,11 +958,13 @@ model Store {
   name        String    @db.VarChar(150)
   location    String?
   description String?
-  is_active   Boolean   @default(true)
-  deleted_at  DateTime? @db.Timestamp(6)
-  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  is_active       Boolean   @default(true)
+  deleted_at      DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  store_keeper_id String?   @db.Uuid
 
   company                     Company                    @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  store_keeper                User?                      @relation("StoreKeeper", fields: [store_keeper_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   stocks                      InventoryStock[]
   ledger                      StockLedger[]
   grns                        GoodsReceiptNote[]
