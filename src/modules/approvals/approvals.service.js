@@ -172,7 +172,7 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
 
     // Load matching approval matrices
     const numericAmount = Number(amount) || 0;
-    const matrices = await repo.findMatrices(userCtx, docType, projectId, numericAmount, departmentId);
+    const matrices = await repo.findMatrices(userCtx, docType, projectId, numericAmount, departmentId, companyId);
     if (!matrices || matrices.length === 0) {
         const projectDisplay = projectId || "Global/None";
         logger.warn(`Approval Matrix not found: docType=${docType}, projectId=${projectDisplay}, amount=${numericAmount}, departmentId=${departmentId}`);

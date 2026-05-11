@@ -112,6 +112,7 @@ async function createVendor(data, user) {
         await requestApproval({
             docType: "VENDOR",
             docId: vendor.id,
+            companyId: vendor.company_id,
             departmentId: vendor.department_id,
             amount: 0,
             remarks: `New vendor registration request for '${vendor.name}'`

@@ -20,7 +20,7 @@ const { applyDataScope } = require("../../utils/scoping");
  * @param {number}  amount
  * @param {string|null} department
  */
-async function findMatrices(user, docType, projectId, amount, departmentId) {
+async function findMatrices(user, docType, projectId, amount, departmentId, companyId) {
     const scopeWhere = applyDataScope(user);
 
     const baseWhere = {
@@ -31,6 +31,11 @@ async function findMatrices(user, docType, projectId, amount, departmentId) {
             { OR: [{ max_amount: null }, { max_amount: { gte: amount } }] },
         ],
     };
+    
+    // Explicit company filter (Overwrites scope if provided)
+    if (companyId) {
+        baseWhere.company_id = companyId;
+    }
 
     // Optional department filter — only apply when the matrix row has a department set
     // (rows without department match all departments)
