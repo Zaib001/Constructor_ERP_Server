@@ -55,8 +55,12 @@ async function resolveApprover(roleId, requestedBy, departmentId, companyId) {
     const candidates = await repo.findUsersByRole(roleId, departmentId, companyId);
     const now = new Date();
 
+    let fallbackCandidate = null;
     for (const user of candidates) {
-        if (user.id === requestedBy) continue; 
+        if (user.id === requestedBy) {
+            fallbackCandidate = { userId: user.id, delegated: false };
+            continue; 
+        }
 
         // Check delegation
         const delegation = await repo.findPendingDelegation(user.id, now);
@@ -68,6 +72,11 @@ async function resolveApprover(roleId, requestedBy, departmentId, companyId) {
         }
 
         return { userId: user.id, delegated: false };
+    }
+
+    if (fallbackCandidate) {
+        logger.info(`No other candidates found for roleId=${roleId}. Allowing self-approval fallback for requester=${requestedBy}.`);
+        return fallbackCandidate;
     }
 
     // ─── Escalation Logic: If requester is the only approver or no candidates found ───
@@ -474,9 +483,17 @@ async function approveStep(approvalRequestId, userCtx, remarks, ipAddress, devic
 
     // Self-approval block (Creator cannot approve their own document)
     // Mandatory Escalation: requester cannot approve even if they are Admin.
+    // FALLBACK: Allow if user is Super Admin or if no other approvers were found (already assigned to them)
     if (request.requested_by === actorId) {
-        logger.warn(`Self-approval blocked for user='${actorId}' on request='${approvalRequestId}'`);
-        throw createAppError("Self-approval is strictly prohibited. This request must be approved by another authorized personnel or escalated to a higher administrator.", 403);
+        const otherStepsAtSameOrder = request.approval_steps.filter(s => s.step_order === request.current_step && s.approver_user !== actorId);
+        const canSelfApprove = (actor.roles?.code === "super_admin") || (otherStepsAtSameOrder.length === 0);
+
+        if (!canSelfApprove) {
+            logger.warn(`Self-approval blocked for user='${actorId}' on request='${approvalRequestId}'`);
+            throw createAppError("Self-approval is strictly prohibited. This request must be approved by another authorized personnel.", 403);
+        } else {
+            logger.info(`Allowing self-approval for user='${actorId}' on request='${approvalRequestId}' (SuperAdmin or Only Approver)`);
+        }
     }
 
     const roleCode = (actor.roles?.code || "").toLowerCase();

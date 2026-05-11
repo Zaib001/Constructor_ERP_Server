@@ -1,64 +1,54 @@
 "use strict";
 
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "../.env") });
 const prisma = require("../src/db");
 
 async function main() {
-    console.log("--- Starting Vendor Approval Matrix Seed ---");
+    console.log("🚀 Seeding Vendor Approval Matrices...");
 
-    // 1. Find the necessary roles
-    const deptHeadRole = await prisma.role.findFirst({
-        where: { code: "dept_head" }
+    // 1. Get ERP Admin Role
+    const erpAdminRole = await prisma.role.findUnique({
+        where: { code: "erp_admin" }
     });
 
-    const superAdminRole = await prisma.role.findFirst({
-        where: { code: "super_admin" }
-    });
-
-    if (!deptHeadRole || !superAdminRole) {
-        console.error("Critical roles missing. Please ensure DEPT_HEAD and SUPER_ADMIN roles exist.");
-        process.exit(1);
+    if (!erpAdminRole) {
+        console.error("❌ erp_admin role not found. Please run seed_rbac.js first.");
+        return;
     }
 
-    console.log(`Found roles: DEPT_HEAD (${deptHeadRole.id}), SUPER_ADMIN (${superAdminRole.id})`);
+    // 2. Get all companies
+    const companies = await prisma.company.findMany();
 
-    // 2. Clear existing VENDOR matrices to avoid duplicates during development
-    await prisma.approvalMatrix.deleteMany({
-        where: { doc_type: "VENDOR" }
-    });
+    for (const co of companies) {
+        console.log(`📍 Configuring VENDOR matrix for company: ${co.name}`);
+        
+        // Clear existing
+        await prisma.approvalMatrix.deleteMany({
+            where: { 
+                company_id: co.id, 
+                doc_type: "VENDOR"
+            }
+        });
 
-    // 3. Create Global Vendor Approval Matrix (Project independent, Department based)
-    // Step 1: Department Head Review
-    await prisma.approvalMatrix.create({
-        data: {
-            doc_type: "VENDOR",
-            step_order: 1,
-            role_id: deptHeadRole.id,
-            is_parallel: false,
-            is_mandatory: true,
-            min_amount: 0,
-            max_amount: 999999999, // Effectively all vendor requests
-        }
-    });
+        // Add 1-step approval by ERP Admin
+        await prisma.approvalMatrix.create({
+            data: {
+                company_id: co.id,
+                doc_type: "VENDOR",
+                role_id: erpAdminRole.id,
+                step_order: 1,
+                min_amount: 0,
+                max_amount: 999999999 // Effectively no limit
+            }
+        });
+    }
 
-    // Step 2: Superadmin Final Approval
-    await prisma.approvalMatrix.create({
-        data: {
-            doc_type: "VENDOR",
-            step_order: 2,
-            role_id: superAdminRole.id,
-            is_parallel: false,
-            is_mandatory: true,
-            min_amount: 0,
-            max_amount: 999999999,
-        }
-    });
-
-    console.log("✅ Vendor Approval Matrix configured successfully (Dept Head -> Superadmin)");
+    console.log("✅ Vendor Approval Seeding Complete!");
 }
 
 main()
-    .catch((e) => {
+    .catch(e => {
         console.error(e);
         process.exit(1);
     })
