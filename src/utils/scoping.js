@@ -17,11 +17,12 @@ const MODULES = {
     FLEET: "FLEET",
     DOCUMENTS: "documents",
     EXECUTION: "EXECUTION",
+    SUBCONTRACT: "SUBCONTRACT",
     SYSTEM: "SYSTEM"
 };
 
 const ROLE_GROUPS = {
-    PROJECT_RESTRICTED: ["project_manager", "site_engineer", "site_coordinator"],
+    PROJECT_RESTRICTED: ["project_manager", "site_engineer", "site_coordinator", "quantity_surveyor"],
     COMPANY_WIDE: ["erp_admin", "procurement_officer", "accounts_officer", "hr_admin", "auditor_readonly"],
     GOVERNANCE: ["super_admin"],
 };

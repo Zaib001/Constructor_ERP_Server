@@ -108,6 +108,8 @@ const riskRoutes = require("./modules/risk/risk.routes");
 const procurementRoutes = require("./modules/procurement/procurement.routes");
 const projectPipelineRoutes = require("./modules/projectPipeline/projectPipeline.routes");
 const projectClosureRoutes = require("./modules/projectClosure/projectClosure.routes");
+const subcontractRoutes = require("./modules/subcontract/subcontract.routes");
+
 
 
 
@@ -153,6 +155,8 @@ app.use("/api/risk", riskRoutes);
 app.use("/api/procurement", procurementRoutes);
 app.use("/api/project-pipeline", projectPipelineRoutes);
 app.use("/api/project-closure", projectClosureRoutes);
+app.use("/api/subcontract", subcontractRoutes);
+
 
 // ─── 7. Static Files (Uploads) ────────────────────────────────────────────────
 const UPLOAD_DIR = process.env.VERCEL ? "/tmp/uploads" : path.join(__dirname, "../uploads");

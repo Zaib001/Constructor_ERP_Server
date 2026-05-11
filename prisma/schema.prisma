@@ -69,34 +69,41 @@ model Company {
   resource_plans         ResourcePlan[]
 
   // Week 6 Phase 2
-  allocations        ResourceAllocation[]
-  service_requests   ServiceRequest[]
-  inventory_requests InventoryPlanningRequest[]
-  logistics_requests LogisticsRequest[]
-  riskRegisters      RiskRegister[]
-  delayRecords       DelayRecord[]
-  variationOrders    VariationOrder[]
-  rfis               RFI[]
-  submittals         Submittal[]
-  meetingLogs        MeetingLog[]
-  inspections        Inspection[]
-  ncrs               NCR[]
-  safetyIncidents    SafetyIncident[]
-  hseinductions      HSEInduction[]
-  deliveryTrackings  DeliveryTracking[]
-  mobilizationLogs   MobilizationLog[]
-  execution_tasks    ExecutionTask[]
-  timesheets         Timesheet[]
-  itp_plans          ITPPlan[]
-  safety_logs        SafetyLog[]
-  safety_jsas        SafetyJSA[]
-  claims             Claim[]
-  billing_cycles     BillingCycle[]
-  cost_trackings     CostTracking[]
-  involved_incidents SafetyIncident[] @relation("IncidentInvolvedCompany")
-  involved_inductions HSEInduction[]   @relation("InductionInvolvedCompany")
+  allocations         ResourceAllocation[]
+  service_requests    ServiceRequest[]
+  inventory_requests  InventoryPlanningRequest[]
+  logistics_requests  LogisticsRequest[]
+  riskRegisters       RiskRegister[]
+  delayRecords        DelayRecord[]
+  variationOrders     VariationOrder[]
+  rfis                RFI[]
+  submittals          Submittal[]
+  meetingLogs         MeetingLog[]
+  inspections         Inspection[]
+  ncrs                NCR[]
+  safetyIncidents     SafetyIncident[]
+  hseinductions       HSEInduction[]
+  deliveryTrackings   DeliveryTracking[]
+  mobilizationLogs    MobilizationLog[]
+  execution_tasks     ExecutionTask[]
+  timesheets          Timesheet[]
+  itp_plans           ITPPlan[]
+  safety_logs         SafetyLog[]
+  safety_jsas         SafetyJSA[]
+  claims              Claim[]
+  billing_cycles      BillingCycle[]
+  cost_trackings      CostTracking[]
+  involved_incidents  SafetyIncident[]           @relation("IncidentInvolvedCompany")
+  involved_inductions HSEInduction[]             @relation("InductionInvolvedCompany")
   punch_list_items    PunchListItem[]
   project_closures    ProjectClosure[]
+
+  // Week 7: Subcontractor System
+  subcontract_work_orders   SubcontractWorkOrder[]
+  subcontract_mobilizations SubcontractMobilization[]
+  work_measurements         WorkMeasurement[]
+  ra_bills                  RABill[]
+  subcontract_payments      SubcontractPayment[]
 
   @@map("companies")
   @@schema("auth")
@@ -237,11 +244,25 @@ model User {
   safety_logs_observed   SafetyLog[]                   @relation("SafetyObserver")
   jsas_created           SafetyJSA[]                   @relation("JSACreator")
   jsas_approved          SafetyJSA[]                   @relation("JSAApprover")
-  updated_status_logs    ProjectStatusLog[]          @relation("StatusUpdater")
+  updated_status_logs    ProjectStatusLog[]            @relation("StatusUpdater")
   raised_punches         PunchListItem[]               @relation("PunchRaiser")
   assigned_punches       PunchListItem[]               @relation("PunchAssignee")
   prepared_closures      ProjectClosure[]              @relation("ClosurePreparer")
   managed_stores         Store[]                       @relation("StoreKeeper")
+
+  // Week 7: Subcontractor System
+  created_wos             SubcontractWorkOrder[]    @relation("WOCreator")
+  issued_wos              SubcontractWorkOrder[]    @relation("WOIssuer")
+  mob_verifications       SubcontractMobilization[] @relation("MobVerifier")
+  measurements_made       WorkMeasurement[]         @relation("MeasurementMeasurer")
+  measurements_checked    WorkMeasurement[]         @relation("MeasurementChecker")
+  qs_certifications       QSCertification[]         @relation("QSCertifier")
+  finance_approvals       FinanceApproval[]         @relation("FinanceApprover")
+  processed_payments      SubcontractPayment[]      @relation("PaymentProcessor")
+  wo_status_logs          WorkOrderStatusLog[]      @relation("WOStatusActor")
+  measurement_status_logs MeasurementStatusLog[]    @relation("MeasurementStatusActor")
+  ra_bill_status_logs     RABillStatusLog[]         @relation("RABillStatusActor")
+  payment_status_logs     PaymentStatusLog[]        @relation("PaymentStatusActor")
 
   @@map("users")
   @@schema("auth")
@@ -272,41 +293,41 @@ model RolePermission {
 }
 
 model Project {
-  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code               String?           @unique @db.VarChar(50)
-  name               String            @db.VarChar(200)
-  description        String?
-  status             String?           @default("active") @db.VarChar(20)
-  start_date         DateTime?         @db.Timestamp(6)
-  end_date           DateTime?         @db.Timestamp(6)
-  created_at         DateTime?         @default(now()) @db.Timestamp(6)
-  updated_at         DateTime?         @db.Timestamp(6)
-  deleted_at         DateTime?         @db.Timestamp(6)
-  company_id         String?           @db.Uuid
-  budget             Decimal?          @db.Decimal
-  revenue            Decimal?          @db.Decimal
-  cost               Decimal?          @db.Decimal
-  advance_payment_amount Decimal?      @default(0) @db.Decimal
-  advance_recovery_pct   Decimal?      @default(10) @db.Decimal
-  retention_pct          Decimal?      @default(10) @db.Decimal
-  company            Company?          @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  approval_matrices  ApprovalMatrix[]
-  approval_requests  ApprovalRequest[]
-  user_projects      UserProject[]
-  profit_share_rules ProfitShareRule[]
-  purchase_orders    PurchaseOrder[]
-  quotations         Quotation[]
-  expenses           Expense[]
-  progress           ProjectProgress[]
-  location           String?
-  client             String?
-  contract_value     Decimal?          @db.Decimal // Week 6: signed contract amount
-  current_contract_value Decimal?       @db.Decimal // Revised after VOs/Claims
-  forecast_end_date  DateTime?         @db.Timestamp(6) // Recalculated after Delays
-  wbs                WBS[]
-  employees          Employee[]
-  vehicles           Vehicle[]
-  equipment          Equipment[]
+  id                     String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                   String?           @unique @db.VarChar(50)
+  name                   String            @db.VarChar(200)
+  description            String?
+  status                 String?           @default("active") @db.VarChar(20)
+  start_date             DateTime?         @db.Timestamp(6)
+  end_date               DateTime?         @db.Timestamp(6)
+  created_at             DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?         @db.Timestamp(6)
+  deleted_at             DateTime?         @db.Timestamp(6)
+  company_id             String?           @db.Uuid
+  budget                 Decimal?          @db.Decimal
+  revenue                Decimal?          @db.Decimal
+  cost                   Decimal?          @db.Decimal
+  advance_payment_amount Decimal?          @default(0) @db.Decimal
+  advance_recovery_pct   Decimal?          @default(10) @db.Decimal
+  retention_pct          Decimal?          @default(10) @db.Decimal
+  company                Company?          @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approval_matrices      ApprovalMatrix[]
+  approval_requests      ApprovalRequest[]
+  user_projects          UserProject[]
+  profit_share_rules     ProfitShareRule[]
+  purchase_orders        PurchaseOrder[]
+  quotations             Quotation[]
+  expenses               Expense[]
+  progress               ProjectProgress[]
+  location               String?
+  client                 String?
+  contract_value         Decimal?          @db.Decimal // Week 6: signed contract amount
+  current_contract_value Decimal?          @db.Decimal // Revised after VOs/Claims
+  forecast_end_date      DateTime?         @db.Timestamp(6) // Recalculated after Delays
+  wbs                    WBS[]
+  employees              Employee[]
+  vehicles               Vehicle[]
+  equipment              Equipment[]
   // purchase_requests   PurchaseRequest[]
 
   purchase_requisitions PurchaseRequisition[]
@@ -337,28 +358,33 @@ model Project {
   inventory_requests InventoryPlanningRequest[]
   logistics_requests LogisticsRequest[]
 
-  risk_registers    RiskRegister[]
-  delay_records     DelayRecord[]
-  variation_orders  VariationOrder[]
-  rfis              RFI[]
-  submittals        Submittal[]
-  meeting_logs      MeetingLog[]
-  inspections       Inspection[]
-  ncrs              NCR[]
-  safety_incidents  SafetyIncident[]
-  hse_inductions    HSEInduction[]
-  deliveryTrackings DeliveryTracking[]
-  mobilizationLogs  MobilizationLog[]
-  execution_tasks   ExecutionTask[]
-  timesheets        Timesheet[]
-  safety_logs       SafetyLog[]
-  safety_jsas       SafetyJSA[]
-  claims            Claim[]
-  billing_cycles    BillingCycle[]
-  cost_trackings    CostTracking[]
-  status_logs       ProjectStatusLog[]
-  punch_list_items  PunchListItem[]
-  closure           ProjectClosure?
+  risk_registers           RiskRegister[]
+  delay_records            DelayRecord[]
+  variation_orders         VariationOrder[]
+  rfis                     RFI[]
+  submittals               Submittal[]
+  meeting_logs             MeetingLog[]
+  inspections              Inspection[]
+  ncrs                     NCR[]
+  safety_incidents         SafetyIncident[]
+  hse_inductions           HSEInduction[]
+  deliveryTrackings        DeliveryTracking[]
+  mobilizationLogs         MobilizationLog[]
+  execution_tasks          ExecutionTask[]
+  timesheets               Timesheet[]
+  safety_logs              SafetyLog[]
+  safety_jsas              SafetyJSA[]
+  claims                   Claim[]
+  billing_cycles           BillingCycle[]
+  cost_trackings           CostTracking[]
+  status_logs              ProjectStatusLog[]
+  punch_list_items         PunchListItem[]
+  closure                  ProjectClosure?
+  subcontractWorkOrders    SubcontractWorkOrder[]
+  subcontractMobilizations SubcontractMobilization[]
+  workMeasurements         WorkMeasurement[]
+  rabills                  RABill[]
+  subcontractPayments      SubcontractPayment[]
 
   @@map("projects")
   @@schema("auth")
@@ -586,6 +612,12 @@ model Vendor {
   comparison_selections ComparisonEngine[]
   procurement_items     ProcurementPlanItem[]
 
+  // Week 7: Subcontractor System
+  subcontract_work_orders   SubcontractWorkOrder[]
+  subcontract_mobilizations SubcontractMobilization[]
+  work_measurements         WorkMeasurement[]
+  ra_bills                  RABill[]
+
   @@map("vendors")
   @@schema("auth")
 }
@@ -628,11 +660,12 @@ model PurchaseOrder {
   invoices SupplierInvoice[]
   grns     GoodsReceiptNote[]
 
-  notes             String?
-  terms_conditions  String?
-  attachments       Json?
-  procurement_items ProcurementPlanItem[]
-  deliveryTrackings DeliveryTracking[]
+  notes                   String?
+  terms_conditions        String?
+  attachments             Json?
+  procurement_items       ProcurementPlanItem[]
+  deliveryTrackings       DeliveryTracking[]
+  subcontract_work_orders SubcontractWorkOrder[]
 
   @@map("purchase_orders")
   @@schema("auth")
@@ -879,7 +912,7 @@ model WBS {
 
   // Week 6 Initiation Relations
   boq_validations BOQValidation[]
-   meeting_logs    MeetingLog[]
+  meeting_logs    MeetingLog[]
   rfis            RFI[]
   submittals      Submittal[]
   schedules       ProjectSchedule[]
@@ -893,6 +926,10 @@ model WBS {
   execution_tasks    ExecutionTask[]
   cost_trackings     CostTracking[]
   punch_list_items   PunchListItem[]
+
+  // Week 7: Subcontractor System
+  subcontract_work_orders SubcontractWorkOrder[]
+  work_measurements       WorkMeasurement[]
 
   @@map("wbs")
   @@schema("auth")
@@ -917,6 +954,10 @@ model CostCode {
   // Week 6 Initiation Relations
   boq_validations  BOQValidation[]
   service_requests ServiceRequest[]
+
+  // Week 7: Subcontractor System
+  subcontract_work_orders SubcontractWorkOrder[]
+  work_measurements       WorkMeasurement[]
 
   @@map("cost_codes")
   @@schema("auth")
@@ -953,11 +994,11 @@ model Item {
 // Week 5: Full inventory models below
 
 model Store {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id  String    @db.Uuid
-  name        String    @db.VarChar(150)
-  location    String?
-  description String?
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id      String    @db.Uuid
+  name            String    @db.VarChar(150)
+  location        String?
+  description     String?
   is_active       Boolean   @default(true)
   deleted_at      DateTime? @db.Timestamp(6)
   created_at      DateTime  @default(now()) @db.Timestamp(6)
@@ -1014,25 +1055,25 @@ model Employee {
   salary                 Decimal?  @db.Decimal
   saudization_status     String?   @db.VarChar(50)
   contract_renewal_date  DateTime? @db.Date
-  
-  // New HR & Finance fields
-  joining_date           DateTime? @db.Date
-  insurance_company_name String?   @db.VarChar(200)
-  bank_name              String?   @db.VarChar(200)
-  bank_account_name      String?   @db.VarChar(200)
-  bank_iban              String?   @db.VarChar(100)
-  basic_salary           Decimal?  @db.Decimal
-  housing_allowance      Decimal?  @db.Decimal
-  transportation_allowance Decimal?  @db.Decimal
-  other_allowance        Decimal?  @db.Decimal
-  attachments            Json?
 
-  project_id             String?   @db.Uuid
-  company_id             String?   @db.Uuid
-  department_id          String?   @db.Uuid
-  is_active              Boolean?  @default(true)
-  created_at             DateTime? @default(now()) @db.Timestamp(6)
-  updated_at             DateTime? @db.Timestamp(6)
+  // New HR & Finance fields
+  joining_date             DateTime? @db.Date
+  insurance_company_name   String?   @db.VarChar(200)
+  bank_name                String?   @db.VarChar(200)
+  bank_account_name        String?   @db.VarChar(200)
+  bank_iban                String?   @db.VarChar(100)
+  basic_salary             Decimal?  @db.Decimal
+  housing_allowance        Decimal?  @db.Decimal
+  transportation_allowance Decimal?  @db.Decimal
+  other_allowance          Decimal?  @db.Decimal
+  attachments              Json?
+
+  project_id    String?   @db.Uuid
+  company_id    String?   @db.Uuid
+  department_id String?   @db.Uuid
+  is_active     Boolean?  @default(true)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @db.Timestamp(6)
 
   company     Company?    @relation(fields: [company_id], references: [id], onDelete: Cascade)
   departments Department? @relation(fields: [department_id], references: [id], onDelete: SetNull)
@@ -1170,6 +1211,7 @@ model PurchaseRequisition {
   procurement_items        ProcurementPlanItem[]
   service_requests         ServiceRequest[]          @relation
   purchaseRequisitionItems PurchaseRequisitionItem[]
+  subcontract_work_orders  SubcontractWorkOrder[]
 
   @@map("purchase_requisitions")
   @@schema("auth")
@@ -1554,7 +1596,8 @@ model BOQItem {
   invoice_items ProgressInvoiceItem[]
 
   // Week 6 Initiation Relations
-  boq_validations BOQValidation[]
+  boq_validations              BOQValidation[]
+  subcontract_work_order_items SubcontractWorkOrderItem[]
 
   @@index([company_id, project_id])
   @@map("boq_items")
@@ -1805,20 +1848,20 @@ model SafetyLog {
 
 // ─── Safety JSA (Job Safety Analysis) ──────────────────────────────────────────
 model SafetyJSA {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id      String    @db.Uuid
-  project_id      String    @db.Uuid
-  wbs_id          String    @db.Uuid
-  jsa_no          String    @unique @db.VarChar(50)
-  title           String    @db.VarChar(300)
-  work_activity   String
-  steps           Json // Array of steps with potential hazards and controls
-  status          String    @default("pending") @db.VarChar(30) // pending | approved | rejected | archived
-  approved_by_id  String?   @db.Uuid
-  approved_at     DateTime? @db.Timestamp(6)
-  created_by_id   String    @db.Uuid
-  created_at      DateTime  @default(now()) @db.Timestamp(6)
-  updated_at      DateTime  @updatedAt @db.Timestamp(6)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String    @db.Uuid
+  project_id     String    @db.Uuid
+  wbs_id         String    @db.Uuid
+  jsa_no         String    @unique @db.VarChar(50)
+  title          String    @db.VarChar(300)
+  work_activity  String
+  steps          Json // Array of steps with potential hazards and controls
+  status         String    @default("pending") @db.VarChar(30) // pending | approved | rejected | archived
+  approved_by_id String?   @db.Uuid
+  approved_at    DateTime? @db.Timestamp(6)
+  created_by_id  String    @db.Uuid
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @updatedAt @db.Timestamp(6)
 
   company     Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project     Project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -1833,25 +1876,25 @@ model SafetyJSA {
 
 // ─── Delay Record ─────────────────────────────────────────────────────────────
 model DelayRecord {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id  String    @db.Uuid
-  project_id  String    @db.Uuid
-  wbs_id      String?   @db.Uuid
-  delay_ref   String    @unique @db.VarChar(100)
-  delay_type  String    @db.VarChar(50) // EXCUSABLE | NON_EXCUSABLE | COMPENSABLE
-  cause       String    @db.VarChar(100) // CLIENT | CONTRACTOR | FORCE_MAJEURE | VENDOR | WEATHER
-  description String
-  start_date  DateTime  @db.Date
-  end_date    DateTime? @db.Date
-  delay_days  Int?
-  cost_impact Decimal?  @db.Decimal
-  eot_claimed Boolean   @default(false)
-  eot_days    Int?
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id       String    @db.Uuid
+  project_id       String    @db.Uuid
+  wbs_id           String?   @db.Uuid
+  delay_ref        String    @unique @db.VarChar(100)
+  delay_type       String    @db.VarChar(50) // EXCUSABLE | NON_EXCUSABLE | COMPENSABLE
+  cause            String    @db.VarChar(100) // CLIENT | CONTRACTOR | FORCE_MAJEURE | VENDOR | WEATHER
+  description      String
+  start_date       DateTime  @db.Date
+  end_date         DateTime? @db.Date
+  delay_days       Int?
+  cost_impact      Decimal?  @db.Decimal
+  eot_claimed      Boolean   @default(false)
+  eot_days         Int?
   status           String    @default("open") @db.VarChar(30)
   resolution_notes String?
   created_by       String    @db.Uuid
-  created_at  DateTime  @default(now()) @db.Timestamp(6)
-  updated_at  DateTime  @updatedAt @db.Timestamp(6)
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @updatedAt @db.Timestamp(6)
 
   company          Company          @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project          Project          @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -1916,22 +1959,22 @@ model VOItem {
 }
 
 model Claim {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id      String    @db.Uuid
-  project_id      String    @db.Uuid
-  claim_no        String    @unique @db.VarChar(100)
-  claim_date      DateTime  @db.Date
-  type            String    @db.VarChar(50) // CONTRACTUAL | EXTRA_CONTRACTUAL | FORCE_MAJEURE
-  description     String
-  claim_amount    Decimal?  @db.Decimal
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id       String   @db.Uuid
+  project_id       String   @db.Uuid
+  claim_no         String   @unique @db.VarChar(100)
+  claim_date       DateTime @db.Date
+  type             String   @db.VarChar(50) // CONTRACTUAL | EXTRA_CONTRACTUAL | FORCE_MAJEURE
+  description      String
+  claim_amount     Decimal? @db.Decimal
   eot_days_claimed Int?
-  status          String    @default("submitted") @db.VarChar(30) // SUBMITTED | UNDER_REVIEW | ACCEPTED | REJECTED | SETTLED
+  status           String   @default("submitted") @db.VarChar(30) // SUBMITTED | UNDER_REVIEW | ACCEPTED | REJECTED | SETTLED
   resolution_notes String?
-  settled_amount  Decimal?  @db.Decimal
-  settled_days    Int?
-  created_by      String    @db.Uuid
-  created_at      DateTime  @default(now()) @db.Timestamp(6)
-  updated_at      DateTime  @updatedAt @db.Timestamp(6)
+  settled_amount   Decimal? @db.Decimal
+  settled_days     Int?
+  created_by       String   @db.Uuid
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  updated_at       DateTime @updatedAt @db.Timestamp(6)
 
   company Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project Project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -2060,12 +2103,12 @@ model Inspection {
   item_id         String?   @db.Uuid
   rfi_id          String?   @db.Uuid
 
-  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  project Project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  wbs     WBS?    @relation(fields: [wbs_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  itp_plan   ITPPlan?   @relation(fields: [itp_plan_id], references: [id])
-  ncrs       NCR[]
-  
+  company  Company  @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project  Project  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wbs      WBS?     @relation(fields: [wbs_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itp_plan ITPPlan? @relation(fields: [itp_plan_id], references: [id])
+  ncrs     NCR[]
+
   @@index([company_id, project_id, status])
   @@map("inspections")
   @@schema("auth")
@@ -2073,20 +2116,20 @@ model Inspection {
 
 // ─── Inspection Test Plan (ITP) ──────────────────────────────────────────────
 model ITPPlan {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id        String    @db.Uuid
-  project_id        String    @db.Uuid
-  wbs_id            String?   @db.Uuid
-  itp_no            String    @unique @db.VarChar(100)
-  title             String    @db.VarChar(500)
-  description       String?
-  revision_no       Int       @default(0)
-  status            String    @default("active") @db.VarChar(30)
-  is_v_critical     Boolean   @default(false)
-  blocking_enabled  Boolean   @default(true)
-  created_by        String    @db.Uuid
-  created_at        DateTime  @default(now()) @db.Timestamp(6)
-  updated_at        DateTime  @updatedAt @db.Timestamp(6)
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id       String   @db.Uuid
+  project_id       String   @db.Uuid
+  wbs_id           String?  @db.Uuid
+  itp_no           String   @unique @db.VarChar(100)
+  title            String   @db.VarChar(500)
+  description      String?
+  revision_no      Int      @default(0)
+  status           String   @default("active") @db.VarChar(30)
+  is_v_critical    Boolean  @default(false)
+  blocking_enabled Boolean  @default(true)
+  created_by       String   @db.Uuid
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  updated_at       DateTime @updatedAt @db.Timestamp(6)
 
   company     Company      @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project     Project      @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -2231,11 +2274,11 @@ model ProgressInvoice {
   created_at            DateTime  @default(now()) @db.Timestamp(6)
   updated_at            DateTime  @updatedAt @db.Timestamp(6)
 
-  company Company               @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  project Project               @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cycle   BillingCycle?         @relation(fields: [cycle_id], references: [id])
-  items   ProgressInvoiceItem[]
-  cycle_id String?              @db.Uuid
+  company  Company               @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project  Project               @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cycle    BillingCycle?         @relation(fields: [cycle_id], references: [id])
+  items    ProgressInvoiceItem[]
+  cycle_id String?               @db.Uuid
 
   @@index([company_id, project_id])
   @@map("progress_invoices")
@@ -2244,15 +2287,15 @@ model ProgressInvoice {
 
 // ─── Billing Cycle ────────────────────────────────────────────────────────────
 model BillingCycle {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id   String    @db.Uuid
-  project_id   String    @db.Uuid
-  cycle_name   String    @db.VarChar(100)
-  start_date   DateTime  @db.Date
-  end_date     DateTime  @db.Date
-  status       String    @default("open") @db.VarChar(30) // open | closed
-  created_at   DateTime  @default(now()) @db.Timestamp(6)
-  updated_at   DateTime  @updatedAt @db.Timestamp(6)
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String   @db.Uuid
+  project_id String   @db.Uuid
+  cycle_name String   @db.VarChar(100)
+  start_date DateTime @db.Date
+  end_date   DateTime @db.Date
+  status     String   @default("open") @db.VarChar(30) // open | closed
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
 
   company   Company           @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project   Project           @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -2266,16 +2309,16 @@ model BillingCycle {
 
 // ─── Cost Tracking (Snapshots) ────────────────────────────────────────────────
 model CostTracking {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id      String   @db.Uuid
-  project_id      String   @db.Uuid
-  cycle_id        String?  @db.Uuid
-  wbs_id          String?  @db.Uuid
-  planned_amount  Decimal  @default(0) @db.Decimal
-  committed_amount Decimal @default(0) @db.Decimal
-  actual_amount   Decimal  @default(0) @db.Decimal
-  variance        Decimal  @default(0) @db.Decimal
-  recorded_at     DateTime @default(now()) @db.Timestamp(6)
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id       String   @db.Uuid
+  project_id       String   @db.Uuid
+  cycle_id         String?  @db.Uuid
+  wbs_id           String?  @db.Uuid
+  planned_amount   Decimal  @default(0) @db.Decimal
+  committed_amount Decimal  @default(0) @db.Decimal
+  actual_amount    Decimal  @default(0) @db.Decimal
+  variance         Decimal  @default(0) @db.Decimal
+  recorded_at      DateTime @default(now()) @db.Timestamp(6)
 
   company Company       @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project Project       @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -2634,7 +2677,8 @@ model ServiceRequest {
   creator   User                 @relation("ServiceReqCreator", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   linked_pr PurchaseRequisition? @relation(fields: [converted_pr_id], references: [id])
 
-  status_logs ServiceRequestStatusLog[]
+  status_logs             ServiceRequestStatusLog[]
+  subcontract_work_orders SubcontractWorkOrder[]
 
   @@index([company_id, project_id])
   @@index([status])
@@ -2806,40 +2850,40 @@ model Timesheet {
 }
 
 model ProjectStatusLog {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  project_id   String    @db.Uuid
-  old_status   String?   @db.VarChar(30)
-  new_status   String    @db.VarChar(30)
-  reason       String?   @db.Text
-  updated_by   String?   @db.Uuid
-  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id String   @db.Uuid
+  old_status String?  @db.VarChar(30)
+  new_status String   @db.VarChar(30)
+  reason     String?  @db.Text
+  updated_by String?  @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamp(6)
 
-  project    Project @relation(fields: [project_id], references: [id])
-  updater    User?   @relation("StatusUpdater", fields: [updated_by], references: [id])
+  project Project @relation(fields: [project_id], references: [id])
+  updater User?   @relation("StatusUpdater", fields: [updated_by], references: [id])
 
   @@map("project_status_logs")
   @@schema("auth")
 }
 
 model PunchListItem {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id   String    @db.Uuid
-  project_id   String    @db.Uuid
-  wbs_id       String?   @db.Uuid
-  item_no      String    @unique @db.VarChar(100)
-  title        String    @db.VarChar(300)
-  description  String?
-  location     String?   @db.VarChar(200)
-  category     String?   @db.VarChar(100)
-  severity     String?   @default("medium") @db.VarChar(20)
-  status       String    @default("open") @db.VarChar(30)
-  raised_by    String    @db.Uuid
-  assigned_to  String?   @db.Uuid
-  target_date  DateTime? @db.Date
-  verified_at  DateTime? @db.Timestamp(6)
-  attachments  Json?
-  created_at   DateTime  @default(now()) @db.Timestamp(6)
-  updated_at   DateTime  @updatedAt @db.Timestamp(6)
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id  String    @db.Uuid
+  project_id  String    @db.Uuid
+  wbs_id      String?   @db.Uuid
+  item_no     String    @unique @db.VarChar(100)
+  title       String    @db.VarChar(300)
+  description String?
+  location    String?   @db.VarChar(200)
+  category    String?   @db.VarChar(100)
+  severity    String?   @default("medium") @db.VarChar(20)
+  status      String    @default("open") @db.VarChar(30)
+  raised_by   String    @db.Uuid
+  assigned_to String?   @db.Uuid
+  target_date DateTime? @db.Date
+  verified_at DateTime? @db.Timestamp(6)
+  attachments Json?
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at  DateTime  @updatedAt @db.Timestamp(6)
 
   company  Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project  Project @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -2853,21 +2897,21 @@ model PunchListItem {
 }
 
 model ProjectClosure {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id        String    @db.Uuid
-  project_id        String    @unique @db.Uuid
-  request_no        String    @unique @db.VarChar(100)
-  status            String    @default("draft") @db.VarChar(30)
-  prepared_by       String    @db.Uuid
-  handover_date     DateTime? @db.Date
-  completion_notes  String?
-  attachments       Json?
-  total_snags       Int       @default(0)
-  cleared_snags     Int       @default(0)
-  wbs_completion    Decimal   @default(0) @db.Decimal
-  created_at        DateTime  @default(now()) @db.Timestamp(6)
-  updated_at        DateTime  @updatedAt @db.Timestamp(6)
-  approved_at       DateTime? @db.Timestamp(6)
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id       String    @db.Uuid
+  project_id       String    @unique @db.Uuid
+  request_no       String    @unique @db.VarChar(100)
+  status           String    @default("draft") @db.VarChar(30)
+  prepared_by      String    @db.Uuid
+  handover_date    DateTime? @db.Date
+  completion_notes String?
+  attachments      Json?
+  total_snags      Int       @default(0)
+  cleared_snags    Int       @default(0)
+  wbs_completion   Decimal   @default(0) @db.Decimal
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @updatedAt @db.Timestamp(6)
+  approved_at      DateTime? @db.Timestamp(6)
 
   company  Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project  Project @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -2875,5 +2919,359 @@ model ProjectClosure {
 
   @@index([company_id, project_id])
   @@map("project_closures")
+  @@schema("auth")
+}
+
+// ─── Week 7: Subcontractor Management System ──────────────────────────────────
+
+model SubcontractWorkOrder {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id              String    @db.Uuid
+  project_id              String    @db.Uuid
+  vendor_id               String    @db.Uuid
+  service_request_id      String?   @db.Uuid
+  purchase_requisition_id String?   @db.Uuid
+  purchase_order_id       String?   @db.Uuid
+  work_order_no           String    @unique @db.VarChar(100)
+  title                   String    @db.VarChar(300)
+  scope_of_work           String
+  wbs_id                  String    @db.Uuid
+  cost_code_id            String    @db.Uuid
+  contract_value          Decimal   @db.Decimal
+  retention_percentage    Decimal   @default(10) @db.Decimal
+  advance_percentage      Decimal   @default(0) @db.Decimal
+  tax_percentage          Decimal   @default(0) @db.Decimal
+  tax_mode                String    @default("additive") @db.VarChar(20)
+  start_date              DateTime  @db.Date
+  end_date                DateTime  @db.Date
+  status                  String    @default("draft") @db.VarChar(30)
+  issued_by               String?   @db.Uuid
+  issued_at               DateTime? @db.Timestamp(6)
+  created_by              String    @db.Uuid
+  updated_by              String?   @db.Uuid
+  created_at              DateTime  @default(now()) @db.Timestamp(6)
+  updated_at              DateTime  @updatedAt @db.Timestamp(6)
+  deleted_at              DateTime? @db.Timestamp(6)
+
+  company              Company              @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project              Project              @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vendor               Vendor               @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wbs                  WBS                  @relation(fields: [wbs_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cost_code            CostCode             @relation(fields: [cost_code_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_request      ServiceRequest?      @relation(fields: [service_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchase_requisition PurchaseRequisition? @relation(fields: [purchase_requisition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchase_order       PurchaseOrder?       @relation(fields: [purchase_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator              User                 @relation("WOCreator", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  issuer               User?                @relation("WOIssuer", fields: [issued_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  items         SubcontractWorkOrderItem[]
+  mobilizations SubcontractMobilization[]
+  measurements  WorkMeasurement[]
+  ra_bills      RABill[]
+  status_logs   WorkOrderStatusLog[]
+
+  @@index([company_id, project_id])
+  @@index([vendor_id])
+  @@index([status])
+  @@map("subcontract_work_orders")
+  @@schema("auth")
+}
+
+model SubcontractWorkOrderItem {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  work_order_id  String  @db.Uuid
+  boq_item_id    String? @db.Uuid
+  description    String  @db.VarChar(500)
+  unit           String  @db.VarChar(50)
+  contracted_qty Decimal @db.Decimal
+  executed_qty   Decimal @default(0) @db.Decimal
+  remaining_qty  Decimal @db.Decimal
+  rate           Decimal @db.Decimal
+  total_amount   Decimal @db.Decimal
+
+  work_order SubcontractWorkOrder @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  boq_item   BOQItem?             @relation(fields: [boq_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  measurements WorkMeasurement[]
+
+  @@map("subcontract_work_order_items")
+  @@schema("auth")
+}
+
+model WorkOrderStatusLog {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  work_order_id String   @db.Uuid
+  status_from   String   @db.VarChar(30)
+  status_to     String   @db.VarChar(30)
+  remarks       String?
+  created_by    String   @db.Uuid
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+
+  work_order SubcontractWorkOrder @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
+  actor      User                 @relation("WOStatusActor", fields: [created_by], references: [id])
+
+  @@map("work_order_status_logs")
+  @@schema("auth")
+}
+
+model SubcontractMobilization {
+  id                           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id                   String    @db.Uuid
+  project_id                   String    @db.Uuid
+  work_order_id                String    @db.Uuid
+  vendor_id                    String    @db.Uuid
+  mobilization_date            DateTime  @db.Date
+  manpower_count               Int       @default(0)
+  equipment_details            String?
+  site_access_status           String    @default("pending") @db.VarChar(30)
+  safety_induction_done        Boolean   @default(false)
+  insurance_documents_verified Boolean   @default(false)
+  status                       String    @default("pending") @db.VarChar(30)
+  remarks                      String?
+  verified_by                  String?   @db.Uuid
+  verified_at                  DateTime? @db.Timestamp(6)
+  created_at                   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                   DateTime  @updatedAt @db.Timestamp(6)
+
+  company    Company              @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project    Project              @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  work_order SubcontractWorkOrder @relation(fields: [work_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendor     Vendor               @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  verifier   User?                @relation("MobVerifier", fields: [verified_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([company_id, project_id])
+  @@index([work_order_id])
+  @@map("subcontract_mobilizations")
+  @@schema("auth")
+}
+
+model WorkMeasurement {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id         String   @db.Uuid
+  project_id         String   @db.Uuid
+  work_order_id      String   @db.Uuid
+  work_order_item_id String   @db.Uuid
+  vendor_id          String   @db.Uuid
+  wbs_id             String   @db.Uuid
+  cost_code_id       String   @db.Uuid
+  measurement_no     String   @unique @db.VarChar(100)
+  measurement_date   DateTime @db.Date
+  description        String
+  unit               String   @db.VarChar(50)
+  measured_qty       Decimal  @db.Decimal
+  rate               Decimal  @db.Decimal
+  amount             Decimal  @db.Decimal
+  measured_by        String   @db.Uuid
+  checked_by         String?  @db.Uuid
+  status             String   @default("draft") @db.VarChar(30)
+  remarks            String?
+  attachments        Json?
+
+  revision_no        Int     @default(0)
+  parent_revision_id String? @db.Uuid
+  is_latest_revision Boolean @default(true)
+
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
+
+  company         Company                  @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project         Project                  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  work_order      SubcontractWorkOrder     @relation(fields: [work_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  work_order_item SubcontractWorkOrderItem @relation(fields: [work_order_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendor          Vendor                   @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wbs             WBS                      @relation(fields: [wbs_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cost_code       CostCode                 @relation(fields: [cost_code_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  measurer        User                     @relation("MeasurementMeasurer", fields: [measured_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  checker         User?                    @relation("MeasurementChecker", fields: [checked_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  ra_bill_items RABillItem[]
+  status_logs   MeasurementStatusLog[]
+
+  @@index([company_id, project_id])
+  @@index([work_order_id])
+  @@index([status])
+  @@map("work_measurements")
+  @@schema("auth")
+}
+
+model MeasurementStatusLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  measurement_id String   @db.Uuid
+  status_from    String   @db.VarChar(30)
+  status_to      String   @db.VarChar(30)
+  remarks        String?
+  created_by     String   @db.Uuid
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  measurement WorkMeasurement @relation(fields: [measurement_id], references: [id], onDelete: Cascade)
+  actor       User            @relation("MeasurementStatusActor", fields: [created_by], references: [id])
+
+  @@map("measurement_status_logs")
+  @@schema("auth")
+}
+
+model RABill {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String   @db.Uuid
+  project_id           String   @db.Uuid
+  work_order_id        String   @db.Uuid
+  vendor_id            String   @db.Uuid
+  ra_bill_no           String   @unique @db.VarChar(100)
+  bill_date            DateTime @db.Date
+  billing_period_start DateTime @db.Date
+  billing_period_end   DateTime @db.Date
+  gross_amount         Decimal  @db.Decimal
+  retention_amount     Decimal  @default(0) @db.Decimal
+  advance_recovery     Decimal  @default(0) @db.Decimal
+  tax_amount           Decimal  @default(0) @db.Decimal
+  deductions           Decimal  @default(0) @db.Decimal
+  net_payable          Decimal  @db.Decimal
+  status               String   @default("draft") @db.VarChar(30)
+
+  released_retention_amount Decimal @default(0) @db.Decimal
+  retention_release_status  String  @default("none") @db.VarChar(20)
+
+  submitted_by        String?   @db.Uuid
+  submitted_at        DateTime? @db.Timestamp(6)
+  qs_certified_by     String?   @db.Uuid
+  qs_certified_at     DateTime? @db.Timestamp(6)
+  finance_approved_by String?   @db.Uuid
+  finance_approved_at DateTime? @db.Timestamp(6)
+
+  revision_no        Int     @default(0)
+  parent_revision_id String? @db.Uuid
+  is_latest_revision Boolean @default(true)
+
+  attachments Json?
+
+  voucher_no             String? @db.VarChar(100)
+  finance_transaction_id String? @db.VarChar(100)
+  payment_reference_type String? @db.VarChar(50)
+
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
+
+  company    Company              @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project    Project              @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  work_order SubcontractWorkOrder @relation(fields: [work_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendor     Vendor               @relation(fields: [vendor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  items             RABillItem[]
+  qs_certs          QSCertification[]
+  finance_approvals FinanceApproval[]
+  payments          SubcontractPayment[]
+  status_logs       RABillStatusLog[]
+
+  @@index([company_id, project_id])
+  @@index([work_order_id])
+  @@index([vendor_id])
+  @@index([status])
+  @@index([bill_date])
+  @@map("ra_bills")
+  @@schema("auth")
+}
+
+model RABillItem {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ra_bill_id     String  @db.Uuid
+  measurement_id String  @db.Uuid
+  amount         Decimal @db.Decimal
+
+  ra_bill     RABill          @relation(fields: [ra_bill_id], references: [id], onDelete: Cascade)
+  measurement WorkMeasurement @relation(fields: [measurement_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("ra_bill_items")
+  @@schema("auth")
+}
+
+model RABillStatusLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ra_bill_id  String   @db.Uuid
+  status_from String   @db.VarChar(30)
+  status_to   String   @db.VarChar(30)
+  remarks     String?
+  created_by  String   @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  ra_bill RABill @relation(fields: [ra_bill_id], references: [id], onDelete: Cascade)
+  actor   User   @relation("RABillStatusActor", fields: [created_by], references: [id])
+
+  @@map("ra_bill_status_logs")
+  @@schema("auth")
+}
+
+model QSCertification {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ra_bill_id       String   @db.Uuid
+  certified_amount Decimal  @db.Decimal
+  certified_by     String   @db.Uuid
+  certified_at     DateTime @default(now()) @db.Timestamp(6)
+  remarks          String?
+
+  ra_bill   RABill @relation(fields: [ra_bill_id], references: [id], onDelete: Cascade)
+  certifier User   @relation("QSCertifier", fields: [certified_by], references: [id])
+
+  @@map("qs_certifications")
+  @@schema("auth")
+}
+
+model FinanceApproval {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ra_bill_id      String   @db.Uuid
+  approved_amount Decimal  @db.Decimal
+  approved_by     String   @db.Uuid
+  approved_at     DateTime @default(now()) @db.Timestamp(6)
+  remarks         String?
+
+  ra_bill  RABill @relation(fields: [ra_bill_id], references: [id], onDelete: Cascade)
+  approver User   @relation("FinanceApprover", fields: [approved_by], references: [id])
+
+  @@map("finance_approvals")
+  @@schema("auth")
+}
+
+model SubcontractPayment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String    @db.Uuid
+  project_id     String    @db.Uuid
+  ra_bill_id     String    @db.Uuid
+  payment_date   DateTime  @db.Date
+  amount_paid    Decimal   @db.Decimal
+  payment_method String    @db.VarChar(50)
+  reference_no   String?   @db.VarChar(100)
+  status         String    @default("pending") @db.VarChar(30)
+  processed_by   String?   @db.Uuid
+  processed_at   DateTime? @db.Timestamp(6)
+
+  voucher_no             String? @db.VarChar(100)
+  finance_transaction_id String? @db.VarChar(100)
+
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
+
+  company   Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project   Project @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ra_bill   RABill  @relation(fields: [ra_bill_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  processor User?   @relation("PaymentProcessor", fields: [processed_by], references: [id])
+
+  status_logs PaymentStatusLog[]
+
+  @@map("subcontract_payments")
+  @@schema("auth")
+}
+
+model PaymentStatusLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payment_id  String   @db.Uuid
+  status_from String   @db.VarChar(30)
+  status_to   String   @db.VarChar(30)
+  remarks     String?
+  created_by  String   @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  payment SubcontractPayment @relation(fields: [payment_id], references: [id], onDelete: Cascade)
+  actor   User               @relation("PaymentStatusActor", fields: [created_by], references: [id])
+
+  @@map("payment_status_logs")
   @@schema("auth")
 }
