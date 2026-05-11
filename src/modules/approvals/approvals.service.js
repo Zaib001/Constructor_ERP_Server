@@ -107,7 +107,7 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
         isSuperAdmin: (actorUserRaw.roles?.code === "super_admin")
     };
 
-    const departmentId = actorUserRaw.department_id;
+    const departmentId = data.departmentId || actorUserRaw.department_id;
 
     // Check for an existing active approval for this document
     const existingRequest = await repo.findActiveRequest(userCtx, docType, docId);
