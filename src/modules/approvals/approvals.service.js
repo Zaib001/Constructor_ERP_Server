@@ -34,7 +34,11 @@ async function resolveApprover(roleId, requestedBy, departmentId, companyId) {
         if (!adminRole) return null;
         const admins = await repo.findUsersByRole(adminRole.id, null, compId);
         const validAdmin = admins.find(a => a.id !== requestedBy);
-        return validAdmin ? { userId: validAdmin.id, delegated: false } : null;
+        if (validAdmin) return { userId: validAdmin.id, delegated: false };
+        
+        // If no other admin, but requester IS an admin of this type, use them as fallback
+        const selfAsAdmin = admins.find(a => a.id === requestedBy);
+        return selfAsAdmin ? { userId: selfAsAdmin.id, delegated: false } : null;
     };
 
     // ─── New Logic: Support Department Head ───
