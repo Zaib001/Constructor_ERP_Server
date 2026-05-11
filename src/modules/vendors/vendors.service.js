@@ -62,8 +62,13 @@ async function getVendorById(id, user) {
 }
 
 async function createVendor(data, user) {
-    const { id: actorId, isSuperAdmin, companyId: userCompanyId } = user;
-    const companyId = isSuperAdmin ? (data.company_id || data.companyId) : userCompanyId;
+    const actorId = user.id || user.userId;
+    const isSuperAdmin = user.isSuperAdmin || user.roleCode === "super_admin";
+    const userCompanyId = user.companyId || user.company_id;
+    
+    // For SuperAdmins, they can specify a company or default to their own. 
+    // For regular users, they are locked to their own company.
+    const companyId = isSuperAdmin ? (data.company_id || data.companyId || userCompanyId) : userCompanyId;
 
     if (!companyId) throw new Error("Company context missing for vendor creation.");
 
