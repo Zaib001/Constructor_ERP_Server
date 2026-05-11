@@ -108,7 +108,7 @@ async function resolveApprover(roleId, requestedBy, departmentId, companyId) {
 // ─── 1. Request Approval ──────────────────────────────────────────────────────
 
 async function requestApproval(data, actorId, ipAddress, deviceInfo) {
-    const { docType, docId, projectId, amount, items } = data;
+    const { docType, docId, projectId, amount, items, companyId } = data;
 
     const actorUserRaw = await repo.findUserById(actorId);
     if (!actorUserRaw) throw createAppError("Actor user not found", 404);
@@ -121,6 +121,7 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
     };
 
     const departmentId = data.departmentId || actorUserRaw.department_id;
+    const targetCompanyId = companyId || userCtx.companyId;
 
     // Check for an existing active approval for this document
     const existingRequest = await repo.findActiveRequest(userCtx, docType, docId);
@@ -172,7 +173,7 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
 
     // Load matching approval matrices
     const numericAmount = Number(amount) || 0;
-    const matrices = await repo.findMatrices(userCtx, docType, projectId, numericAmount, departmentId, companyId);
+    const matrices = await repo.findMatrices(userCtx, docType, projectId, numericAmount, departmentId, targetCompanyId);
     if (!matrices || matrices.length === 0) {
         const projectDisplay = projectId || "Global/None";
         logger.warn(`Approval Matrix not found: docType=${docType}, projectId=${projectDisplay}, amount=${numericAmount}, departmentId=${departmentId}`);
@@ -253,7 +254,7 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
     try {
         await updateDocumentStatus(
             { docType, docId, status: "in_approval" }, 
-            { id: actorId, companyId: userCtx.companyId }
+            { id: actorId, companyId: targetCompanyId }
         );
 
         await logAudit({
