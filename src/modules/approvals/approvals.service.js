@@ -253,7 +253,7 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
     try {
         await updateDocumentStatus(
             { docType, docId, status: "in_approval" }, 
-            { id: actorId, companyId }
+            { id: actorId, companyId: userCtx.companyId }
         );
 
         await logAudit({
