@@ -79,6 +79,79 @@ const RejectStepSchema = z.object({
     remarks: z.string().min(1, "Rejection reason is required"),
 });
 
+// ─── Finance Schemas ───
+
+const InvoiceSchema = z.object({
+    project_id: z.string().uuid(),
+    client_name: z.string().min(1),
+    invoice_date: z.string().or(z.date()),
+    due_date: z.string().or(z.date()),
+    subtotal: z.number().nonnegative(),
+    vat_amount: z.number().nonnegative(),
+    net_payable: z.number().positive(),
+    items: z.array(z.object({
+        description: z.string().min(1),
+        quantity: z.number().positive(),
+        unit_price: z.number().positive(),
+        total_price: z.number().positive(),
+    })).min(1)
+});
+
+const VendorBillSchema = z.object({
+    vendor_id: z.string().uuid(),
+    project_id: z.string().uuid(),
+    bill_date: z.string().or(z.date()),
+    due_date: z.string().or(z.date()),
+    subtotal: z.number().nonnegative(),
+    vat_amount: z.number().nonnegative(),
+    net_payable: z.number().positive(),
+    items: z.array(z.object({
+        description: z.string().min(1),
+        quantity: z.number().positive(),
+        unit_price: z.number().positive(),
+        total_price: z.number().positive(),
+    })).min(1)
+});
+
+const ReceiptSchema = z.object({
+    total_amount_received: z.number().positive(),
+    payment_date: z.string().or(z.date()),
+    bank_account_id: z.string().uuid(),
+    payment_mode: z.string(),
+    bank_reference: z.string().optional(),
+    notes: z.string().optional(),
+    allocations: z.array(z.object({
+        invoice_id: z.string().uuid(),
+        amount: z.number().positive()
+    })).min(1)
+});
+
+const PaymentSchema = z.object({
+    total_amount_paid: z.number().positive(),
+    payment_date: z.string().or(z.date()),
+    bank_account_id: z.string().uuid(),
+    payment_mode: z.string(),
+    bank_reference: z.string().optional(),
+    notes: z.string().optional(),
+    allocations: z.array(z.object({
+        bill_id: z.string().uuid(),
+        amount: z.number().positive()
+    })).min(1)
+});
+
+const VoucherSchema = z.object({
+    voucher_type: z.enum(["JOURNAL", "RECEIPT", "PAYMENT"]),
+    posting_date: z.string().or(z.date()),
+    narration: z.string().min(1),
+    ledger_entries: z.array(z.object({
+        account_id: z.string().uuid(),
+        debit: z.number().nonnegative().optional(),
+        credit: z.number().nonnegative().optional(),
+        narration: z.string().optional(),
+        project_id: z.string().uuid().optional(),
+    })).min(2)
+});
+
 module.exports = {
     validate,
     // Exported schemas for use in routes
@@ -88,4 +161,9 @@ module.exports = {
     ApprovalRequestSchema,
     ApproveStepSchema,
     RejectStepSchema,
+    InvoiceSchema,
+    VendorBillSchema,
+    ReceiptSchema,
+    PaymentSchema,
+    VoucherSchema
 };
