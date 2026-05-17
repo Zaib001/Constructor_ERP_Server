@@ -4,6 +4,9 @@ const prisma = require("../../../db");
 const { generateSequenceNo, checkPeriodGuard, resolveAccount } = require("../finance.utils");
 const { requestApproval } = require("../../approvals/approvals.service");
 const { registerAdapter } = require("../../approvals/approvals.adapter");
+const { computeInvoiceVAT, writeVATTransactions } = require("../vat/vat.service");
+const { enqueueInvoiceSubmission, processSubmission } = require("../zatca/zatca.service");
+const logger = require("../../../logger");
 
 // 1. Register Approval Adapter for Client Invoices
 registerAdapter("CLIENT_INVOICE", async ({ docId, status, userId, companyId }) => {
@@ -25,7 +28,11 @@ const getInvoices = async (companyId, filters = {}) => {
         include: {
             project: true,
             creator: true,
-            items: true
+            items: true,
+            zatca_submissions: {
+                orderBy: { submitted_at: "desc" },
+                take: 1
+            }
         },
         orderBy: { invoice_date: "desc" }
     });
@@ -38,20 +45,41 @@ const createInvoice = async (companyId, data, userId) => {
     const invoice_no = await generateSequenceNo(companyId, "INVOICE", "INV");
     const { items, ...invoiceData } = data;
 
+    // 2. Deterministic VAT Calculation
+    const vatResult = await computeInvoiceVAT(companyId, {
+        items,
+        tax_config_id: data.tax_config_id,
+        is_vat_inclusive: data.is_vat_inclusive
+    });
+
+    // Enrich items with calculated values
+    const enrichedItems = items.map((item, idx) => {
+        const calculatedLine = vatResult.lines[idx];
+        return {
+            ...item,
+            taxable_amount: calculatedLine.taxableAmount,
+            vat_amount:     calculatedLine.vatAmount,
+            total_amount:   calculatedLine.grossAmount
+        };
+    });
+
     const invoice = await prisma.clientInvoice.create({
         data: {
             ...invoiceData,
-            company_id: companyId,
+            company_id:      companyId,
             invoice_no,
-            created_by: userId,
+            created_by:      userId,
             document_status: "draft", // Starts as draft
+            subtotal:        vatResult.subtotal,
+            vat_amount:      vatResult.vat_amount,
+            net_payable:     vatResult.total_amount,
             items: {
-                create: items
+                create: enrichedItems
             }
         }
     });
 
-    // 2. Trigger Approval Workflow (Enterprise Rule: Invoices > 0 require approval)
+    // 3. Trigger Approval Workflow (Enterprise Rule: Invoices > 0 require approval)
     if (Number(invoice.net_payable) > 0) {
         await requestApproval({
             docType: "CLIENT_INVOICE",
@@ -70,10 +98,10 @@ const createInvoice = async (companyId, data, userId) => {
  * Enterprise Requirement: Must be approved and period must be open.
  */
 const postInvoice = async (id, companyId, userId) => {
-    return await prisma.$transaction(async (tx) => {
+    const updatedInvoice = await prisma.$transaction(async (tx) => {
         const invoice = await tx.clientInvoice.findUnique({
             where: { id, company_id: companyId },
-            include: { project: true }
+            include: { project: true, items: true }
         });
 
         if (!invoice) throw new Error("Invoice not found.");
@@ -90,6 +118,11 @@ const postInvoice = async (id, companyId, userId) => {
 
         // 3. Create Voucher
         const voucher_no = await generateSequenceNo(companyId, "VOUCHER", "VCH");
+        const activePeriod = await tx.financialPeriod.findFirst({
+            where: { company_id: companyId, status: "open" }
+        });
+        const periodId = activePeriod?.id;
+
         const voucher = await tx.voucher.create({
             data: {
                 company_id: companyId,
@@ -105,7 +138,8 @@ const postInvoice = async (id, companyId, userId) => {
                 reference_id: invoice.id,
                 created_by: userId,
                 posted_by: userId,
-                posted_at: new Date()
+                posted_at: new Date(),
+                period_id: periodId
             }
         });
 
@@ -154,7 +188,27 @@ const postInvoice = async (id, companyId, userId) => {
             });
         }
 
-        // 5. Update Invoice
+        // 5. Write Immutable VAT Transactions
+        const computedLines = invoice.items.map(item => ({
+            taxableAmount: Number(item.taxable_amount || item.subtotal),
+            vatAmount:     Number(item.vat_amount || 0),
+            vatRate:       15, // GCC standard
+            vatType:       "STANDARD"
+        }));
+
+        await writeVATTransactions(tx, {
+            companyId,
+            documentType: "CLIENT_INVOICE",
+            documentId: invoice.id,
+            direction: "OUTPUT",
+            lines: computedLines,
+            taxConfigId: invoice.tax_config_id,
+            periodId,
+            postingDate: invoice.invoice_date,
+            userId
+        });
+
+        // 6. Update Invoice Status to Posted
         return await tx.clientInvoice.update({
             where: { id },
             data: {
@@ -163,6 +217,20 @@ const postInvoice = async (id, companyId, userId) => {
             }
         });
     });
+
+    // 7. Enqueue to ZATCA Asynchronously (Non-blocking gateway)
+    enqueueInvoiceSubmission(updatedInvoice.id, companyId, userId)
+        .then(sub => {
+            logger.info(`[ZATCA Integration] Enqueued submission ${sub.id} for invoice ${updatedInvoice.invoice_no}`);
+            processSubmission(sub.id).catch(err => {
+                logger.error(`[ZATCA Integration] Automated async processing failed: ${err.message}`);
+            });
+        })
+        .catch(err => {
+            logger.error(`[ZATCA Integration] Automated enqueuing failed: ${err.message}`);
+        });
+
+    return updatedInvoice;
 };
 
 module.exports = {

@@ -106,22 +106,36 @@ model Company {
   subcontract_payments      SubcontractPayment[]
 
   // Week 8: Finance + Billing Engine
-  bank_accounts            BankAccount[]
-  financial_periods        FinancialPeriod[]
-  tax_configurations       TaxConfiguration[]
-  chart_of_accounts        ChartOfAccount[]
-  cost_centers             CostCenter[]
-  vouchers                 Voucher[]
-  ledger_entries           LedgerEntry[]
-  client_invoices          ClientInvoice[]
-  client_payment_receipts  ClientPaymentReceipt[]
-  vendor_bills             VendorBill[]
-  vendor_payments          VendorPayment[]
-  dept_salary_summaries    DepartmentSalarySummary[]
-  salary_notifications     SalaryNotification[]
-  credit_notes             CreditNote[]
-  debit_notes              DebitNote[]
-  finance_settings         CompanyFinanceSetting[]
+  bank_accounts           BankAccount[]
+  financial_periods       FinancialPeriod[]
+  tax_configurations      TaxConfiguration[]
+  chart_of_accounts       ChartOfAccount[]
+  cost_centers            CostCenter[]
+  vouchers                Voucher[]
+  ledger_entries          LedgerEntry[]
+  client_invoices         ClientInvoice[]
+  client_payment_receipts ClientPaymentReceipt[]
+  vendor_bills            VendorBill[]
+  vendor_payments         VendorPayment[]
+  dept_salary_summaries   DepartmentSalarySummary[]
+  salary_notifications    SalaryNotification[]
+  credit_notes            CreditNote[]
+  debit_notes             DebitNote[]
+  finance_settings        CompanyFinanceSetting[]
+
+  // Week 9: VAT + ZATCA + Profitability
+  vat_transactions         VATTransaction[]
+  vat_reconciliations      VATReconciliationSnapshot[]
+  zatca_submissions        ZATCASubmission[]
+  zatca_event_logs         ZATCAEventLog[]
+  financial_audit_logs     FinancialAuditLog[]
+  profit_snapshots         ProfitSnapshot[]
+  project_profit_snapshots ProjectProfitSnapshot[]
+  dept_profit_snapshots    DepartmentProfitSnapshot[]
+  recalculation_queue      RecalculationQueue[]
+  vatfilings               VATFiling[]
+  vatadjustments           VATAdjustment[]
+  zatcaconfiguration       ZATCAConfiguration?
 
   @@map("companies")
   @@schema("auth")
@@ -174,8 +188,11 @@ model Department {
   equipment          Equipment[]
 
   // Week 8: Finance + Billing Engine
-  cost_center        CostCenter?
-  salary_summaries   DepartmentSalarySummary[] @relation("DeptSalarySummary")
+  cost_center      CostCenter?
+  salary_summaries DepartmentSalarySummary[] @relation("DeptSalarySummary")
+
+  // Week 9: Profitability
+  dept_profit_snapshots DepartmentProfitSnapshot[]
 
   @@map("departments")
   @@schema("auth")
@@ -287,17 +304,17 @@ model User {
   payment_status_logs     PaymentStatusLog[]        @relation("PaymentStatusActor")
 
   // Week 8: Finance + Billing Engine
-  created_invoices         ClientInvoice[]          @relation("InvoiceCreator")
-  received_receipts        ClientPaymentReceipt[]   @relation("ReceiptReceiver")
-  payment_allocations      PaymentAllocation[]      @relation("AllocationCreator")
-  verified_bills           VendorBill[]             @relation("BillVerifier")
-  approved_bills           VendorBill[]             @relation("BillApprover")
-  created_bills            VendorBill[]             @relation("BillCreator")
-  processed_vendor_payments VendorPayment[]         @relation("VendorPaymentProcessor")
-  vendor_alloc_created     VendorPaymentAllocation[] @relation("VendorAllocCreator")
+  created_invoices           ClientInvoice[]           @relation("InvoiceCreator")
+  received_receipts          ClientPaymentReceipt[]    @relation("ReceiptReceiver")
+  payment_allocations        PaymentAllocation[]       @relation("AllocationCreator")
+  verified_bills             VendorBill[]              @relation("BillVerifier")
+  approved_bills             VendorBill[]              @relation("BillApprover")
+  created_bills              VendorBill[]              @relation("BillCreator")
+  processed_vendor_payments  VendorPayment[]           @relation("VendorPaymentProcessor")
+  vendor_alloc_created       VendorPaymentAllocation[] @relation("VendorAllocCreator")
   finalized_salary_summaries DepartmentSalarySummary[] @relation("SalaryFinalizer")
-  created_credit_notes     CreditNote[]             @relation("CreditNoteCreator")
-  created_debit_notes      DebitNote[]              @relation("DebitNoteCreator")
+  created_credit_notes       CreditNote[]              @relation("CreditNoteCreator")
+  created_debit_notes        DebitNote[]               @relation("DebitNoteCreator")
 
   @@map("users")
   @@schema("auth")
@@ -425,6 +442,9 @@ model Project {
   client_invoices ClientInvoice[]
   vendor_bills    VendorBill[]
   ledger_entries  LedgerEntry[]
+
+  // Week 9: Profitability
+  project_profit_snapshots ProjectProfitSnapshot[]
 
   @@map("projects")
   @@schema("auth")
@@ -975,8 +995,8 @@ model WBS {
   work_measurements       WorkMeasurement[]
 
   // Week 8: Finance + Billing Engine
-  invoice_line_items  ClientInvoiceItem[] @relation("InvoiceItemWBS")
-  bill_line_items     VendorBillItem[]    @relation("BillItemWBS")
+  invoice_line_items ClientInvoiceItem[] @relation("InvoiceItemWBS")
+  bill_line_items    VendorBillItem[]    @relation("BillItemWBS")
 
   @@map("wbs")
   @@schema("auth")
@@ -3333,22 +3353,22 @@ model PaymentStatusLog {
 // ─── Week 8: Finance + Billing Engine ────────────────────────────────────────
 
 model BankAccount {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id   String    @db.Uuid
-  account_name String    @db.VarChar(200)
-  account_no   String    @db.VarChar(100)
-  bank_name    String    @db.VarChar(200)
-  branch       String?   @db.VarChar(200)
-  currency     String    @default("SAR") @db.VarChar(10)
-  is_default   Boolean   @default(false)
-  is_active    Boolean   @default(true)
-  created_at   DateTime  @default(now()) @db.Timestamp(6)
-  updated_at   DateTime  @updatedAt @db.Timestamp(6)
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id   String   @db.Uuid
+  account_name String   @db.VarChar(200)
+  account_no   String   @db.VarChar(100)
+  bank_name    String   @db.VarChar(200)
+  branch       String?  @db.VarChar(200)
+  currency     String   @default("SAR") @db.VarChar(10)
+  is_default   Boolean  @default(false)
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @updatedAt @db.Timestamp(6)
 
-  company          Company          @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  vouchers         Voucher[]
-  client_receipts  ClientPaymentReceipt[]
-  vendor_payments  VendorPayment[]
+  company         Company                @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  vouchers        Voucher[]
+  client_receipts ClientPaymentReceipt[]
+  vendor_payments VendorPayment[]
 
   @@index([company_id])
   @@map("bank_accounts")
@@ -3366,7 +3386,7 @@ model FinancialPeriod {
   closed_at   DateTime? @db.Timestamp(6)
   created_at  DateTime  @default(now()) @db.Timestamp(6)
 
-  company        Company        @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  company        Company       @relation(fields: [company_id], references: [id], onDelete: NoAction)
   vouchers       Voucher[]
   ledger_entries LedgerEntry[]
 
@@ -3376,41 +3396,48 @@ model FinancialPeriod {
 }
 
 model TaxConfiguration {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id   String    @db.Uuid
-  tax_name     String    @db.VarChar(100)
-  tax_code     String    @db.VarChar(50)
-  rate         Decimal   @db.Decimal
-  applies_to   String    @default("BOTH") @db.VarChar(20)
-  is_active    Boolean   @default(true)
-  effective_from DateTime @db.Date
-  effective_to DateTime? @db.Date
-  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String    @db.Uuid
+  tax_name       String    @db.VarChar(100)
+  tax_code       String    @db.VarChar(50)
+  rate           Decimal   @db.Decimal
+  // STANDARD | ZERO_RATED | EXEMPT | REVERSE_CHARGE
+  tax_type       String    @default("STANDARD") @db.VarChar(30)
+  // BOTH | SALES | PURCHASES
+  applies_to     String    @default("BOTH") @db.VarChar(20)
+  is_inclusive   Boolean   @default(false)
+  is_active      Boolean   @default(true)
+  effective_from DateTime  @db.Date
+  effective_to   DateTime? @db.Date
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime? @updatedAt @db.Timestamp(6)
 
-  company       Company         @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  invoices      ClientInvoice[]
-  vendor_bills  VendorBill[]
+  company          Company          @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  invoices         ClientInvoice[]
+  vendor_bills     VendorBill[]
+  vat_transactions VATTransaction[]
 
   @@index([company_id, is_active])
+  @@index([company_id, tax_type])
   @@map("tax_configurations")
   @@schema("auth")
 }
 
 model ChartOfAccount {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id         String    @db.Uuid
-  account_code       String    @db.VarChar(50)
-  account_name       String    @db.VarChar(200)
-  account_type       String    @db.VarChar(20)
-  parent_id          String?   @db.Uuid
-  is_control_account Boolean   @default(false)
-  is_active          Boolean   @default(true)
-  created_at         DateTime  @default(now()) @db.Timestamp(6)
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id         String   @db.Uuid
+  account_code       String   @db.VarChar(50)
+  account_name       String   @db.VarChar(200)
+  account_type       String   @db.VarChar(20)
+  parent_id          String?  @db.Uuid
+  is_control_account Boolean  @default(false)
+  is_active          Boolean  @default(true)
+  created_at         DateTime @default(now()) @db.Timestamp(6)
 
-  company        Company         @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  parent         ChartOfAccount? @relation("AccountHierarchy", fields: [parent_id], references: [id], onDelete: NoAction)
-  children       ChartOfAccount[] @relation("AccountHierarchy")
-  ledger_entries LedgerEntry[]
+  company          Company                 @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  parent           ChartOfAccount?         @relation("AccountHierarchy", fields: [parent_id], references: [id], onDelete: NoAction)
+  children         ChartOfAccount[]        @relation("AccountHierarchy")
+  ledger_entries   LedgerEntry[]
   finance_settings CompanyFinanceSetting[]
 
   @@unique([company_id, account_code])
@@ -3420,16 +3447,16 @@ model ChartOfAccount {
 }
 
 model CostCenter {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id    String    @db.Uuid
-  department_id String    @unique @db.Uuid
-  code          String    @db.VarChar(50)
-  name          String    @db.VarChar(200)
-  is_active     Boolean   @default(true)
-  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id    String   @db.Uuid
+  department_id String   @unique @db.Uuid
+  code          String   @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamp(6)
 
-  company        Company        @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  department     Department     @relation(fields: [department_id], references: [id], onDelete: NoAction)
+  company        Company       @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  department     Department    @relation(fields: [department_id], references: [id], onDelete: NoAction)
   ledger_entries LedgerEntry[]
 
   @@index([company_id])
@@ -3438,37 +3465,37 @@ model CostCenter {
 }
 
 model Voucher {
-  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id              String    @db.Uuid
-  voucher_no              String    @db.VarChar(50)
-  posting_no              String?   @db.VarChar(50)
-  journal_no              String?   @db.VarChar(50)
-  voucher_type            String    @db.VarChar(20)
-  event_type              String    @db.VarChar(50)
-  is_manual               Boolean   @default(false)
-  reference_type          String?   @db.VarChar(50)
-  reference_id            String?   @db.VarChar(100)
-  period_id               String?   @db.Uuid
-  bank_account_id         String?   @db.Uuid
-  posting_date            DateTime  @db.Date
-  narration               String?
-  total_debit             Decimal   @default(0) @db.Decimal
-  total_credit            Decimal   @default(0) @db.Decimal
-  status                  String    @default("draft") @db.VarChar(20)
-  reversal_of_voucher_id  String?   @db.Uuid
-  posted_by               String?   @db.Uuid
-  posted_at               DateTime? @db.Timestamp(6)
-  created_by              String    @db.Uuid
-  created_at              DateTime  @default(now()) @db.Timestamp(6)
-  approval_request_id     String?   @db.Uuid
-  approval_status         String    @default("approved") @db.VarChar(20) // For manual vouchers, default to approved or follow matrix
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id             String    @db.Uuid
+  voucher_no             String    @db.VarChar(50)
+  posting_no             String?   @db.VarChar(50)
+  journal_no             String?   @db.VarChar(50)
+  voucher_type           String    @db.VarChar(20)
+  event_type             String    @db.VarChar(50)
+  is_manual              Boolean   @default(false)
+  reference_type         String?   @db.VarChar(50)
+  reference_id           String?   @db.VarChar(100)
+  period_id              String?   @db.Uuid
+  bank_account_id        String?   @db.Uuid
+  posting_date           DateTime  @db.Date
+  narration              String?
+  total_debit            Decimal   @default(0) @db.Decimal
+  total_credit           Decimal   @default(0) @db.Decimal
+  status                 String    @default("draft") @db.VarChar(20)
+  reversal_of_voucher_id String?   @db.Uuid
+  posted_by              String?   @db.Uuid
+  posted_at              DateTime? @db.Timestamp(6)
+  created_by             String    @db.Uuid
+  created_at             DateTime  @default(now()) @db.Timestamp(6)
+  approval_request_id    String?   @db.Uuid
+  approval_status        String    @default("approved") @db.VarChar(20) // For manual vouchers, default to approved or follow matrix
 
-  company          Company          @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  period           FinancialPeriod? @relation(fields: [period_id], references: [id], onDelete: NoAction)
-  bank_account     BankAccount?     @relation(fields: [bank_account_id], references: [id], onDelete: NoAction)
-  reversal_of      Voucher?         @relation("VoucherReversal", fields: [reversal_of_voucher_id], references: [id], onDelete: NoAction)
-  reversals        Voucher[]        @relation("VoucherReversal")
-  ledger_entries   LedgerEntry[]
+  company        Company          @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  period         FinancialPeriod? @relation(fields: [period_id], references: [id], onDelete: NoAction)
+  bank_account   BankAccount?     @relation(fields: [bank_account_id], references: [id], onDelete: NoAction)
+  reversal_of    Voucher?         @relation("VoucherReversal", fields: [reversal_of_voucher_id], references: [id], onDelete: NoAction)
+  reversals      Voucher[]        @relation("VoucherReversal")
+  ledger_entries LedgerEntry[]
 
   @@unique([company_id, voucher_no])
   @@index([company_id, status, posting_date])
@@ -3494,63 +3521,76 @@ model LedgerEntry {
   period_id      String?  @db.Uuid
   created_at     DateTime @default(now()) @db.Timestamp(6)
 
-  company     Company         @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  voucher     Voucher         @relation(fields: [voucher_id], references: [id], onDelete: NoAction)
-  account     ChartOfAccount  @relation(fields: [account_id], references: [id], onDelete: NoAction)
-  cost_center CostCenter?     @relation(fields: [cost_center_id], references: [id], onDelete: NoAction)
+  company     Company          @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  voucher     Voucher          @relation(fields: [voucher_id], references: [id], onDelete: NoAction)
+  account     ChartOfAccount   @relation(fields: [account_id], references: [id], onDelete: NoAction)
+  cost_center CostCenter?      @relation(fields: [cost_center_id], references: [id], onDelete: NoAction)
   period      FinancialPeriod? @relation(fields: [period_id], references: [id], onDelete: NoAction)
   project     Project?         @relation(fields: [project_id], references: [id], onDelete: NoAction)
 
   @@index([company_id, account_id, posting_date])
   @@index([company_id, period_id])
+  @@index([company_id, period_id, account_id])
+  @@index([company_id, reference_type, reference_id])
   @@index([voucher_id])
   @@index([project_id])
+  @@index([project_id, posting_date])
+  @@index([cost_center_id, posting_date])
   @@map("ledger_entries")
   @@schema("auth")
 }
 
 model ClientInvoice {
-  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id            String    @db.Uuid
-  project_id            String    @db.Uuid
-  invoice_no            String    @db.VarChar(50)
-  invoice_date          DateTime  @db.Date
-  due_date              DateTime  @db.Date
-  billing_period_start  DateTime? @db.Date
-  billing_period_end    DateTime? @db.Date
-  dpr_references        Json?
-  subtotal              Decimal   @default(0) @db.Decimal
-  vat_amount            Decimal   @default(0) @db.Decimal
-  total_amount          Decimal   @default(0) @db.Decimal
-  retention_amount      Decimal   @default(0) @db.Decimal
-  advance_recovery      Decimal   @default(0) @db.Decimal
-  net_payable           Decimal   @default(0) @db.Decimal
-  amount_paid           Decimal   @default(0) @db.Decimal
-  outstanding           Decimal   @default(0) @db.Decimal
-  document_status       String    @default("draft") @db.VarChar(20)
-  posting_status        String    @default("unposted") @db.VarChar(20)
-  payment_status        String    @default("unpaid") @db.VarChar(20)
-  tax_config_id         String?   @db.Uuid
-  approval_request_id   String?   @db.Uuid
-  voucher_id            String?   @db.Uuid
-  notes                 String?
-  attachments           Json?
-  created_by            String    @db.Uuid
-  created_at            DateTime  @default(now()) @db.Timestamp(6)
-  updated_at            DateTime  @updatedAt @db.Timestamp(6)
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String    @db.Uuid
+  project_id           String    @db.Uuid
+  invoice_no           String    @db.VarChar(50)
+  invoice_date         DateTime  @db.Date
+  due_date             DateTime  @db.Date
+  billing_period_start DateTime? @db.Date
+  billing_period_end   DateTime? @db.Date
+  dpr_references       Json?
+  subtotal             Decimal   @default(0) @db.Decimal
+  vat_amount           Decimal   @default(0) @db.Decimal
+  total_amount         Decimal   @default(0) @db.Decimal
+  retention_amount     Decimal   @default(0) @db.Decimal
+  advance_recovery     Decimal   @default(0) @db.Decimal
+  net_payable          Decimal   @default(0) @db.Decimal
+  amount_paid          Decimal   @default(0) @db.Decimal
+  outstanding          Decimal   @default(0) @db.Decimal
+  document_status      String    @default("draft") @db.VarChar(20)
+  posting_status       String    @default("unposted") @db.VarChar(20)
+  payment_status       String    @default("unpaid") @db.VarChar(20)
+  tax_config_id        String?   @db.Uuid
+  approval_request_id  String?   @db.Uuid
+  voucher_id           String?   @db.Uuid
+  // Week 9: ZATCA fields
+  zatca_status         String    @default("NOT_QUEUED") @db.VarChar(20)
+  zatca_uuid           String?   @db.VarChar(100)
+  zatca_qr_code        String? // base64 QR PNG
+  vat_type             String    @default("STANDARD") @db.VarChar(30)
+  is_vat_inclusive     Boolean   @default(false)
+  notes                String?
+  attachments          Json?
+  created_by           String    @db.Uuid
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
+  updated_at           DateTime  @updatedAt @db.Timestamp(6)
 
-  company    Company          @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  project    Project          @relation(fields: [project_id], references: [id], onDelete: NoAction)
+  company    Company           @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  project    Project           @relation(fields: [project_id], references: [id], onDelete: NoAction)
   tax_config TaxConfiguration? @relation(fields: [tax_config_id], references: [id], onDelete: NoAction)
-  creator    User             @relation("InvoiceCreator", fields: [created_by], references: [id], onDelete: NoAction)
+  creator    User              @relation("InvoiceCreator", fields: [created_by], references: [id], onDelete: NoAction)
 
-  items    ClientInvoiceItem[]
-  receipts ClientPaymentReceipt[]
-  allocations PaymentAllocation[]
+  items             ClientInvoiceItem[]
+  receipts          ClientPaymentReceipt[]
+  allocations       PaymentAllocation[]
+  vat_transactions  VATTransaction[]
+  zatca_submissions ZATCASubmission[]
 
   @@unique([company_id, invoice_no])
   @@index([company_id, document_status])
   @@index([company_id, payment_status])
+  @@index([company_id, zatca_status])
   @@index([project_id])
   @@index([due_date])
   @@map("client_invoices")
@@ -3558,16 +3598,16 @@ model ClientInvoice {
 }
 
 model ClientInvoiceItem {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  invoice_id   String   @db.Uuid
-  description  String   @db.VarChar(500)
-  boq_item_id  String?  @db.Uuid
-  wbs_id       String?  @db.Uuid
-  cost_code_id String?  @db.Uuid
-  unit         String?  @db.VarChar(50)
-  qty          Decimal  @default(1) @db.Decimal
-  rate         Decimal  @default(0) @db.Decimal
-  amount       Decimal  @default(0) @db.Decimal
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoice_id   String  @db.Uuid
+  description  String  @db.VarChar(500)
+  boq_item_id  String? @db.Uuid
+  wbs_id       String? @db.Uuid
+  cost_code_id String? @db.Uuid
+  unit         String? @db.VarChar(50)
+  qty          Decimal @default(1) @db.Decimal
+  rate         Decimal @default(0) @db.Decimal
+  amount       Decimal @default(0) @db.Decimal
 
   invoice   ClientInvoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
   boq_item  BOQItem?      @relation(fields: [boq_item_id], references: [id], onDelete: NoAction)
@@ -3579,25 +3619,25 @@ model ClientInvoiceItem {
 }
 
 model ClientPaymentReceipt {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id      String    @db.Uuid
-  invoice_id      String    @db.Uuid
-  receipt_no      String    @db.VarChar(50)
-  payment_date    DateTime  @db.Date
-  amount_received Decimal   @db.Decimal
-  bank_account_id String?   @db.Uuid
-  payment_mode    String    @db.VarChar(30)
-  bank_reference  String?   @db.VarChar(200)
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id      String   @db.Uuid
+  invoice_id      String   @db.Uuid
+  receipt_no      String   @db.VarChar(50)
+  payment_date    DateTime @db.Date
+  amount_received Decimal  @db.Decimal
+  bank_account_id String?  @db.Uuid
+  payment_mode    String   @db.VarChar(30)
+  bank_reference  String?  @db.VarChar(200)
   notes           String?
-  voucher_id      String?   @db.Uuid
-  status          String    @default("pending") @db.VarChar(20)
-  received_by     String    @db.Uuid
-  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  voucher_id      String?  @db.Uuid
+  status          String   @default("pending") @db.VarChar(20)
+  received_by     String   @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamp(6)
 
-  company      Company      @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  invoice      ClientInvoice @relation(fields: [invoice_id], references: [id], onDelete: NoAction)
-  bank_account BankAccount?  @relation(fields: [bank_account_id], references: [id], onDelete: NoAction)
-  receiver     User          @relation("ReceiptReceiver", fields: [received_by], references: [id], onDelete: NoAction)
+  company      Company             @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  invoice      ClientInvoice       @relation(fields: [invoice_id], references: [id], onDelete: NoAction)
+  bank_account BankAccount?        @relation(fields: [bank_account_id], references: [id], onDelete: NoAction)
+  receiver     User                @relation("ReceiptReceiver", fields: [received_by], references: [id], onDelete: NoAction)
   allocations  PaymentAllocation[]
 
   @@unique([company_id, receipt_no])
@@ -3614,9 +3654,9 @@ model PaymentAllocation {
   allocated_at     DateTime @default(now()) @db.Timestamp(6)
   created_by       String   @db.Uuid
 
-  receipt  ClientPaymentReceipt @relation(fields: [receipt_id], references: [id], onDelete: Cascade)
-  invoice  ClientInvoice        @relation(fields: [invoice_id], references: [id], onDelete: NoAction)
-  creator  User                 @relation("AllocationCreator", fields: [created_by], references: [id], onDelete: NoAction)
+  receipt ClientPaymentReceipt @relation(fields: [receipt_id], references: [id], onDelete: Cascade)
+  invoice ClientInvoice        @relation(fields: [invoice_id], references: [id], onDelete: NoAction)
+  creator User                 @relation("AllocationCreator", fields: [created_by], references: [id], onDelete: NoAction)
 
   @@map("payment_allocations")
   @@schema("auth")
@@ -3637,6 +3677,9 @@ model VendorBill {
   vat_amount                Decimal   @default(0) @db.Decimal
   total_amount              Decimal   @default(0) @db.Decimal
   net_payable               Decimal   @default(0) @db.Decimal
+  // Week 9: VAT fields
+  vat_type                  String    @default("STANDARD") @db.VarChar(30)
+  is_vat_inclusive          Boolean   @default(false)
   amount_paid               Decimal   @default(0) @db.Decimal
   outstanding               Decimal   @default(0) @db.Decimal
   document_status           String    @default("draft") @db.VarChar(20)
@@ -3655,17 +3698,18 @@ model VendorBill {
   updated_at                DateTime  @updatedAt @db.Timestamp(6)
   approval_request_id       String?   @db.Uuid
 
-  company    Company          @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  vendor     Vendor           @relation("VendorBillVendor", fields: [vendor_id], references: [id], onDelete: NoAction)
+  company    Company           @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  vendor     Vendor            @relation("VendorBillVendor", fields: [vendor_id], references: [id], onDelete: NoAction)
   tax_config TaxConfiguration? @relation(fields: [tax_config_id], references: [id], onDelete: NoAction)
-  verifier   User?            @relation("BillVerifier", fields: [verified_by], references: [id], onDelete: NoAction)
-  approver   User?            @relation("BillApprover", fields: [approved_by], references: [id], onDelete: NoAction)
-  creator    User             @relation("BillCreator", fields: [created_by], references: [id], onDelete: NoAction)
-  project    Project?         @relation(fields: [project_id], references: [id], onDelete: NoAction)
+  verifier   User?             @relation("BillVerifier", fields: [verified_by], references: [id], onDelete: NoAction)
+  approver   User?             @relation("BillApprover", fields: [approved_by], references: [id], onDelete: NoAction)
+  creator    User              @relation("BillCreator", fields: [created_by], references: [id], onDelete: NoAction)
+  project    Project?          @relation(fields: [project_id], references: [id], onDelete: NoAction)
 
-  items       VendorBillItem[]
-  payments    VendorPayment[]
-  allocations VendorPaymentAllocation[]
+  items            VendorBillItem[]
+  payments         VendorPayment[]
+  allocations      VendorPaymentAllocation[]
+  vat_transactions VATTransaction[]
 
   @@unique([company_id, bill_no])
   @@index([company_id, document_status])
@@ -3677,15 +3721,15 @@ model VendorBill {
 }
 
 model VendorBillItem {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  bill_id      String   @db.Uuid
-  description  String   @db.VarChar(500)
-  qty          Decimal  @default(1) @db.Decimal
-  unit         String?  @db.VarChar(50)
-  rate         Decimal  @default(0) @db.Decimal
-  amount       Decimal  @default(0) @db.Decimal
-  cost_code_id String?  @db.Uuid
-  wbs_id       String?  @db.Uuid
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bill_id      String  @db.Uuid
+  description  String  @db.VarChar(500)
+  qty          Decimal @default(1) @db.Decimal
+  unit         String? @db.VarChar(50)
+  rate         Decimal @default(0) @db.Decimal
+  amount       Decimal @default(0) @db.Decimal
+  cost_code_id String? @db.Uuid
+  wbs_id       String? @db.Uuid
 
   bill      VendorBill @relation(fields: [bill_id], references: [id], onDelete: Cascade)
   cost_code CostCode?  @relation("BillItemCostCode", fields: [cost_code_id], references: [id], onDelete: NoAction)
@@ -3711,10 +3755,10 @@ model VendorPayment {
   processed_by    String   @db.Uuid
   created_at      DateTime @default(now()) @db.Timestamp(6)
 
-  company      Company      @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  bill         VendorBill   @relation(fields: [bill_id], references: [id], onDelete: NoAction)
-  bank_account BankAccount? @relation(fields: [bank_account_id], references: [id], onDelete: NoAction)
-  processor    User         @relation("VendorPaymentProcessor", fields: [processed_by], references: [id], onDelete: NoAction)
+  company      Company                   @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  bill         VendorBill                @relation(fields: [bill_id], references: [id], onDelete: NoAction)
+  bank_account BankAccount?              @relation(fields: [bank_account_id], references: [id], onDelete: NoAction)
+  processor    User                      @relation("VendorPaymentProcessor", fields: [processed_by], references: [id], onDelete: NoAction)
   allocations  VendorPaymentAllocation[]
 
   @@unique([company_id, payment_no])
@@ -3731,35 +3775,35 @@ model VendorPaymentAllocation {
   allocated_at     DateTime @default(now()) @db.Timestamp(6)
   created_by       String   @db.Uuid
 
-  payment  VendorPayment @relation(fields: [payment_id], references: [id], onDelete: Cascade)
-  bill     VendorBill    @relation(fields: [bill_id], references: [id], onDelete: NoAction)
-  creator  User          @relation("VendorAllocCreator", fields: [created_by], references: [id], onDelete: NoAction)
+  payment VendorPayment @relation(fields: [payment_id], references: [id], onDelete: Cascade)
+  bill    VendorBill    @relation(fields: [bill_id], references: [id], onDelete: NoAction)
+  creator User          @relation("VendorAllocCreator", fields: [created_by], references: [id], onDelete: NoAction)
 
   @@map("vendor_payment_allocations")
   @@schema("auth")
 }
 
 model DepartmentSalarySummary {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id           String    @db.Uuid
-  department_id        String    @db.Uuid
-  period_month         String    @db.VarChar(7)
-  source_payroll_run_id String?  @db.Uuid
-  total_headcount      Int       @default(0)
-  total_gross          Decimal   @default(0) @db.Decimal
-  total_deductions     Decimal   @default(0) @db.Decimal
-  total_net            Decimal   @default(0) @db.Decimal
-  status               String    @default("draft") @db.VarChar(20)
-  finalized_by         String?   @db.Uuid
-  finalized_at         DateTime? @db.Timestamp(6)
-  paid_at              DateTime? @db.Timestamp(6)
-  voucher_id           String?   @db.Uuid
-  created_at           DateTime  @default(now()) @db.Timestamp(6)
-  updated_at           DateTime  @updatedAt @db.Timestamp(6)
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id            String    @db.Uuid
+  department_id         String    @db.Uuid
+  period_month          String    @db.VarChar(7)
+  source_payroll_run_id String?   @db.Uuid
+  total_headcount       Int       @default(0)
+  total_gross           Decimal   @default(0) @db.Decimal
+  total_deductions      Decimal   @default(0) @db.Decimal
+  total_net             Decimal   @default(0) @db.Decimal
+  status                String    @default("draft") @db.VarChar(20)
+  finalized_by          String?   @db.Uuid
+  finalized_at          DateTime? @db.Timestamp(6)
+  paid_at               DateTime? @db.Timestamp(6)
+  voucher_id            String?   @db.Uuid
+  created_at            DateTime  @default(now()) @db.Timestamp(6)
+  updated_at            DateTime  @updatedAt @db.Timestamp(6)
 
-  company    Company    @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  department Department @relation("DeptSalarySummary", fields: [department_id], references: [id], onDelete: NoAction)
-  finalizer  User?      @relation("SalaryFinalizer", fields: [finalized_by], references: [id], onDelete: NoAction)
+  company       Company              @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  department    Department           @relation("DeptSalarySummary", fields: [department_id], references: [id], onDelete: NoAction)
+  finalizer     User?                @relation("SalaryFinalizer", fields: [finalized_by], references: [id], onDelete: NoAction)
   notifications SalaryNotification[]
 
   @@unique([company_id, department_id, period_month])
@@ -3779,8 +3823,8 @@ model SalaryNotification {
   is_read           Boolean   @default(false)
   created_at        DateTime  @default(now()) @db.Timestamp(6)
 
-  company   Company                  @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  summary   DepartmentSalarySummary? @relation(fields: [summary_id], references: [id], onDelete: NoAction)
+  company Company                  @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  summary DepartmentSalarySummary? @relation(fields: [summary_id], references: [id], onDelete: NoAction)
 
   @@index([company_id, is_read])
   @@map("salary_notifications")
@@ -3788,16 +3832,16 @@ model SalaryNotification {
 }
 
 model CreditNote {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String    @db.Uuid
-  invoice_id String    @db.Uuid
-  note_no    String    @db.VarChar(50)
-  amount     Decimal   @db.Decimal
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String   @db.Uuid
+  invoice_id String   @db.Uuid
+  note_no    String   @db.VarChar(50)
+  amount     Decimal  @db.Decimal
   reason     String?
-  status     String    @default("draft") @db.VarChar(20)
-  voucher_id String?   @db.Uuid
-  created_by String    @db.Uuid
-  created_at DateTime  @default(now()) @db.Timestamp(6)
+  status     String   @default("draft") @db.VarChar(20)
+  voucher_id String?  @db.Uuid
+  created_by String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamp(6)
 
   company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
   creator User    @relation("CreditNoteCreator", fields: [created_by], references: [id], onDelete: NoAction)
@@ -3808,16 +3852,16 @@ model CreditNote {
 }
 
 model DebitNote {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id String    @db.Uuid
-  bill_id    String    @db.Uuid
-  note_no    String    @db.VarChar(50)
-  amount     Decimal   @db.Decimal
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String   @db.Uuid
+  bill_id    String   @db.Uuid
+  note_no    String   @db.VarChar(50)
+  amount     Decimal  @db.Decimal
   reason     String?
-  status     String    @default("draft") @db.VarChar(20)
-  voucher_id String?   @db.Uuid
-  created_by String    @db.Uuid
-  created_at DateTime  @default(now()) @db.Timestamp(6)
+  status     String   @default("draft") @db.VarChar(20)
+  voucher_id String?  @db.Uuid
+  created_by String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamp(6)
 
   company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
   creator User    @relation("DebitNoteCreator", fields: [created_by], references: [id], onDelete: NoAction)
@@ -3828,12 +3872,12 @@ model DebitNote {
 }
 
 model CompanyFinanceSetting {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id  String    @db.Uuid
-  setting_key String    @db.VarChar(100) // e.g. DEFAULT_AR_ACCOUNT
-  account_id  String    @db.Uuid
-  created_at  DateTime  @default(now()) @db.Timestamp(6)
-  updated_at  DateTime  @updatedAt @db.Timestamp(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id  String   @db.Uuid
+  setting_key String   @db.VarChar(100) // e.g. DEFAULT_AR_ACCOUNT
+  account_id  String   @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  updated_at  DateTime @updatedAt @db.Timestamp(6)
 
   company Company        @relation(fields: [company_id], references: [id], onDelete: NoAction)
   account ChartOfAccount @relation(fields: [account_id], references: [id], onDelete: NoAction)
@@ -3852,5 +3896,301 @@ model FinanceSequence {
 
   @@unique([company_id, type])
   @@map("finance_sequences")
+  @@schema("auth")
+}
+
+// ─── Week 9: VAT Engine ──────────────────────────────────────────────────────
+
+model VATTransaction {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String   @db.Uuid
+  document_type  String   @db.VarChar(30) // CLIENT_INVOICE | VENDOR_BILL | CREDIT_NOTE | DEBIT_NOTE
+  document_id    String   @db.Uuid
+  // STANDARD | ZERO_RATED | EXEMPT | REVERSE_CHARGE
+  vat_type       String   @db.VarChar(30)
+  // OUTPUT (sales) | INPUT (purchases)
+  direction      String   @db.VarChar(10)
+  line_index     Int      @default(0)
+  taxable_amount Decimal  @db.Decimal
+  vat_rate       Decimal  @db.Decimal
+  vat_amount     Decimal  @db.Decimal
+  period_id      String?  @db.Uuid
+  tax_config_id  String?  @db.Uuid
+  posting_date   DateTime @db.Date
+  created_by     String   @db.Uuid
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+  // Immutable — never update or delete
+
+  company    Company           @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  tax_config TaxConfiguration? @relation(fields: [tax_config_id], references: [id], onDelete: NoAction)
+  invoice    ClientInvoice?    @relation(fields: [document_id], references: [id], onDelete: NoAction, map: "vat_tx_invoice_fk")
+  bill       VendorBill?       @relation(fields: [document_id], references: [id], onDelete: NoAction, map: "vat_tx_bill_fk")
+
+  @@index([company_id, direction, posting_date])
+  @@index([company_id, document_type, document_id])
+  @@index([company_id, period_id])
+  @@map("vat_transactions")
+  @@schema("auth")
+}
+
+model VATReconciliationSnapshot {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id        String   @db.Uuid
+  period_id         String   @db.Uuid
+  period_month      String   @db.VarChar(7)
+  output_vat_ledger Decimal  @db.Decimal
+  output_vat_tx     Decimal  @db.Decimal
+  input_vat_ledger  Decimal  @db.Decimal
+  input_vat_tx      Decimal  @db.Decimal
+  output_mismatch   Decimal  @db.Decimal
+  input_mismatch    Decimal  @db.Decimal
+  is_balanced       Boolean  @default(false)
+  computed_at       DateTime @default(now()) @db.Timestamp(6)
+  computed_by       String?  @db.Uuid
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
+
+  @@index([company_id, period_id])
+  @@map("vat_reconciliation_snapshots")
+  @@schema("auth")
+}
+
+// ─── Week 9: ZATCA Submission Engine ─────────────────────────────────────────
+
+model ZATCASubmission {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String    @db.Uuid
+  invoice_id     String    @db.Uuid
+  // DRAFT | QUEUED | SUBMITTED | ACCEPTED | REJECTED | CLEARED | FAILED | RETRYING
+  status         String    @default("QUEUED") @db.VarChar(20)
+  zatca_uuid     String?   @db.VarChar(100)
+  invoice_hash   String?   @db.VarChar(256)
+  qr_code_base64 String? // TLV base64
+  xml_payload    String? // Full XML for Phase 2
+  zatca_response Json? // Raw API response
+  error_message  String?
+  retry_count    Int       @default(0)
+  next_retry_at  DateTime? @db.Timestamp(6)
+  submitted_at   DateTime? @db.Timestamp(6)
+  accepted_at    DateTime? @db.Timestamp(6)
+  rejected_at    DateTime? @db.Timestamp(6)
+  cleared_at     DateTime? @db.Timestamp(6)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @updatedAt @db.Timestamp(6)
+
+  company    Company         @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  invoice    ClientInvoice   @relation(fields: [invoice_id], references: [id], onDelete: NoAction)
+  event_logs ZATCAEventLog[]
+
+  @@index([company_id, status])
+  @@index([company_id, invoice_id])
+  @@index([status, next_retry_at])
+  @@map("zatca_submissions")
+  @@schema("auth")
+}
+
+model ZATCAEventLog {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id       String   @db.Uuid
+  submission_id    String   @db.Uuid
+  event_type       String   @db.VarChar(50) // QUEUED | SUBMITTED | ACCEPTED | REJECTED | RETRY | FAILED | SIMULATION
+  status_before    String?  @db.VarChar(20)
+  status_after     String   @db.VarChar(20)
+  request_payload  Json?
+  response_payload Json?
+  error_details    String?
+  retry_count      Int      @default(0)
+  triggered_by     String?  @db.VarChar(50) // worker | manual | api
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  // Append-only — never update or delete
+
+  company    Company         @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  submission ZATCASubmission @relation(fields: [submission_id], references: [id], onDelete: NoAction)
+
+  @@index([company_id, submission_id])
+  @@index([company_id, event_type, created_at])
+  @@map("zatca_event_logs")
+  @@schema("auth")
+}
+
+// ─── Week 9: Financial Audit Log ─────────────────────────────────────────────
+
+model FinancialAuditLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id   String   @db.Uuid
+  user_id      String?  @db.Uuid
+  action       String   @db.VarChar(80) // INVOICE_POSTED | VAT_RECALCULATED | ZATCA_RETRY | etc.
+  entity_type  String   @db.VarChar(50)
+  entity_id    String   @db.VarChar(100)
+  before_state Json?
+  after_state  Json?
+  meta         Json? // ip, request_id, device
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  // Append-only — never update or delete
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
+
+  @@index([company_id, entity_type, entity_id])
+  @@index([company_id, action, created_at])
+  @@index([company_id, user_id])
+  @@map("financial_audit_logs")
+  @@schema("auth")
+}
+
+// ─── Week 9: Profitability Snapshots ─────────────────────────────────────────
+
+model ProfitSnapshot {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String   @db.Uuid
+  period_month   String   @db.VarChar(7) // e.g. "2025-05"
+  total_revenue  Decimal  @default(0) @db.Decimal
+  total_cogs     Decimal  @default(0) @db.Decimal
+  gross_profit   Decimal  @default(0) @db.Decimal
+  total_opex     Decimal  @default(0) @db.Decimal
+  ebitda         Decimal  @default(0) @db.Decimal
+  net_profit     Decimal  @default(0) @db.Decimal
+  net_margin_pct Decimal  @default(0) @db.Decimal
+  computed_at    DateTime @default(now()) @db.Timestamp(6)
+  computed_by    String?  @db.VarChar(30) // worker | manual
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
+
+  @@unique([company_id, period_month])
+  @@index([company_id, period_month])
+  @@map("profit_snapshots")
+  @@schema("auth")
+}
+
+model ProjectProfitSnapshot {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id          String   @db.Uuid
+  project_id          String   @db.Uuid
+  period_month        String   @db.VarChar(7)
+  revenue             Decimal  @default(0) @db.Decimal
+  direct_costs        Decimal  @default(0) @db.Decimal
+  labor_costs         Decimal  @default(0) @db.Decimal
+  material_costs      Decimal  @default(0) @db.Decimal
+  subcontractor_costs Decimal  @default(0) @db.Decimal
+  overhead_allocation Decimal  @default(0) @db.Decimal
+  gross_profit        Decimal  @default(0) @db.Decimal
+  net_profit          Decimal  @default(0) @db.Decimal
+  profit_margin_pct   Decimal  @default(0) @db.Decimal
+  projected_revenue   Decimal  @default(0) @db.Decimal
+  projected_profit    Decimal  @default(0) @db.Decimal
+  computed_at         DateTime @default(now()) @db.Timestamp(6)
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  project Project @relation(fields: [project_id], references: [id], onDelete: NoAction)
+
+  @@unique([company_id, project_id, period_month])
+  @@index([company_id, period_month])
+  @@index([project_id, period_month])
+  @@map("project_profit_snapshots")
+  @@schema("auth")
+}
+
+model DepartmentProfitSnapshot {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id        String   @db.Uuid
+  department_id     String   @db.Uuid
+  period_month      String   @db.VarChar(7)
+  revenue_allocated Decimal  @default(0) @db.Decimal
+  salary_costs      Decimal  @default(0) @db.Decimal
+  expense_costs     Decimal  @default(0) @db.Decimal
+  overhead_costs    Decimal  @default(0) @db.Decimal
+  net_profit        Decimal  @default(0) @db.Decimal
+  margin_pct        Decimal  @default(0) @db.Decimal
+  computed_at       DateTime @default(now()) @db.Timestamp(6)
+
+  company    Company    @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  department Department @relation(fields: [department_id], references: [id], onDelete: NoAction)
+
+  @@unique([company_id, department_id, period_month])
+  @@index([company_id, period_month])
+  @@map("department_profit_snapshots")
+  @@schema("auth")
+}
+
+model RecalculationQueue {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id   String    @db.Uuid
+  queue_type   String    @db.VarChar(30) // PROFITABILITY | VAT_RECONCILE
+  period_month String?   @db.VarChar(7)
+  status       String    @default("PENDING") @db.VarChar(20) // PENDING | PROCESSING | DONE | FAILED
+  triggered_by String?   @db.VarChar(50)
+  error        String?
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  processed_at DateTime? @db.Timestamp(6)
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
+
+  @@index([company_id, status, queue_type])
+  @@map("recalculation_queue")
+  @@schema("auth")
+}
+
+model VATFiling {
+  id                         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id                 String    @db.Uuid
+  period_id                  String    @db.Uuid
+  status                     String    @default("draft") @db.VarChar(20) // draft | filed | closed
+  sales_standard_taxable     Decimal   @db.Decimal
+  sales_standard_vat         Decimal   @db.Decimal
+  sales_exempt               Decimal   @db.Decimal
+  sales_zero_rated           Decimal   @db.Decimal
+  purchases_standard_taxable Decimal   @db.Decimal
+  purchases_standard_vat     Decimal   @db.Decimal
+  reverse_charges            Decimal   @db.Decimal
+  net_vat_amount             Decimal   @db.Decimal // output_vat - input_vat
+  adjustment_amount          Decimal   @default(0) @db.Decimal
+  carry_forward_applied      Decimal   @default(0) @db.Decimal
+  total_vat_due              Decimal   @db.Decimal // net_vat_amount + adjustment_amount - carry_forward_applied
+  filed_at                   DateTime? @db.Timestamp(6)
+  filed_by                   String?   @db.Uuid
+  created_at                 DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime  @updatedAt @db.Timestamp(6)
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
+
+  @@unique([company_id, period_id])
+  @@map("vat_filings")
+  @@schema("auth")
+}
+
+model VATAdjustment {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id      String   @db.Uuid
+  period_id       String   @db.Uuid
+  amount          Decimal  @db.Decimal
+  reason          String
+  adjustment_type String   @db.VarChar(50) // sales_correction | purchase_correction | bad_debt_relief | other
+  created_by      String   @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
+
+  @@map("vat_adjustments")
+  @@schema("auth")
+}
+
+model ZATCAConfiguration {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id              String    @db.Uuid
+  zatca_env               String    @default("simulation") @db.VarChar(20)
+  client_id_encrypted     String?   @db.Text
+  client_secret_encrypted String?   @db.Text
+  certificate_pem         String?   @db.Text
+  private_key_encrypted   String?   @db.Text
+  csid                    String?   @db.Text
+  pcsid                   String?   @db.Text
+  is_onboarded            Boolean   @default(false)
+  cert_expiry             DateTime? @db.Timestamp(6)
+  created_at              DateTime  @default(now()) @db.Timestamp(6)
+  updated_at              DateTime  @updatedAt @db.Timestamp(6)
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
+
+  @@unique([company_id])
+  @@map("zatca_configurations")
   @@schema("auth")
 }

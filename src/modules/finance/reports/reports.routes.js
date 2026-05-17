@@ -11,4 +11,9 @@ router.get("/balance-sheet", requirePermission("finance.read"), controller.getBa
 router.get("/trial-balance", requirePermission("finance.read"), controller.getTrialBalance);
 router.get("/cash-flow", requirePermission("finance.read"), controller.getCashFlow);
 
+// Exports
+router.get("/export/vat",           requirePermission("vat.read"),           controller.exportVATReport);
+router.get("/export/zatca",         requirePermission("zatca.read"),         controller.exportZATCALog);
+router.get("/export/profitability", requirePermission("profitability.read"), controller.exportProfitabilityReport);
+
 module.exports = router;

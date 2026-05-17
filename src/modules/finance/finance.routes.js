@@ -19,6 +19,11 @@ const payrollRoutes = require("./payroll/payroll.routes");
 const settingsRoutes = require("./settings/financeSettings.routes");
 const reportRoutes = require("./reports/reports.routes");
 const dashboardRoutes = require("./dashboard/dashboard.routes");
+const vatRoutes = require("./vat/vat.routes");
+const zatcaRoutes = require("./zatca/zatca.routes");
+const profitabilityRoutes = require("./profitability/profitability.routes");
+const creditNotesRoutes = require("./creditNotes/creditNotes.routes");
+const debitNotesRoutes = require("./debitNotes/debitNotes.routes");
 
 // Apply auth to all finance routes
 router.use(authenticate);
@@ -37,5 +42,10 @@ router.use("/payroll", payrollRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/reports", reportRoutes);
 router.use("/dashboard", dashboardRoutes);
+router.use("/vat", vatRoutes);
+router.use("/zatca", zatcaRoutes);
+router.use("/profitability", profitabilityRoutes);
+router.use("/credit-notes", creditNotesRoutes);
+router.use("/debit-notes", debitNotesRoutes);
 
 module.exports = router;

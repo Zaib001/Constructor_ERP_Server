@@ -4,6 +4,7 @@ const prisma = require("../../../db");
 const { generateSequenceNo, checkPeriodGuard, resolveAccount } = require("../finance.utils");
 const { requestApproval } = require("../../approvals/approvals.service");
 const { registerAdapter } = require("../../approvals/approvals.adapter");
+const { computeInvoiceVAT, writeVATTransactions } = require("../vat/vat.service");
 
 const logger = require("../../../logger");
 
@@ -45,15 +46,36 @@ const createBill = async (companyId, data, userId) => {
     const bill_no = await generateSequenceNo(companyId, "VENDOR_BILL", "VBL");
     const { items, ...billData } = data;
 
+    // 2. Deterministic VAT Calculation
+    const vatResult = await computeInvoiceVAT(companyId, {
+        items,
+        tax_config_id: data.tax_config_id,
+        is_vat_inclusive: data.is_vat_inclusive
+    });
+
+    // Enrich items with calculated values
+    const enrichedItems = items.map((item, idx) => {
+        const calculatedLine = vatResult.lines[idx];
+        return {
+            ...item,
+            taxable_amount: calculatedLine.taxableAmount,
+            vat_amount:     calculatedLine.vatAmount,
+            total_amount:   calculatedLine.grossAmount
+        };
+    });
+
     const bill = await prisma.vendorBill.create({
         data: {
             ...billData,
-            company_id: companyId,
+            company_id:      companyId,
             bill_no,
-            created_by: userId,
+            created_by:      userId,
             document_status: "draft",
+            subtotal:        vatResult.subtotal,
+            vat_amount:      vatResult.vat_amount,
+            net_payable:     vatResult.total_amount,
             items: {
-                create: items
+                create: enrichedItems
             }
         }
     });
@@ -79,7 +101,7 @@ const postBill = async (id, companyId, userId) => {
     return await prisma.$transaction(async (tx) => {
         const bill = await tx.vendorBill.findUnique({
             where: { id, company_id: companyId },
-            include: { vendor: true, project: true }
+            include: { vendor: true, project: true, items: true }
         });
 
         if (!bill) throw new Error("Vendor bill not found.");
@@ -95,6 +117,11 @@ const postBill = async (id, companyId, userId) => {
 
         // 1. Create Voucher
         const voucher_no = await generateSequenceNo(companyId, "VOUCHER", "VCH");
+        const activePeriod = await tx.financialPeriod.findFirst({
+            where: { company_id: companyId, status: "open" }
+        });
+        const periodId = activePeriod?.id;
+
         const voucher = await tx.voucher.create({
             data: {
                 company_id: companyId,
@@ -110,7 +137,8 @@ const postBill = async (id, companyId, userId) => {
                 reference_id: bill.id,
                 created_by: userId,
                 posted_by: userId,
-                posted_at: new Date()
+                posted_at: new Date(),
+                period_id: periodId
             }
         });
 
@@ -159,7 +187,27 @@ const postBill = async (id, companyId, userId) => {
             }
         });
 
-        // 3. Update Bill
+        // 3. Write Immutable INPUT VAT Transactions
+        const computedLines = bill.items.map(item => ({
+            taxableAmount: Number(item.taxable_amount || item.subtotal),
+            vatAmount:     Number(item.vat_amount || 0),
+            vatRate:       15,
+            vatType:       "STANDARD"
+        }));
+
+        await writeVATTransactions(tx, {
+            companyId,
+            documentType: "VENDOR_BILL",
+            documentId: bill.id,
+            direction: "INPUT",
+            lines: computedLines,
+            taxConfigId: bill.tax_config_id,
+            periodId,
+            postingDate: bill.bill_date,
+            userId
+        });
+
+        // 4. Update Bill
         return await tx.vendorBill.update({
             where: { id },
             data: {

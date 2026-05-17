@@ -119,7 +119,137 @@ const getAgingReport = async (companyId, type = "AR") => {
     return buckets;
 };
 
+const getVATDashboard = async (companyId) => {
+    const now = new Date();
+    const periodMonth = now.toISOString().slice(0, 7);
+
+    // Sum input and output VAT
+    const [output, input] = await Promise.all([
+        prisma.vATTransaction.aggregate({
+            where: { company_id: companyId, direction: "OUTPUT" },
+            _sum: { vat_amount: true, taxable_amount: true }
+        }),
+        prisma.vATTransaction.aggregate({
+            where: { company_id: companyId, direction: "INPUT" },
+            _sum: { vat_amount: true, taxable_amount: true }
+        })
+    ]);
+
+    const outputVAT = Number(output._sum.vat_amount || 0);
+    const inputVAT  = Number(input._sum.vat_amount || 0);
+
+    // Fetch last 5 ZATCA submissions
+    const recentSubmissions = await prisma.zATCASubmission.findMany({
+        where: { company_id: companyId },
+        include: {
+            invoice: { select: { invoice_no: true, total_amount: true, vat_amount: true } }
+        },
+        take: 5,
+        orderBy: { created_at: "desc" }
+    });
+
+    return {
+        outputVAT,
+        inputVAT,
+        netVATPayable: outputVAT - inputVAT,
+        outputTaxable: Number(output._sum.taxable_amount || 0),
+        inputTaxable:  Number(input._sum.taxable_amount || 0),
+        recentSubmissions
+    };
+};
+
+const getZATCADashboard = async (companyId) => {
+    // 1. Group submission status counts
+    const submissions = await prisma.zATCASubmission.groupBy({
+        by: ["status"],
+        where: { company_id: companyId },
+        _count: { id: true }
+    });
+
+    const counts = {
+        QUEUED: 0,
+        ACCEPTED: 0,
+        REJECTED: 0,
+        CLEARED: 0,
+        FAILED: 0,
+        RETRYING: 0
+    };
+
+    submissions.forEach(group => {
+        if (counts[group.status] !== undefined) {
+            counts[group.status] = group._count.id;
+        }
+    });
+
+    const totalSubmissions = Object.values(counts).reduce((a, b) => a + b, 0);
+    const acceptedCount = counts.ACCEPTED + counts.CLEARED;
+    const complianceRate = totalSubmissions > 0 ? Math.round((acceptedCount / totalSubmissions) * 100) : 100;
+
+    // 2. Fetch failed submissions requiring manual attention
+    const failedRequiringAttention = await prisma.zATCASubmission.findMany({
+        where: { company_id: companyId, status: { in: ["FAILED", "REJECTED"] } },
+        include: {
+            invoice: { select: { invoice_no: true, total_amount: true } }
+        },
+        take: 10,
+        orderBy: { updated_at: "desc" }
+    });
+
+    return {
+        counts,
+        complianceRate,
+        failedRequiringAttention,
+        totalSubmissions
+    };
+};
+
+const getProfitabilityKPIs = async (companyId) => {
+    const periodMonth = new Date().toISOString().slice(0, 7);
+
+    // Fetch company profit snapshot
+    const companySnapshot = await prisma.profitSnapshot.findUnique({
+        where: { company_id_period_month: { company_id: companyId, period_month: periodMonth } }
+    });
+
+    // Fetch top 5 high-performing projects
+    const topProjects = await prisma.projectProfitSnapshot.findMany({
+        where: { company_id: companyId, period_month: periodMonth },
+        include: {
+            project: { select: { name: true, code: true } }
+        },
+        orderBy: { profit_margin_pct: "desc" },
+        take: 5
+    });
+
+    // Fetch top performing departments
+    const topDepartments = await prisma.departmentProfitSnapshot.findMany({
+        where: { company_id: companyId, period_month: periodMonth },
+        include: {
+            department: { select: { name: true } }
+        },
+        orderBy: { margin_pct: "desc" },
+        take: 5
+    });
+
+    return {
+        companySnapshot: companySnapshot || {
+            total_revenue: 0,
+            total_cogs: 0,
+            gross_profit: 0,
+            total_opex: 0,
+            ebitda: 0,
+            net_profit: 0,
+            net_margin_pct: 0
+        },
+        topProjects,
+        topDepartments
+    };
+};
+
 module.exports = {
     getSummary,
-    getAgingReport
+    getAgingReport,
+    getVATDashboard,
+    getZATCADashboard,
+    getProfitabilityKPIs
 };

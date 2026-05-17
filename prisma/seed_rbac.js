@@ -1,10 +1,8 @@
 "use strict";
 
 require("dotenv").config();
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../src/db");
 const bcrypt = require("bcrypt");
-
-const prisma = new PrismaClient();
 
 const BCRYPT_ROUNDS = 10;
 
@@ -118,7 +116,16 @@ async function main() {
         // Audit & System
         { code: "audit.read", module: "audit", description: "View global audit logs" },
         { code: "settings.read", module: "settings", description: "View system preferences" },
-        { code: "settings.manage", module: "settings", description: "Manage enterprise configuration" }
+        { code: "settings.manage", module: "settings", description: "Manage enterprise configuration" },
+
+        // Week 9: VAT + ZATCA + Profitability
+        { code: "vat.read", module: "vat", description: "View VAT ledgers and filings" },
+        { code: "vat.manage", module: "vat", description: "Manage tax configurations" },
+        { code: "zatca.read", module: "zatca", description: "View ZATCA submissions logs" },
+        { code: "zatca.submit", module: "zatca", description: "Submit invoices to ZATCA portal" },
+        { code: "zatca.admin", module: "zatca", description: "Manual override and retry submissions" },
+        { code: "profitability.read", module: "profitability", description: "View profitability analytics" },
+        { code: "profitability.snapshot", module: "profitability", description: "Recalculate profit snapshots" }
     ];
 
     const permissions = {};
@@ -288,9 +295,9 @@ async function main() {
         data: {
             doc_type: "PR",
             doc_id: "PR-2024-001",
-            project_id: neom.id,
-            requester_id: usersCreated["engineer@erp.com"].id,
-            company_id: mainCo.id,
+            project: { connect: { id: neom.id } },
+            requestedByRel: { connect: { id: usersCreated["engineer@erp.com"].id } },
+            company: { connect: { id: mainCo.id } },
             current_status: "pending",
             total_steps: 1,
             current_step: 1,

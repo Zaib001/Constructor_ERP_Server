@@ -33,8 +33,41 @@ const getPayablesAging = async (req, res) => {
     }
 };
 
+const getVATDashboard = async (req, res) => {
+    try {
+        const data = await dashboardService.getVATDashboard(req.user.company_id);
+        res.json({ success: true, data });
+    } catch (error) {
+        logger.error("Error fetching VAT dashboard:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getZATCADashboard = async (req, res) => {
+    try {
+        const data = await dashboardService.getZATCADashboard(req.user.company_id);
+        res.json({ success: true, data });
+    } catch (error) {
+        logger.error("Error fetching ZATCA dashboard:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getProfitabilityKPIs = async (req, res) => {
+    try {
+        const data = await dashboardService.getProfitabilityKPIs(req.user.company_id);
+        res.json({ success: true, data });
+    } catch (error) {
+        logger.error("Error fetching Profitability KPIs:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getSummary,
     getReceivablesAging,
-    getPayablesAging
+    getPayablesAging,
+    getVATDashboard,
+    getZATCADashboard,
+    getProfitabilityKPIs
 };
