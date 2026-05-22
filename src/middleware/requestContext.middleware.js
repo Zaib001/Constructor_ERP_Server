@@ -1,23 +1,14 @@
 "use strict";
 
 const { randomUUID } = require("node:crypto");
+const { contextStorage } = require("../utils/context");
 
 /**
- * requestContext middleware
- * ─────────────────────────────────────────────────────────────────────────────
- * Generates a unique requestId for every incoming HTTP request and attaches
- * context data that flows through the entire request lifecycle.
- *
- * Attaches to req:
- *   req.context = { requestId, ipAddress, deviceInfo, startTime }
- *
- * Sets response header:
- *   x-request-id: <uuid>
- *
- * Mount this FIRST in app.js before all routes and other middleware.
+ * requestContext middleware using AsyncLocalStorage for global tracing
  */
 function requestContext(req, res, next) {
-    const requestId = randomUUID();
+    const requestId = req.headers["x-request-id"] || randomUUID();
+    const correlationId = req.headers["x-correlation-id"] || requestId;
     const ipAddress =
         req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
         req.socket?.remoteAddress ||
@@ -27,15 +18,27 @@ function requestContext(req, res, next) {
 
     req.context = {
         requestId,
+        correlationId,
         ipAddress,
         deviceInfo,
         startTime: Date.now(),
     };
 
-    // Expose requestId to clients so they can correlate errors with support
     res.setHeader("x-request-id", requestId);
+    res.setHeader("x-correlation-id", correlationId);
 
-    next();
+    const store = {
+        requestId,
+        correlationId,
+        ipAddress,
+        deviceInfo,
+        userId: null,
+        companyId: null
+    };
+
+    contextStorage.run(store, () => {
+        next();
+    });
 }
 
 module.exports = requestContext;

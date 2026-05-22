@@ -137,6 +137,17 @@ model Company {
   vatadjustments           VATAdjustment[]
   zatcaconfiguration       ZATCAConfiguration?
 
+  designations          Designation[]
+  shifts                Shift[]
+  attendances           Attendance[]
+  leave_types           LeaveType[]
+  payroll_runs          PayrollRun[]
+  payroll_audit_logs    PayrollAuditLog[]
+  payroll_snapshots     PayrollSnapshot[]
+  assets                Asset[]
+  assetDepreciationRuns AssetDepreciationRun[]
+  documents             Document[]
+
   @@map("companies")
   @@schema("auth")
 }
@@ -193,6 +204,11 @@ model Department {
 
   // Week 9: Profitability
   dept_profit_snapshots DepartmentProfitSnapshot[]
+
+  labor_cost_allocations LaborCostAllocation[]
+  assets                 Asset[]
+  assetAllocations       AssetAllocation[]
+  documents              Document[]
 
   @@map("departments")
   @@schema("auth")
@@ -315,6 +331,19 @@ model User {
   finalized_salary_summaries DepartmentSalarySummary[] @relation("SalaryFinalizer")
   created_credit_notes       CreditNote[]              @relation("CreditNoteCreator")
   created_debit_notes        DebitNote[]               @relation("DebitNoteCreator")
+
+  attendance_approvals  AttendanceCorrection[]
+  overtime_approvals    OvertimeRequest[]
+  leave_approvals       LeaveRequest[]
+  payroll_run_creations PayrollRun[]           @relation("PayrollRunCreator")
+  payroll_approvals     PayrollApproval[]
+  salary_revisions      SalaryRevision[]
+  payroll_audit_logs    PayrollAuditLog[]
+  assetAllocations      AssetAllocation[]
+  assetDepreciationRuns AssetDepreciationRun[]
+  documentVersions      DocumentVersion[]
+  documentApprovals     DocumentApproval[]
+  documentAccessLogs    DocumentAccessLog[]
 
   @@map("users")
   @@schema("auth")
@@ -445,6 +474,11 @@ model Project {
 
   // Week 9: Profitability
   project_profit_snapshots ProjectProfitSnapshot[]
+
+  labor_cost_allocations LaborCostAllocation[]
+  assets                 Asset[]
+  assetAllocations       AssetAllocation[]
+  documents              Document[]
 
   @@map("projects")
   @@schema("auth")
@@ -680,6 +714,7 @@ model Vendor {
 
   // Week 8: Finance + Billing Engine
   vendor_bills VendorBill[] @relation("VendorBillVendor")
+  assets       Asset[]
 
   @@map("vendors")
   @@schema("auth")
@@ -1154,6 +1189,24 @@ model Employee {
   resource_logs  ResourceLog[]
   hse_inductions HSEInduction[]
   timesheets     Timesheet[]
+
+  designation_id String? @db.Uuid
+  shift_id       String? @db.Uuid
+
+  designationObj Designation? @relation(fields: [designation_id], references: [id], onDelete: SetNull)
+  shift          Shift?       @relation(fields: [shift_id], references: [id], onDelete: SetNull)
+
+  attendances       Attendance[]
+  attendance_corrs  AttendanceCorrection[]
+  overtime_requests OvertimeRequest[]
+  leave_balances    LeaveBalance[]
+  leave_requests    LeaveRequest[]
+  payroll_items     PayrollItem[]
+  payslips          Payslip[]
+  salary_revisions  SalaryRevision[]
+  bank_account      EmployeeBankAccount?
+  assets            Asset[]
+  assetAllocations  AssetAllocation[]
 
   @@map("employees")
   @@schema("auth")
@@ -3787,7 +3840,7 @@ model DepartmentSalarySummary {
   id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   company_id            String    @db.Uuid
   department_id         String    @db.Uuid
-  period_month          String    @db.VarChar(7)
+  period_month          String    @db.VarChar(50)
   source_payroll_run_id String?   @db.Uuid
   total_headcount       Int       @default(0)
   total_gross           Decimal   @default(0) @db.Decimal
@@ -3843,8 +3896,9 @@ model CreditNote {
   created_by String   @db.Uuid
   created_at DateTime @default(now()) @db.Timestamp(6)
 
-  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  creator User    @relation("CreditNoteCreator", fields: [created_by], references: [id], onDelete: NoAction)
+  company           Company           @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  creator           User              @relation("CreditNoteCreator", fields: [created_by], references: [id], onDelete: NoAction)
+  zatca_submissions ZATCASubmission[]
 
   @@unique([company_id, note_no])
   @@map("credit_notes")
@@ -3937,7 +3991,7 @@ model VATReconciliationSnapshot {
   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   company_id        String   @db.Uuid
   period_id         String   @db.Uuid
-  period_month      String   @db.VarChar(7)
+  period_month      String   @db.VarChar(50)
   output_vat_ledger Decimal  @db.Decimal
   output_vat_tx     Decimal  @db.Decimal
   input_vat_ledger  Decimal  @db.Decimal
@@ -3958,29 +4012,33 @@ model VATReconciliationSnapshot {
 // ─── Week 9: ZATCA Submission Engine ─────────────────────────────────────────
 
 model ZATCASubmission {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id     String    @db.Uuid
-  invoice_id     String    @db.Uuid
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id         String    @db.Uuid
+  invoice_id         String    @db.Uuid
   // DRAFT | QUEUED | SUBMITTED | ACCEPTED | REJECTED | CLEARED | FAILED | RETRYING
-  status         String    @default("QUEUED") @db.VarChar(20)
-  zatca_uuid     String?   @db.VarChar(100)
-  invoice_hash   String?   @db.VarChar(256)
-  qr_code_base64 String? // TLV base64
-  xml_payload    String? // Full XML for Phase 2
-  zatca_response Json? // Raw API response
-  error_message  String?
-  retry_count    Int       @default(0)
-  next_retry_at  DateTime? @db.Timestamp(6)
-  submitted_at   DateTime? @db.Timestamp(6)
-  accepted_at    DateTime? @db.Timestamp(6)
-  rejected_at    DateTime? @db.Timestamp(6)
-  cleared_at     DateTime? @db.Timestamp(6)
-  created_at     DateTime  @default(now()) @db.Timestamp(6)
-  updated_at     DateTime  @updatedAt @db.Timestamp(6)
+  status             String    @default("QUEUED") @db.VarChar(20)
+  zatca_uuid         String?   @db.VarChar(100)
+  invoice_hash       String?   @db.VarChar(256)
+  qr_code_base64     String? // TLV base64
+  xml_payload        String? // Full XML for Phase 2
+  zatca_response     Json? // Raw API response
+  error_message      String?
+  retry_count        Int       @default(0)
+  next_retry_at      DateTime? @db.Timestamp(6)
+  submitted_at       DateTime? @db.Timestamp(6)
+  accepted_at        DateTime? @db.Timestamp(6)
+  rejected_at        DateTime? @db.Timestamp(6)
+  cleared_at         DateTime? @db.Timestamp(6)
+  processing_lock_at DateTime? @db.Timestamp(6)
+  correlation_id     String?   @db.VarChar(100)
+  created_at         DateTime  @default(now()) @db.Timestamp(6)
+  updated_at         DateTime  @updatedAt @db.Timestamp(6)
 
-  company    Company         @relation(fields: [company_id], references: [id], onDelete: NoAction)
-  invoice    ClientInvoice   @relation(fields: [invoice_id], references: [id], onDelete: NoAction)
-  event_logs ZATCAEventLog[]
+  company        Company         @relation(fields: [company_id], references: [id], onDelete: NoAction)
+  invoice        ClientInvoice   @relation(fields: [invoice_id], references: [id], onDelete: NoAction)
+  credit_note_id String?         @db.Uuid
+  credit_note    CreditNote?     @relation(fields: [credit_note_id], references: [id], onDelete: NoAction)
+  event_logs     ZATCAEventLog[]
 
   @@index([company_id, status])
   @@index([company_id, invoice_id])
@@ -4040,18 +4098,24 @@ model FinancialAuditLog {
 // ─── Week 9: Profitability Snapshots ─────────────────────────────────────────
 
 model ProfitSnapshot {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id     String   @db.Uuid
-  period_month   String   @db.VarChar(7) // e.g. "2025-05"
-  total_revenue  Decimal  @default(0) @db.Decimal
-  total_cogs     Decimal  @default(0) @db.Decimal
-  gross_profit   Decimal  @default(0) @db.Decimal
-  total_opex     Decimal  @default(0) @db.Decimal
-  ebitda         Decimal  @default(0) @db.Decimal
-  net_profit     Decimal  @default(0) @db.Decimal
-  net_margin_pct Decimal  @default(0) @db.Decimal
-  computed_at    DateTime @default(now()) @db.Timestamp(6)
-  computed_by    String?  @db.VarChar(30) // worker | manual
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id            String   @db.Uuid
+  period_month          String   @db.VarChar(50) // e.g. "2025-05"
+  total_revenue         Decimal  @default(0) @db.Decimal
+  total_cogs            Decimal  @default(0) @db.Decimal
+  gross_profit          Decimal  @default(0) @db.Decimal
+  total_opex            Decimal  @default(0) @db.Decimal
+  ebitda                Decimal  @default(0) @db.Decimal
+  net_profit            Decimal  @default(0) @db.Decimal
+  net_margin_pct        Decimal  @default(0) @db.Decimal
+  computed_at           DateTime @default(now()) @db.Timestamp(6)
+  computed_by           String?  @db.VarChar(30) // worker | manual
+  snapshot_version      String   @default("1.0.0") @db.VarChar(20)
+  calculation_strategy  String   @default("DIRECT_COST_OVERHEAD_ALLOCATION") @db.VarChar(50)
+  generated_by_worker   Boolean  @default(false)
+  generated_at          DateTime @default(now()) @db.Timestamp(6)
+  snapshot_checksum     String?  @db.VarChar(256)
+  ledger_hash_signature String?  @db.VarChar(256)
 
   company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
 
@@ -4062,22 +4126,28 @@ model ProfitSnapshot {
 }
 
 model ProjectProfitSnapshot {
-  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id          String   @db.Uuid
-  project_id          String   @db.Uuid
-  period_month        String   @db.VarChar(7)
-  revenue             Decimal  @default(0) @db.Decimal
-  direct_costs        Decimal  @default(0) @db.Decimal
-  labor_costs         Decimal  @default(0) @db.Decimal
-  material_costs      Decimal  @default(0) @db.Decimal
-  subcontractor_costs Decimal  @default(0) @db.Decimal
-  overhead_allocation Decimal  @default(0) @db.Decimal
-  gross_profit        Decimal  @default(0) @db.Decimal
-  net_profit          Decimal  @default(0) @db.Decimal
-  profit_margin_pct   Decimal  @default(0) @db.Decimal
-  projected_revenue   Decimal  @default(0) @db.Decimal
-  projected_profit    Decimal  @default(0) @db.Decimal
-  computed_at         DateTime @default(now()) @db.Timestamp(6)
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id            String   @db.Uuid
+  project_id            String   @db.Uuid
+  period_month          String   @db.VarChar(50)
+  revenue               Decimal  @default(0) @db.Decimal
+  direct_costs          Decimal  @default(0) @db.Decimal
+  labor_costs           Decimal  @default(0) @db.Decimal
+  material_costs        Decimal  @default(0) @db.Decimal
+  subcontractor_costs   Decimal  @default(0) @db.Decimal
+  overhead_allocation   Decimal  @default(0) @db.Decimal
+  gross_profit          Decimal  @default(0) @db.Decimal
+  net_profit            Decimal  @default(0) @db.Decimal
+  profit_margin_pct     Decimal  @default(0) @db.Decimal
+  projected_revenue     Decimal  @default(0) @db.Decimal
+  projected_profit      Decimal  @default(0) @db.Decimal
+  computed_at           DateTime @default(now()) @db.Timestamp(6)
+  snapshot_version      String   @default("1.0.0") @db.VarChar(20)
+  calculation_strategy  String   @default("DIRECT_COST_OVERHEAD_ALLOCATION") @db.VarChar(50)
+  generated_by_worker   Boolean  @default(false)
+  generated_at          DateTime @default(now()) @db.Timestamp(6)
+  snapshot_checksum     String?  @db.VarChar(256)
+  ledger_hash_signature String?  @db.VarChar(256)
 
   company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
   project Project @relation(fields: [project_id], references: [id], onDelete: NoAction)
@@ -4090,17 +4160,23 @@ model ProjectProfitSnapshot {
 }
 
 model DepartmentProfitSnapshot {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  company_id        String   @db.Uuid
-  department_id     String   @db.Uuid
-  period_month      String   @db.VarChar(7)
-  revenue_allocated Decimal  @default(0) @db.Decimal
-  salary_costs      Decimal  @default(0) @db.Decimal
-  expense_costs     Decimal  @default(0) @db.Decimal
-  overhead_costs    Decimal  @default(0) @db.Decimal
-  net_profit        Decimal  @default(0) @db.Decimal
-  margin_pct        Decimal  @default(0) @db.Decimal
-  computed_at       DateTime @default(now()) @db.Timestamp(6)
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id            String   @db.Uuid
+  department_id         String   @db.Uuid
+  period_month          String   @db.VarChar(50)
+  revenue_allocated     Decimal  @default(0) @db.Decimal
+  salary_costs          Decimal  @default(0) @db.Decimal
+  expense_costs         Decimal  @default(0) @db.Decimal
+  overhead_costs        Decimal  @default(0) @db.Decimal
+  net_profit            Decimal  @default(0) @db.Decimal
+  margin_pct            Decimal  @default(0) @db.Decimal
+  computed_at           DateTime @default(now()) @db.Timestamp(6)
+  snapshot_version      String   @default("1.0.0") @db.VarChar(20)
+  calculation_strategy  String   @default("DIRECT_COST_OVERHEAD_ALLOCATION") @db.VarChar(50)
+  generated_by_worker   Boolean  @default(false)
+  generated_at          DateTime @default(now()) @db.Timestamp(6)
+  snapshot_checksum     String?  @db.VarChar(256)
+  ledger_hash_signature String?  @db.VarChar(256)
 
   company    Company    @relation(fields: [company_id], references: [id], onDelete: NoAction)
   department Department @relation(fields: [department_id], references: [id], onDelete: NoAction)
@@ -4120,6 +4196,7 @@ model RecalculationQueue {
   triggered_by String?   @db.VarChar(50)
   error        String?
   created_at   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at   DateTime  @default(now()) @updatedAt @db.Timestamp(6)
   processed_at DateTime? @db.Timestamp(6)
 
   company Company @relation(fields: [company_id], references: [id], onDelete: NoAction)
@@ -4192,5 +4269,555 @@ model ZATCAConfiguration {
 
   @@unique([company_id])
   @@map("zatca_configurations")
+  @@schema("auth")
+}
+
+model WorkerHealth {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  worker_name            String    @unique @db.VarChar(100)
+  last_run_at            DateTime? @db.Timestamp(6)
+  heartbeat_at           DateTime? @db.Timestamp(6)
+  processed_count        Int       @default(0)
+  failed_count           Int       @default(0)
+  retry_count            Int       @default(0)
+  consecutive_failures   Int       @default(0)
+  last_error_message     String?
+  last_success_at        DateTime? @db.Timestamp(6)
+  last_failed_at         DateTime? @db.Timestamp(6)
+  current_processing_job String?   @db.VarChar(100)
+  processing_started_at  DateTime? @db.Timestamp(6)
+  average_duration_ms    Decimal   @default(0) @db.Decimal
+  total_duration_ms      Decimal   @default(0) @db.Decimal
+  status                 String    @default("healthy") @db.VarChar(20) // healthy | degraded | failed | recovering
+
+  @@map("worker_health")
+  @@schema("auth")
+}
+
+// ==================================================
+// WEEK 10: ENTERPRISE HR & PAYROLL MODULES
+// ==================================================
+
+model Designation {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id  String   @db.Uuid
+  title       String   @db.VarChar(200)
+  description String?
+  level       Int?     @default(1)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  updated_at  DateTime @updatedAt @db.Timestamp(6)
+
+  company   Company    @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employees Employee[]
+
+  @@map("designations")
+  @@schema("auth")
+}
+
+model Shift {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id    String   @db.Uuid
+  name          String   @db.VarChar(100)
+  start_time    String   @db.VarChar(10) // "08:00"
+  end_time      String   @db.VarChar(10) // "17:00"
+  grace_period  Int      @default(15) // Minutes
+  working_hours Decimal  @db.Decimal(5, 2)
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+
+  company   Company    @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employees Employee[]
+
+  @@map("shifts")
+  @@schema("auth")
+}
+
+model Attendance {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String    @db.Uuid
+  employee_id    String    @db.Uuid
+  date           DateTime  @db.Date
+  check_in       DateTime? @db.Timestamp(6)
+  check_out      DateTime? @db.Timestamp(6)
+  status         String    @db.VarChar(50) // PRESENT, ABSENT, LATE, HALF_DAY, LEAVE
+  late_minutes   Int       @default(0)
+  early_minutes  Int       @default(0)
+  worked_hours   Decimal   @default(0) @db.Decimal(5, 2)
+  overtime_hours Decimal   @default(0) @db.Decimal(5, 2)
+  is_manual      Boolean   @default(false)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @updatedAt @db.Timestamp(6)
+
+  company  Company  @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([employee_id, date])
+  @@index([company_id, date])
+  @@map("attendances")
+  @@schema("auth")
+}
+
+model AttendanceCorrection {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String    @db.Uuid
+  employee_id    String    @db.Uuid
+  date           DateTime  @db.Date
+  reason         String
+  requested_in   DateTime? @db.Timestamp(6)
+  requested_out  DateTime? @db.Timestamp(6)
+  status         String    @default("PENDING") @db.VarChar(50) // PENDING, APPROVED, REJECTED
+  approved_by_id String?   @db.Uuid
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @updatedAt @db.Timestamp(6)
+
+  employee    Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approved_by User?    @relation(fields: [approved_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("attendance_corrections")
+  @@schema("auth")
+}
+
+model OvertimeRequest {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String   @db.Uuid
+  employee_id    String   @db.Uuid
+  date           DateTime @db.Date
+  hours          Decimal  @db.Decimal(5, 2)
+  type           String   @db.VarChar(50) // REGULAR, WEEKEND, HOLIDAY
+  multiplier     Decimal  @db.Decimal(4, 2) // 1.5, 2.0
+  reason         String?
+  status         String   @default("PENDING") @db.VarChar(50)
+  approved_by_id String?  @db.Uuid
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  employee    Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approved_by User?    @relation(fields: [approved_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([employee_id, date])
+  @@index([company_id, status])
+  @@map("overtime_requests")
+  @@schema("auth")
+}
+
+model LeaveType {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String   @db.Uuid
+  name           String   @db.VarChar(100)
+  is_paid        Boolean  @default(true)
+  yearly_accrual Decimal  @db.Decimal(5, 2) // 21, 30
+  carry_forward  Boolean  @default(false)
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  company        Company        @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  leave_requests LeaveRequest[]
+  balances       LeaveBalance[]
+
+  @@map("leave_types")
+  @@schema("auth")
+}
+
+model LeaveBalance {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id    String   @db.Uuid
+  employee_id   String   @db.Uuid
+  leave_type_id String   @db.Uuid
+  year          Int
+  total_accrued Decimal  @db.Decimal(5, 2)
+  total_used    Decimal  @default(0) @db.Decimal(5, 2)
+  balance       Decimal  @db.Decimal(5, 2)
+  updated_at    DateTime @updatedAt @db.Timestamp(6)
+
+  employee   Employee  @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  leave_type LeaveType @relation(fields: [leave_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([employee_id, leave_type_id, year])
+  @@map("leave_balances")
+  @@schema("auth")
+}
+
+model LeaveRequest {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id     String   @db.Uuid
+  employee_id    String   @db.Uuid
+  leave_type_id  String   @db.Uuid
+  start_date     DateTime @db.Date
+  end_date       DateTime @db.Date
+  days           Decimal  @db.Decimal(5, 2)
+  reason         String?
+  status         String   @default("PENDING") @db.VarChar(50)
+  approved_by_id String?  @db.Uuid
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  employee    Employee  @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  leave_type  LeaveType @relation(fields: [leave_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approved_by User?     @relation(fields: [approved_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([employee_id, start_date, end_date])
+  @@index([company_id, status])
+  @@map("leave_requests")
+  @@schema("auth")
+}
+
+model PayrollRun {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id      String    @db.Uuid
+  period_month    String    @db.VarChar(50) // YYYY-MM
+  status          String    @default("DRAFT") @db.VarChar(50) // DRAFT, VALIDATED, APPROVED, POSTED
+  total_gross     Decimal   @default(0) @db.Decimal(15, 2)
+  total_net       Decimal   @default(0) @db.Decimal(15, 2)
+  total_deduction Decimal   @default(0) @db.Decimal(15, 2)
+  processed_by    String?   @db.Uuid
+  locked_at       DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime  @updatedAt @db.Timestamp(6)
+
+  company   Company           @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator   User?             @relation("PayrollRunCreator", fields: [processed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items     PayrollItem[]
+  approvals PayrollApproval[]
+
+  @@unique([company_id, period_month])
+  @@index([company_id, status])
+  @@map("payroll_runs")
+  @@schema("auth")
+}
+
+model PayrollItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payroll_run_id String   @db.Uuid
+  employee_id    String   @db.Uuid
+  basic_salary   Decimal  @db.Decimal(12, 2)
+  allowances     Decimal  @db.Decimal(12, 2)
+  overtime_pay   Decimal  @db.Decimal(12, 2)
+  deductions     Decimal  @db.Decimal(12, 2)
+  net_salary     Decimal  @db.Decimal(12, 2)
+  breakdown      Json // Detailed component breakdown
+  is_posted      Boolean  @default(false)
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  payroll_run PayrollRun            @relation(fields: [payroll_run_id], references: [id], onDelete: Cascade)
+  employee    Employee              @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  allocations LaborCostAllocation[]
+  payslip     Payslip?
+
+  @@unique([payroll_run_id, employee_id])
+  @@index([payroll_run_id])
+  @@index([employee_id])
+  @@map("payroll_items")
+  @@schema("auth")
+}
+
+model PayrollApproval {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payroll_run_id String   @db.Uuid
+  approved_by_id String   @db.Uuid
+  status         String   @db.VarChar(50) // APPROVED, REJECTED
+  comments       String?
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  payroll_run PayrollRun @relation(fields: [payroll_run_id], references: [id], onDelete: Cascade)
+  approver    User       @relation(fields: [approved_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("payroll_approvals")
+  @@schema("auth")
+}
+
+model Payslip {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payroll_item_id String   @unique @db.Uuid
+  employee_id     String   @db.Uuid
+  pdf_url         String?
+  integrity_hash  String?  @db.VarChar(255) // SHA-256 hash of payslip contents
+  is_published    Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+
+  payroll_item PayrollItem @relation(fields: [payroll_item_id], references: [id], onDelete: Cascade)
+  employee     Employee    @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("payslips")
+  @@schema("auth")
+}
+
+model SalaryRevision {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employee_id    String    @db.Uuid
+  effective_from DateTime  @db.Date
+  effective_to   DateTime? @db.Date
+  basic_salary   Decimal   @db.Decimal(12, 2)
+  allowances     Json?
+  reason         String?
+  approved_by_id String?   @db.Uuid
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+
+  employee    Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approved_by User?    @relation(fields: [approved_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([employee_id, effective_from])
+  @@map("salary_revisions")
+  @@schema("auth")
+}
+
+model LaborCostAllocation {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payroll_run_id  String?  @db.Uuid
+  payroll_item_id String   @db.Uuid
+  project_id      String?  @db.Uuid
+  department_id   String?  @db.Uuid
+  amount          Decimal  @db.Decimal(12, 2)
+  percentage      Decimal  @db.Decimal(5, 2)
+  type            String   @db.VarChar(50) // DIRECT_LABOR, OVERHEAD
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+
+  payroll_item PayrollItem @relation(fields: [payroll_item_id], references: [id], onDelete: Cascade)
+  project      Project?    @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  department   Department? @relation(fields: [department_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([payroll_item_id])
+  @@index([project_id])
+  @@index([department_id])
+  @@index([project_id, payroll_run_id])
+  @@map("labor_cost_allocations")
+  @@schema("auth")
+}
+
+model PayrollAuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id String   @db.Uuid
+  action     String   @db.VarChar(100) // RUN_CREATED, POSTED, REVERSED
+  user_id    String?  @db.Uuid
+  details    Json
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user    User?   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("payroll_audit_logs")
+  @@schema("auth")
+}
+
+model PayrollSnapshot {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id    String   @db.Uuid
+  period_month  String   @db.VarChar(50)
+  snapshot_data Json // Immutable JSON dump of the entire payroll state
+  hash          String   @db.VarChar(255)
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("payroll_snapshots")
+  @@schema("auth")
+}
+
+model EmployeeBankAccount {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employee_id  String   @unique @db.Uuid
+  bank_name    String   @db.VarChar(200)
+  account_name String   @db.VarChar(200)
+  iban         String   @db.VarChar(100)
+  swift_code   String?  @db.VarChar(50)
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+
+  employee Employee @relation(fields: [employee_id], references: [id], onDelete: Cascade)
+
+  @@map("employee_bank_accounts")
+  @@schema("auth")
+}
+
+// Week 10 Additions for existing Company/User models
+
+// ==========================================
+// WEEK 11: ENTERPRISE ASSETS & DOCUMENTS
+// ==========================================
+
+model Asset {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id               String    @db.Uuid
+  asset_code               String    @db.VarChar(100)
+  asset_name               String    @db.VarChar(255)
+  category                 String    @db.VarChar(100)
+  purchase_date            DateTime  @db.Date
+  purchase_cost            Decimal   @db.Decimal(15, 2)
+  supplier_id              String?   @db.Uuid
+  invoice_id               String?   @db.Uuid
+  serial_number            String?   @db.VarChar(150)
+  warranty_expiry          DateTime? @db.Date
+  depreciation_method      String    @default("STRAIGHT_LINE") @db.VarChar(50)
+  useful_life_months       Int
+  salvage_value            Decimal   @default(0) @db.Decimal(15, 2)
+  accumulated_depreciation Decimal   @default(0) @db.Decimal(15, 2)
+  current_book_value       Decimal   @db.Decimal(15, 2)
+  location                 String?   @db.VarChar(255)
+  project_id               String?   @db.Uuid
+  department_id            String?   @db.Uuid
+  allocated_employee_id    String?   @db.Uuid
+  status                   String    @default("DRAFT") @db.VarChar(50) // DRAFT, APPROVED, ACTIVE, DISPOSED
+  disposal_date            DateTime? @db.Date
+  disposal_amount          Decimal?  @db.Decimal(15, 2)
+  created_at               DateTime  @default(now()) @db.Timestamp(6)
+  updated_at               DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+
+  company            Company     @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project            Project?    @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  department         Department? @relation(fields: [department_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  allocated_employee Employee?   @relation(fields: [allocated_employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  supplier           Vendor?     @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  allocations    AssetAllocation[]
+  ledger_entries AssetLedger[]
+
+  @@unique([company_id, asset_code])
+  @@index([project_id])
+  @@index([department_id])
+  @@index([status])
+  @@map("assets")
+  @@schema("auth")
+}
+
+model AssetAllocation {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  asset_id       String    @db.Uuid
+  allocated_date DateTime  @default(now()) @db.Timestamp(6)
+  return_date    DateTime? @db.Timestamp(6)
+  project_id     String?   @db.Uuid
+  department_id  String?   @db.Uuid
+  employee_id    String?   @db.Uuid
+  allocated_by   String?   @db.Uuid
+  status         String    @default("ACTIVE") @db.VarChar(50) // ACTIVE, RETURNED
+  notes          String?
+
+  asset      Asset       @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  project    Project?    @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  department Department? @relation(fields: [department_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee   Employee?   @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  allocator  User?       @relation(fields: [allocated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([asset_id])
+  @@index([project_id])
+  @@map("asset_allocations")
+  @@schema("auth")
+}
+
+model AssetLedger {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  asset_id         String   @db.Uuid
+  transaction_type String   @db.VarChar(100) // PURCHASE, DEPRECIATION, DISPOSAL, IMPAIRMENT
+  transaction_date DateTime @default(now()) @db.Timestamp(6)
+  amount           Decimal  @db.Decimal(15, 2)
+  period_month     String?  @db.VarChar(20) // For depreciation linking
+  run_id           String?  @db.Uuid // Links to AssetDepreciationRun
+  narration        String?
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+
+  asset Asset                 @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  run   AssetDepreciationRun? @relation(fields: [run_id], references: [id], onDelete: Cascade)
+
+  @@index([asset_id])
+  @@index([period_month])
+  @@map("asset_ledger")
+  @@schema("auth")
+}
+
+model AssetDepreciationRun {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id         String   @db.Uuid
+  period_month       String   @db.VarChar(20)
+  total_depreciation Decimal  @db.Decimal(15, 2)
+  processed_by       String?  @db.Uuid
+  status             String   @default("POSTED") @db.VarChar(50)
+  created_at         DateTime @default(now()) @db.Timestamp(6)
+
+  company   Company @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  processor User?   @relation(fields: [processed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  ledger_entries AssetLedger[]
+
+  @@unique([company_id, period_month])
+  @@map("asset_depreciation_runs")
+  @@schema("auth")
+}
+
+model Document {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id    String   @db.Uuid
+  document_code String   @db.VarChar(100)
+  title         String   @db.VarChar(255)
+  category      String   @db.VarChar(100)
+  project_id    String?  @db.Uuid
+  department_id String?  @db.Uuid
+  status        String   @default("DRAFT") @db.VarChar(50) // DRAFT, PUBLISHED, ARCHIVED
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  updated_at    DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  company    Company     @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project    Project?    @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  department Department? @relation(fields: [department_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  versions    DocumentVersion[]
+  access_logs DocumentAccessLog[]
+
+  @@unique([company_id, document_code])
+  @@index([project_id])
+  @@index([department_id])
+  @@map("documents")
+  @@schema("auth")
+}
+
+model DocumentVersion {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_id       String   @db.Uuid
+  version_number    String   @db.VarChar(50) // e.g. "1.0", "1.1"
+  storage_path      String   @db.VarChar(1000)
+  checksum          String   @db.VarChar(255) // SHA-256 for duplicate prevention
+  mime_type         String   @db.VarChar(100)
+  file_size         Int
+  original_filename String   @db.VarChar(500)
+  changelog         String?
+  uploaded_by       String?  @db.Uuid
+  status            String   @default("PENDING_APPROVAL") @db.VarChar(50) // PENDING_APPROVAL, APPROVED, REJECTED
+  published         Boolean  @default(false)
+  created_at        DateTime @default(now()) @db.Timestamp(6)
+
+  document Document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  uploader User?    @relation(fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  approvals DocumentApproval[]
+
+  @@unique([document_id, version_number])
+  @@index([checksum])
+  @@map("document_versions")
+  @@schema("auth")
+}
+
+model DocumentApproval {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_version_id String   @db.Uuid
+  approver_id         String   @db.Uuid
+  status              String   @db.VarChar(50) // APPROVED, REJECTED
+  reason              String?
+  created_at          DateTime @default(now()) @db.Timestamp(6)
+
+  version  DocumentVersion @relation(fields: [document_version_id], references: [id], onDelete: Cascade)
+  approver User            @relation(fields: [approver_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("document_approvals")
+  @@schema("auth")
+}
+
+model DocumentAccessLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document_id String   @db.Uuid
+  user_id     String   @db.Uuid
+  action      String   @db.VarChar(50) // VIEW, DOWNLOAD
+  ip_address  String?  @db.VarChar(50)
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  document Document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([document_id])
+  @@map("document_access_logs")
   @@schema("auth")
 }

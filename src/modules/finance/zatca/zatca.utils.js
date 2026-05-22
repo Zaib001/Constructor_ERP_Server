@@ -2,8 +2,12 @@
 
 const crypto = require("crypto");
 
-// Resolve a secure key from JWT_SECRET or a fallback
-const ENCRYPTION_KEY = process.env.ZATCA_ENCRYPTION_KEY || process.env.JWT_SECRET || "hoopoees_keyzite_zatca_secret_key_32";
+// Strict dependency on explicit ZATCA encryption key to prevent fallback vulnerabilities
+const ENCRYPTION_KEY = process.env.ZATCA_ENCRYPTION_KEY;
+
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) {
+    throw new Error("FATAL: ZATCA_ENCRYPTION_KEY must be defined and at least 32 characters long.");
+}
 
 /**
  * Derives a valid 32-byte key from a variable-length string

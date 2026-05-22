@@ -12,6 +12,8 @@ const prisma = require("../../../db");
 const { allocateOverhead, getLaborBurdenAllocation } = require("./allocation.engine");
 const { computeProjectProfitability, computeDepartmentProfitability, computeCompanyProfitability } = require("./profitability.calculator");
 const { round2 } = require("../vat/vat.engine");
+const { computeProfitSnapshotHash, computeProjectProfitSnapshotHash, computeDeptProfitSnapshotHash, verifyCompanyProfitChain } = require("./profitability.checksum");
+const crypto = require("crypto");
 
 /**
  * Live Project Profitability calculation.
@@ -136,14 +138,34 @@ async function calculateDepartmentProfitLive(departmentId, companyId, periodMont
         });
     }
 
-    // Allocate department revenue based on involvement (e.g. 10% of company monthly project revenues)
-    // Real enterprise allocates based on timesheet hours/project billings.
-    const companySummary = await prisma.vATTransaction.aggregate({
-        where: { company_id: companyId, direction: "OUTPUT", posting_date: { gte: start, lte: end } },
-        _sum: { taxable_amount: true }
+    // Allocate department revenue dynamically based on timesheet hours of department employees relative to total company timesheet hours
+    const allCompanyTimesheets = await prisma.timesheet.findMany({
+        where: {
+            company_id: companyId,
+            check_in_at: { gte: start, lte: end },
+            resource_type: "labor"
+        },
+        include: {
+            employee: true
+        }
     });
-    const totalCompanyRevenue = Number(companySummary._sum.taxable_amount || 0);
-    const revenueAllocated = round2(totalCompanyRevenue * 0.15); // Standard 15% division allocation placeholder
+
+    const totalCompanyHours = allCompanyTimesheets.reduce((sum, ts) => sum + Number(ts.total_hours || 0), 0);
+
+    let revenueAllocated = 0;
+    if (totalCompanyHours > 0) {
+        const deptTimesheets = allCompanyTimesheets.filter(ts => ts.employee && ts.employee.department_id === departmentId);
+        const totalDeptHours = deptTimesheets.reduce((sum, ts) => sum + Number(ts.total_hours || 0), 0);
+
+        const companySummary = await prisma.vATTransaction.aggregate({
+            where: { company_id: companyId, direction: "OUTPUT", posting_date: { gte: start, lte: end } },
+            _sum: { taxable_amount: true }
+        });
+        const totalCompanyRevenue = Number(companySummary._sum.taxable_amount || 0);
+
+        const deptRatio = totalDeptHours / totalCompanyHours;
+        revenueAllocated = round2(totalCompanyRevenue * deptRatio);
+    }
 
     const metrics = computeDepartmentProfitability({
         revenueAllocated,
@@ -160,11 +182,32 @@ async function calculateDepartmentProfitLive(departmentId, companyId, periodMont
 }
 
 /**
+ * Helper to get preceding month YYYY-MM
+ */
+function getPrecedingMonth(periodMonth) {
+    const [year, month] = periodMonth.split("-").map(Number);
+    if (month === 1) {
+        return `${year - 1}-12`;
+    } else {
+        return `${year}-${String(month - 1).padStart(2, "0")}`;
+    }
+}
+
+/**
+ * Helper to sign a checksum using HMAC SHA-256
+ */
+function signChecksum(checksum) {
+    const secret = process.env.JWT_SECRET || "erp_ledger_secret";
+    return crypto.createHmac("sha256", secret).update(checksum).digest("hex");
+}
+
+/**
  * Generate cached monthly profit snapshots for the company.
  */
 async function generateCompanySnapshots(companyId, periodMonth) {
     const start = new Date(`${periodMonth}-01`);
     const end   = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    const precedingMonth = getPrecedingMonth(periodMonth);
 
     // 1. Calculate Company Overall
     const ledgerSummary = await prisma.ledgerEntry.findMany({
@@ -202,32 +245,44 @@ async function generateCompanySnapshots(companyId, periodMonth) {
         totalOPEX
     });
 
+    // Blockchain-style Chaining Lookup
+    const precedingSnap = await prisma.profitSnapshot.findFirst({
+        where: { company_id: companyId, period_month: precedingMonth }
+    });
+    const precedingChecksum = precedingSnap?.snapshot_checksum || "genesis";
+
+    const snapData = {
+        total_revenue:  companyMetrics.totalRevenue,
+        total_cogs:     companyMetrics.totalCOGS,
+        gross_profit:   companyMetrics.grossProfit,
+        total_opex:     companyMetrics.totalOPEX,
+        ebitda:         companyMetrics.ebitda,
+        net_profit:     companyMetrics.netProfit,
+        net_margin_pct: companyMetrics.netMarginPct,
+        snapshot_version: "1.0.0"
+    };
+
+    const checksum = computeProfitSnapshotHash(companyId, periodMonth, snapData, precedingChecksum);
+    const signature = signChecksum(checksum);
+
     // Write Company Snapshot
     await prisma.profitSnapshot.upsert({
         where: {
             company_id_period_month: { company_id: companyId, period_month: periodMonth }
         },
         update: {
-            total_revenue:  companyMetrics.totalRevenue,
-            total_cogs:     companyMetrics.totalCOGS,
-            gross_profit:   companyMetrics.grossProfit,
-            total_opex:     companyMetrics.totalOPEX,
-            ebitda:         companyMetrics.ebitda,
-            net_profit:     companyMetrics.netProfit,
-            net_margin_pct: companyMetrics.netMarginPct,
-            computed_by:    "worker"
+            ...snapData,
+            computed_by:           "worker",
+            snapshot_checksum:     checksum,
+            ledger_hash_signature: signature
         },
         create: {
-            company_id:     companyId,
-            period_month:   periodMonth,
-            total_revenue:  companyMetrics.totalRevenue,
-            total_cogs:     companyMetrics.totalCOGS,
-            gross_profit:   companyMetrics.grossProfit,
-            total_opex:     companyMetrics.totalOPEX,
-            ebitda:         companyMetrics.ebitda,
-            net_profit:     companyMetrics.netProfit,
-            net_margin_pct: companyMetrics.netMarginPct,
-            computed_by:    "worker"
+            company_id:            companyId,
+            period_month:          periodMonth,
+            ...snapData,
+            computed_by:           "worker",
+            snapshot_checksum:     checksum,
+            ledger_hash_signature: signature
         }
     });
 
@@ -239,6 +294,30 @@ async function generateCompanySnapshots(companyId, periodMonth) {
     for (const proj of activeProjects) {
         try {
             const pm = await calculateProjectProfitLive(proj.id, companyId, periodMonth);
+
+            const precedingProjSnap = await prisma.projectProfitSnapshot.findFirst({
+                where: { company_id: companyId, project_id: proj.id, period_month: precedingMonth }
+            });
+            const precedingProjChecksum = precedingProjSnap?.snapshot_checksum || "genesis";
+            
+            const projData = {
+                revenue:              pm.revenue,
+                direct_costs:         pm.directCosts,
+                labor_costs:          pm.laborCosts,
+                material_costs:       pm.materialCosts,
+                subcontractor_costs:  pm.subcontractorCosts,
+                overhead_allocation:  pm.overheadAllocation,
+                gross_profit:         pm.grossProfit,
+                net_profit:           pm.netProfit,
+                profit_margin_pct:    pm.profitMarginPct,
+                projected_revenue:    pm.projectedRevenue,
+                projected_profit:     pm.projectedProfit,
+                snapshot_version:     "1.0.0"
+            };
+
+            const projChecksum = computeProjectProfitSnapshotHash(companyId, proj.id, periodMonth, projData, precedingProjChecksum);
+            const projSignature = signChecksum(projChecksum);
+
             await prisma.projectProfitSnapshot.upsert({
                 where: {
                     company_id_project_id_period_month: {
@@ -248,33 +327,17 @@ async function generateCompanySnapshots(companyId, periodMonth) {
                     }
                 },
                 update: {
-                    revenue:              pm.revenue,
-                    direct_costs:         pm.directCosts,
-                    labor_costs:          pm.laborCosts,
-                    material_costs:       pm.materialCosts,
-                    subcontractor_costs:  pm.subcontractorCosts,
-                    overhead_allocation:  pm.overheadAllocation,
-                    gross_profit:         pm.grossProfit,
-                    net_profit:           pm.netProfit,
-                    profit_margin_pct:    pm.profitMarginPct,
-                    projected_revenue:    pm.projectedRevenue,
-                    projected_profit:     pm.projectedProfit
+                    ...projData,
+                    snapshot_checksum:     projChecksum,
+                    ledger_hash_signature: projSignature
                 },
                 create: {
-                    company_id:           companyId,
-                    project_id:           proj.id,
-                    period_month:         periodMonth,
-                    revenue:              pm.revenue,
-                    direct_costs:         pm.directCosts,
-                    labor_costs:          pm.laborCosts,
-                    material_costs:       pm.materialCosts,
-                    subcontractor_costs:  pm.subcontractorCosts,
-                    overhead_allocation:  pm.overheadAllocation,
-                    gross_profit:         pm.grossProfit,
-                    net_profit:           pm.netProfit,
-                    profit_margin_pct:    pm.profitMarginPct,
-                    projected_revenue:    pm.projectedRevenue,
-                    projected_profit:     pm.projectedProfit
+                    company_id:            companyId,
+                    project_id:            proj.id,
+                    period_month:          periodMonth,
+                    ...projData,
+                    snapshot_checksum:     projChecksum,
+                    ledger_hash_signature: projSignature
                 }
             });
         } catch (err) {
@@ -291,6 +354,25 @@ async function generateCompanySnapshots(companyId, periodMonth) {
     for (const d of activeDepts) {
         try {
             const dm = await calculateDepartmentProfitLive(d.id, companyId, periodMonth);
+
+            const precedingDeptSnap = await prisma.departmentProfitSnapshot.findFirst({
+                where: { company_id: companyId, department_id: d.id, period_month: precedingMonth }
+            });
+            const precedingDeptChecksum = precedingDeptSnap?.snapshot_checksum || "genesis";
+
+            const deptData = {
+                revenue_allocated:  dm.revenueAllocated,
+                salary_costs:       dm.salaryCosts,
+                expense_costs:      dm.expenseCosts,
+                overhead_costs:     dm.overheadCosts,
+                net_profit:         dm.netProfit,
+                margin_pct:         dm.marginPct,
+                snapshot_version:   "1.0.0"
+            };
+
+            const deptChecksum = computeDeptProfitSnapshotHash(companyId, d.id, periodMonth, deptData, precedingDeptChecksum);
+            const deptSignature = signChecksum(deptChecksum);
+
             await prisma.departmentProfitSnapshot.upsert({
                 where: {
                     company_id_department_id_period_month: {
@@ -300,23 +382,17 @@ async function generateCompanySnapshots(companyId, periodMonth) {
                     }
                 },
                 update: {
-                    revenue_allocated:  dm.revenueAllocated,
-                    salary_costs:       dm.salaryCosts,
-                    expense_costs:      dm.expenseCosts,
-                    overhead_costs:     dm.overheadCosts,
-                    net_profit:         dm.netProfit,
-                    margin_pct:         dm.marginPct
+                    ...deptData,
+                    snapshot_checksum:     deptChecksum,
+                    ledger_hash_signature: deptSignature
                 },
                 create: {
-                    company_id:         companyId,
-                    department_id:      d.id,
-                    period_month:       periodMonth,
-                    revenue_allocated:  dm.revenueAllocated,
-                    salary_costs:       dm.salaryCosts,
-                    expense_costs:      dm.expenseCosts,
-                    overhead_costs:     dm.overheadCosts,
-                    net_profit:         dm.netProfit,
-                    margin_pct:         dm.marginPct
+                    company_id:            companyId,
+                    department_id:         d.id,
+                    period_month:          periodMonth,
+                    ...deptData,
+                    snapshot_checksum:     deptChecksum,
+                    ledger_hash_signature: deptSignature
                 }
             });
         } catch (err) {
@@ -349,7 +425,15 @@ async function getProfitDashboardCache(companyId, periodMonth) {
         orderBy: { net_profit: "desc" }
     });
 
-    return { company, projects, departments };
+    // Run cryptographic verification of the snapshot blockchain-style chain
+    let verification = { valid: true, error: null };
+    try {
+        verification = await verifyCompanyProfitChain(companyId);
+    } catch (err) {
+        verification = { valid: false, error: err.message };
+    }
+
+    return { company, projects, departments, verification };
 }
 
 /**
@@ -366,44 +450,12 @@ async function enqueueRecalculation(companyId, periodMonth, triggeredBy) {
         }
     });
 
-    // Run recalculation immediately in background
-    runManualSnapshotJob(job.id).catch(err => {
-        logger.error(`Manual recalculation background job ${job.id} failed: ${err.message}`);
+    // Run background worker asynchronously
+    require("./profitability.worker").runProfitabilityWorker().catch(err => {
+        logger.error(`[Recalculation Queue] Worker execution failed: ${err.message}`);
     });
 
     return job;
-}
-
-/**
- * Runs a manual recalculation snapshot job immediately.
- */
-async function runManualSnapshotJob(jobId) {
-    const job = await prisma.recalculationQueue.findUnique({ where: { id: jobId } });
-    if (!job) return;
-
-    await prisma.recalculationQueue.update({
-        where: { id: jobId },
-        data: { status: "PROCESSING" }
-    });
-
-    try {
-        await generateCompanySnapshots(job.company_id, job.period_month);
-        await prisma.recalculationQueue.update({
-            where: { id: jobId },
-            data: {
-                status: "DONE",
-                processed_at: new Date()
-            }
-        });
-    } catch (err) {
-        await prisma.recalculationQueue.update({
-            where: { id: jobId },
-            data: {
-                status: "FAILED",
-                error: err.message
-            }
-        });
-    }
 }
 
 module.exports = {

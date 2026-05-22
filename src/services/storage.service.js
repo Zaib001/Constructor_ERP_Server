@@ -20,12 +20,14 @@ if (!fs.existsSync(UPLOAD_DIR)) {
     logger.info(`StorageService: Created local upload directory at ${UPLOAD_DIR}`);
 }
 
+const crypto = require("crypto");
+
 /**
  * Upload a file to local storage.
  * @param {Buffer} fileBuffer - The file content
  * @param {string} fileName - Original file name
  * @param {string} folder - Subfolder within uploads/
- * @returns {Promise<Object>} - { key, url }
+ * @returns {Promise<Object>} - { key, url, path, checksum, size }
  */
 async function uploadFile(fileBuffer, fileName, folder = "general") {
     try {
@@ -40,13 +42,20 @@ async function uploadFile(fileBuffer, fileName, folder = "general") {
         }
 
         fs.writeFileSync(filePath, fileBuffer);
+        
+        // Calculate SHA-256 checksum
+        const hash = crypto.createHash("sha256");
+        hash.update(fileBuffer);
+        const checksum = hash.digest("hex");
 
         logger.info(`StorageService: File uploaded successfully: ${key}`);
 
         return {
             key,
             url: `/uploads/${key}`, // Relative URL for frontend exposure
-            path: filePath
+            path: filePath,
+            checksum,
+            size: fileBuffer.length
         };
     } catch (err) {
         logger.error("StorageService: Upload failed", { error: err.message, fileName });

@@ -115,11 +115,63 @@ const ledgerFilterSchema = Joi.object({
     pageSize: Joi.number().integer().min(1).max(200).default(50)
 });
 
+const createRequestSchema = Joi.object({
+    projectId: Joi.string().uuid().required().messages({
+        "string.uuid": "projectId must be a valid UUID",
+        "any.required": "projectId is required"
+    }),
+    wbsId: Joi.string().uuid().required().messages({
+        "string.uuid": "wbsId must be a valid UUID",
+        "any.required": "wbsId is required"
+    }),
+    itemId: Joi.string().uuid().required().messages({
+        "string.uuid": "itemId must be a valid UUID",
+        "any.required": "itemId is required"
+    }),
+    storeId: Joi.string().uuid().optional().allow(null),
+    quantity: Joi.number().positive().required().messages({
+        "number.positive": "quantity must be greater than 0",
+        "any.required": "quantity is required"
+    }),
+    requiredDate: Joi.date().iso().optional().allow(null)
+});
+
+const requestFilterSchema = Joi.object({
+    projectId: Joi.string().uuid().optional(),
+    storeId: Joi.string().uuid().optional(),
+    reservationStatus: Joi.string().valid("PENDING", "RESERVED", "ISSUED", "CANCELLED").optional(),
+    page: Joi.number().integer().min(1).default(1),
+    pageSize: Joi.number().integer().min(1).max(200).default(20)
+});
+
+const updateRequestStatusSchema = Joi.object({
+    status: Joi.string().valid("PENDING", "RESERVED", "ISSUED", "CANCELLED").required().messages({
+        "any.only": "status must be one of PENDING, RESERVED, ISSUED, CANCELLED",
+        "any.required": "status is required"
+    })
+});
+
+const fulfillRequestSchema = Joi.object({
+    storeId: Joi.string().uuid().required().messages({
+        "string.uuid": "storeId must be a valid UUID",
+        "any.required": "storeId is required"
+    }),
+    costCodeId: Joi.string().uuid().required().messages({
+        "string.uuid": "costCodeId must be a valid UUID",
+        "any.required": "costCodeId is required"
+    })
+});
+
 module.exports = {
     createGRNSchema,
     createIssueSchema,
     stockFilterSchema,
     ledgerFilterSchema,
     grnFilterSchema,
-    issueFilterSchema
+    issueFilterSchema,
+    createRequestSchema,
+    requestFilterSchema,
+    updateRequestStatusSchema,
+    fulfillRequestSchema
 };
+

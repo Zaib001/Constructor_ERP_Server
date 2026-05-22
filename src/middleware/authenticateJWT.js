@@ -88,6 +88,13 @@ async function authenticateJWT(req, res, next) {
         };
         req.token = token;
 
+        const { getContext } = require("../utils/context");
+        const store = getContext();
+        if (store) {
+            store.userId = user.id;
+            store.companyId = finalCompanyId;
+        }
+
         next();
     } catch (err) {
         logger.error("authenticateJWT error:", { error: err.message });

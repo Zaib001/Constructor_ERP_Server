@@ -4,6 +4,7 @@ const prisma = require("../../../db");
 const { generateSequenceNo, checkPeriodGuard } = require("../finance.utils");
 const { requestApproval } = require("../../approvals/approvals.service");
 const { registerAdapter } = require("../../approvals/approvals.adapter");
+const { logFinancialMutation } = require("../audit/financial.audit");
 
 const logger = require("../../../logger");
 
@@ -139,6 +140,15 @@ const postVoucher = async (id, companyId, userId) => {
             data: { period_id: period?.id }
         });
 
+        await logFinancialMutation({
+            companyId,
+            userId,
+            action: "VOUCHER_POSTED",
+            entityType: "Voucher",
+            entityId: id,
+            after: updatedVoucher
+        });
+
         return updatedVoucher;
     });
 };
@@ -195,6 +205,16 @@ const reverseVoucher = async (id, companyId, userId, reason) => {
         await tx.voucher.update({
             where: { id: originalVoucher.id },
             data: { status: "reversed" }
+        });
+
+        await logFinancialMutation({
+            companyId,
+            userId,
+            action: "VOUCHER_REVERSED",
+            entityType: "Voucher",
+            entityId: originalVoucher.id,
+            before: originalVoucher,
+            after: reversalVoucher
         });
 
         return reversalVoucher;

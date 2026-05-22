@@ -52,6 +52,31 @@ router.get(
     controller.getLedger
 );
 
+// ─── Material Requests (Site Engineer & Storekeeper) ──────────────────────────
+router.post(
+    "/requests",
+    requirePermission("inventory.read"),
+    controller.postMaterialRequest
+);
+
+router.get(
+    "/requests",
+    requirePermission("inventory.read"),
+    controller.getMaterialRequests
+);
+
+router.put(
+    "/requests/:id/status",
+    requirePermission("inventory.read"),
+    controller.updateMaterialRequestStatus
+);
+
+router.post(
+    "/requests/:id/issue",
+    requirePermission("inventory.issue.create"),
+    controller.issueRequestedMaterials
+);
+
 // ─── Legacy routes (non-breaking, existing UI depends on these) ───────────────
 router.get(
     "/stores",

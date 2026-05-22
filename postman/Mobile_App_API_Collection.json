@@ -1,0 +1,245 @@
+{
+	"info": {
+		"_postman_id": "c62a8039-38c4-42b7-a3f2-8c105b41054d",
+		"name": "ERP Mobile App API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"pm.a1+test@hoopoe.com\",\n    \"password\": \"TestPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Storage / Uploads",
+			"item": [
+				{
+					"name": "Upload Photo",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/storage/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"storage",
+								"upload"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Execution (DPR)",
+			"item": [
+				{
+					"name": "Create DPR",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"project_id\": \"uuid-of-project\",\n  \"report_date\": \"2026-05-18\",\n  \"shift\": \"day\",\n  \"weather\": \"Sunny\",\n  \"executive_summary\": \"General site summary for the day.\",\n  \"safety_note\": \"No incidents. Tool-box talk conducted.\",\n  \"remarks\": \"General remarks or attached photo URLs\",\n  \"items\": [\n    {\n      \"wbs_id\": \"uuid-of-wbs-node\",\n      \"boq_item_id\": \"uuid-of-boq-item\",\n      \"description\": \"Concrete Pouring\",\n      \"unit\": \"m3\",\n      \"planned_today_qty\": 50,\n      \"actual_today_qty\": 45,\n      \"remarks\": \"Photo URL: https://...\"\n    }\n  ],\n  \"labor_logs\": [\n    {\n      \"employee_id\": \"uuid-of-employee\",\n      \"trade\": \"Mason\",\n      \"headcount\": 5,\n      \"hours_worked\": 8,\n      \"overtime_hrs\": 2,\n      \"daily_rate\": 150,\n      \"wbs_id\": \"uuid-of-wbs-node\"\n    }\n  ],\n  \"equipment_logs\": [\n    {\n      \"equipment_id\": \"uuid-of-equipment\",\n      \"equipment_no\": \"EXC-001\",\n      \"hours_used\": 6,\n      \"idle_hours\": 2,\n      \"hire_rate\": 500,\n      \"fuel_consumed\": 20,\n      \"wbs_id\": \"uuid-of-wbs-node\"\n    }\n  ],\n  \"material_issue_ids\": [],\n  \"link_resource_ids\": [],\n  \"hindrance_ids\": []\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/execution/dpr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"execution",
+								"dpr"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Procurement (PR)",
+			"item": [
+				{
+					"name": "Create PR",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"project_id\": \"uuid-of-project\",\n  \"wbs_id\": \"uuid-of-wbs-node\",\n  \"reason\": \"Remarks or reason for PR\",\n  \"items\": [\n    {\n      \"item_id\": \"uuid-of-catalog-item\",\n      \"quantity\": 100,\n      \"required_date\": \"2026-06-01T00:00:00Z\",\n      \"remarks\": \"Urgent delivery required (Photo URL can go here)\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/purchase-requisitions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"purchase-requisitions"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. Inventory (GRN)",
+			"item": [
+				{
+					"name": "Create GRN",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "{{$guid}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"poId\": \"uuid-of-purchase-order\",\n  \"storeId\": \"uuid-of-destination-store\",\n  \"vendorDn\": \"Delivery Note Number 12345\",\n  \"remarks\": \"Delivery photo: https://...\",\n  \"items\": [\n    {\n      \"poItemId\": \"uuid-of-po-item-line\",\n      \"itemId\": \"uuid-of-catalog-item\",\n      \"qtyReceived\": 50,\n      \"qtyRejected\": 2\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/inventory/grn",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"inventory",
+								"grn"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000/api",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "your_jwt_token_here",
+			"type": "string"
+		}
+	]
+}

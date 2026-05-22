@@ -2,7 +2,7 @@
 
 const service = require("./inventory.service");
 const { AppError } = service;
-const { createGRNSchema, createIssueSchema, stockFilterSchema, ledgerFilterSchema, grnFilterSchema, issueFilterSchema } = require("./inventory.validation");
+const { createGRNSchema, createIssueSchema, stockFilterSchema, ledgerFilterSchema, grnFilterSchema, issueFilterSchema, createRequestSchema, requestFilterSchema, updateRequestStatusSchema, fulfillRequestSchema } = require("./inventory.validation");
 const logger = require("../../logger");
 
 // ─── Error Discriminator ─────────────────────────────────────────────────────
@@ -201,6 +201,71 @@ async function deleteStore(req, res, next) {
     } catch (err) { logger.error("inventory.deleteStore:", err); next(err); }
 }
 
+async function postMaterialRequest(req, res, next) {
+    try {
+        const { error, value } = createRequestSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                details: error.details.map((d) => d.message)
+            });
+        }
+
+        const result = await service.createMaterialRequest(value, req.user);
+        return res.status(201).json({ success: true, data: result });
+    } catch (err) {
+        return handleError(err, res, next, "postMaterialRequest");
+    }
+}
+
+async function getMaterialRequests(req, res, next) {
+    try {
+        const { error, value } = requestFilterSchema.validate(req.query);
+        if (error) {
+            return res.status(400).json({ success: false, message: error.details[0].message });
+        }
+        const result = await service.getMaterialRequestList(req.user, value);
+        return res.status(200).json({ success: true, ...result });
+    } catch (err) {
+        return handleError(err, res, next, "getMaterialRequests");
+    }
+}
+
+async function updateMaterialRequestStatus(req, res, next) {
+    try {
+        const { error, value } = updateRequestStatusSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({ success: false, message: error.details[0].message });
+        }
+        const result = await service.updateMaterialRequestStatus(req.params.id, value.status, req.user);
+        return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+        return handleError(err, res, next, "updateMaterialRequestStatus");
+    }
+}
+
+async function issueRequestedMaterials(req, res, next) {
+    try {
+        const { error, value } = fulfillRequestSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                details: error.details.map((d) => d.message)
+            });
+        }
+
+        const ipAddress = req.ip || req.headers["x-forwarded-for"];
+        const deviceInfo = req.headers["user-agent"];
+
+        const result = await service.fulfillMaterialRequest(req.params.id, value, req.user, ipAddress, deviceInfo);
+        return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+        return handleError(err, res, next, "issueRequestedMaterials");
+    }
+}
+
 module.exports = {
     postGRN,
     getGRNs,
@@ -212,6 +277,10 @@ module.exports = {
     createStore,
     updateStore,
     deleteStore,
+    postMaterialRequest,
+    getMaterialRequests,
+    updateMaterialRequestStatus,
+    issueRequestedMaterials,
     // Legacy
     getPRs,
     getExcess,

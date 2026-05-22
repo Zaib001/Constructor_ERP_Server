@@ -8,9 +8,25 @@ const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
 
-server.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
-});
+const { assertStartupConfig } = require("./modules/finance/startup.validator");
+const { startZATCAWorker } = require("./modules/finance/zatca/zatca.worker");
+const { startProfitabilityWorker } = require("./modules/finance/profitability/profitability.worker");
+
+// Run startup config assertions first
+assertStartupConfig()
+  .then(() => {
+    server.listen(PORT, () => {
+      logger.info(`Server running on port ${PORT}`);
+      
+      // Start background workers
+      startZATCAWorker(30000);
+      startProfitabilityWorker(30000);
+    });
+  })
+  .catch(err => {
+    logger.error("Startup validation failed: critical configuration missing. Halting server.", err);
+    process.exit(1);
+  });
 
 
 // ================= GLOBAL ERROR HANDLING =================

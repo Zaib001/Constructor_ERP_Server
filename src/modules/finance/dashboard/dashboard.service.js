@@ -81,19 +81,24 @@ const getAgingReport = async (companyId, type = "AR") => {
     // AR Aging (from ClientInvoice) or AP Aging (from VendorBill)
     const model = type === "AR" ? "clientInvoice" : "vendorBill";
     
+    const selectFields = {
+        id: true,
+        total_amount: true,
+        outstanding: true,
+        due_date: true
+    };
+    if (type === "AR") {
+        selectFields.invoice_no = true;
+    } else {
+        selectFields.bill_no = true;
+    }
+
     const items = await prisma[model].findMany({
         where: {
             company_id: companyId,
             payment_status: { in: ["unpaid", "partial"] }
         },
-        select: {
-            id: true,
-            invoice_no: true,
-            bill_no: true,
-            total_amount: true,
-            outstanding: true,
-            due_date: true
-        }
+        select: selectFields
     });
 
     const now = new Date();

@@ -1,13 +1,13 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+require("dotenv").config();
+const prisma = require("./src/db");
 
 async function check() {
     try {
         const users = await prisma.user.findMany({
-            include: { role: true }
+            include: { roles: true }
         });
         console.log("USERS:");
-        users.forEach(u => console.log(`- ${u.email} [${u.id}] Role: ${u.role?.code} Co: ${u.company_id}`));
+        users.forEach(u => console.log(`- ${u.email} [${u.id}] Role: ${u.roles?.code} Co: ${u.company_id}`));
 
         const projects = await prisma.project.findMany();
         console.log("\nPROJECTS:");

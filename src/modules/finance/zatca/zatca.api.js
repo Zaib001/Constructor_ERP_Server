@@ -17,7 +17,24 @@ const ZATCA_API_URL = process.env.ZATCA_API_URL || "";
  * Submit invoice payload to ZATCA endpoint.
  */
 async function submitInvoiceToGateway(payload, companyId) {
-    if (ZATCA_ENV === "simulation") {
+    // Real API integration
+    const prisma = require("../../../db");
+    const { decrypt } = require("./zatca.utils");
+
+    const config = await prisma.zATCAConfiguration.findUnique({
+        where: { company_id: companyId }
+    });
+
+    if (!config) {
+        throw new Error("ZATCA Configuration missing for company.");
+    }
+
+    const env = config.zatca_env || ZATCA_ENV;
+
+    if (env === "simulation") {
+        if (process.env.NODE_ENV !== "development" || process.env.ALLOW_SIMULATION !== "true") {
+            throw new Error("Simulation mode is strictly blocked in this environment. Cannot submit to mock gateway.");
+        }
         logger.info(`[ZATCA API] [SIMULATION] Invoice ${payload.uuid} submitted to mock gate.`);
         // Simulate a successful ZATCA Phase 2 clearance response after 350ms delay
         await new Promise(resolve => setTimeout(resolve, 350));
@@ -37,31 +54,37 @@ async function submitInvoiceToGateway(payload, companyId) {
         };
     }
 
-    // Real API integration
-    if (!ZATCA_API_URL) {
-        throw new Error("ZATCA_API_URL is required but not configured for non-simulation environments.");
-    }
+    // Determine Base URL (Developer Portal Sandbox vs Production Core)
+    const baseUrl = env === "production" 
+        ? "https://gw-fatoora.zatca.gov.sa/e-invoicing/core" 
+        : "https://gw-fatoora.zatca.gov.sa/e-invoicing/developer-portal";
+        
+    const finalUrl = ZATCA_API_URL || baseUrl;
 
     const headers = {
         "Content-Type": "application/json",
         "Accept-Language": "en",
         "Accept": "application/json",
+        "Clearance-Status": "1" // Standard ZATCA requirement flag
     };
 
-    // Include authentication headers if configured
-    if (process.env.ZATCA_CLIENT_ID && process.env.ZATCA_CLIENT_SECRET) {
-        const auth = Buffer.from(`${process.env.ZATCA_CLIENT_ID}:${process.env.ZATCA_CLIENT_SECRET}`).toString("base64");
+    // Inject real CSID authentication
+    // ZATCA requires Basic Auth where Username = BinarySecurityToken (CSID/PCSID) and Password = Secret
+    const binarySecurityToken = config.pcsid ? decrypt(config.pcsid) : config.csid ? decrypt(config.csid) : null;
+    const clientSecret = config.client_secret_encrypted ? decrypt(config.client_secret_encrypted) : null;
+
+    if (binarySecurityToken && clientSecret) {
+        const auth = Buffer.from(`${binarySecurityToken}:${clientSecret}`).toString("base64");
         headers["Authorization"] = `Basic ${auth}`;
-    } else if (process.env.ZATCA_CERTIFICATE) {
-        // Alternative certificate-based authentications can go here
-        headers["X-Clearance-Auth"] = "Bearer client_cert_token";
+    } else {
+        throw new Error("ZATCA API Authentication missing: PCSID/CSID and Client Secret are required.");
     }
 
-    logger.info(`[ZATCA API] Sending invoice ${payload.uuid} to ${ZATCA_API_URL}...`);
+    logger.info(`[ZATCA API] Sending invoice ${payload.uuid} to ${finalUrl}...`);
 
     try {
         const response = await axios.post(
-            `${ZATCA_API_URL}/invoices/clearance`,
+            `${finalUrl}/invoices/clearance`,
             payload,
             { headers, timeout: 15000 }
         );

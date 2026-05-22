@@ -15,6 +15,8 @@ const { buildZATCAPayload } = require("./zatca.payload");
 const { submitInvoiceToGateway } = require("./zatca.api");
 const { logFinancialMutation } = require("../audit/financial.audit");
 const { encrypt, decrypt } = require("./zatca.utils");
+const forge = require("node-forge");
+const axios = require("axios");
 
 /**
  * Enqueue a Client Invoice for ZATCA e-Invoicing submission.
@@ -33,7 +35,20 @@ async function enqueueInvoiceSubmission(invoiceId, companyId, userId) {
 
         const xmlUUID = invoice.zatca_uuid || crypto.randomUUID();
 
-        // 1. Create or retrieve existing submission
+        // 1. Check for existing active submission (Idempotency Guard)
+        let activeSubmission = await prisma.zATCASubmission.findFirst({
+            where: {
+                invoice_id: invoiceId,
+                status: { in: ["QUEUED", "RETRYING", "SUBMITTED"] }
+            }
+        });
+
+        if (activeSubmission) {
+            logger.warn(`[ZATCA Service] Invoice ${invoice.invoice_no} already has an active ZATCA submission in progress. Idempotent return.`);
+            return activeSubmission;
+        }
+
+        // 2. Create or retrieve existing failed submission
         let submission = await prisma.zATCASubmission.findFirst({
             where: { invoice_id: invoiceId }
         });
@@ -95,22 +110,70 @@ async function enqueueInvoiceSubmission(invoiceId, companyId, userId) {
  * Builds payload, generates QR code, submits to ZATCA gateway, updates DB status.
  */
 async function processSubmission(submissionId) {
-    const submission = await prisma.zATCASubmission.findUnique({
-        where: { id: submissionId },
-        include: {
-            company: true,
-            invoice: {
-                include: { items: true }
+    // 1. Optimistic Locking & Duplicate Prevention
+    const lockedSub = await prisma.$transaction(async (tx) => {
+        // 1. Optimistic Locking: atomically update lock timestamp only if currently null and not accepted/cleared
+        const affected = await tx.zATCASubmission.updateMany({
+            where: {
+                id: submissionId,
+                processing_lock_at: null,
+                status: { notIn: ["ACCEPTED", "CLEARED"] }
+            },
+            data: {
+                processing_lock_at: new Date(),
+                correlation_id: require("../../../utils/context").getContext().correlationId || crypto.randomUUID()
             }
-        }
-    });
+        });
 
-    if (!submission) throw new Error("Submission record not found.");
-    if (submission.status === "ACCEPTED" || submission.status === "CLEARED") {
-        return submission;
+        if (affected.count === 0) {
+            // Already locked by another thread or already succeeded
+            logger.warn(`[ZATCA Service] Submission ${submissionId} is locked or already cleared. Skipping.`);
+            return null;
+        }
+
+        // 2. Fetch the locked submission safely
+        return await tx.zATCASubmission.findUnique({
+            where: { id: submissionId },
+            include: {
+                company: true,
+                invoice: {
+                    include: { items: true }
+                },
+                credit_note: true
+            }
+        });
+    }, { timeout: 25000, maxWait: 15000 });
+
+    if (!lockedSub) return null;
+
+    const { company } = lockedSub;
+    let invoice = lockedSub.invoice;
+
+    if (lockedSub.credit_note) {
+        const cn = lockedSub.credit_note;
+        const totalVal = -Number(cn.amount);
+        const taxableVal = Number((totalVal / 1.15).toFixed(2));
+        const vatVal = Number((totalVal - taxableVal).toFixed(2));
+
+        invoice = {
+            id: cn.invoice_id,
+            invoice_no: cn.note_no,
+            invoice_date: cn.created_at,
+            total_amount: totalVal,
+            vat_amount: vatVal,
+            subtotal: taxableVal,
+            items: [
+                {
+                    description: cn.reason || "Reversal credit note",
+                    quantity: 1,
+                    unit_price: taxableVal,
+                    subtotal: taxableVal,
+                    vat_amount: vatVal
+                }
+            ]
+        };
     }
 
-    const { company, invoice } = submission;
     const sellerName = company.company_name || process.env.ZATCA_SELLER_NAME || company.name || "Enterprise Seller";
     const vatNumber  = company.vat_number || process.env.ZATCA_VAT_NUMBER || "300000000000003";
     const timestamp  = new Date(invoice.invoice_date).toISOString().split(".")[0] + "Z";
@@ -122,9 +185,10 @@ async function processSubmission(submissionId) {
     let qrBase64 = null;
     let tlvBase64 = null;
     let gatewayResponse = null;
+    let realHash = null;
 
     try {
-        // 1. Generate TLV QR Code PNG
+        // 2. Generate TLV QR Code PNG
         const qrResult = await generateZATCAQR({
             sellerName,
             vatNumber,
@@ -136,16 +200,26 @@ async function processSubmission(submissionId) {
         qrBase64 = qrResult.qrBase64DataUrl;
         tlvBase64 = qrResult.tlvBase64;
 
-        // 2. Build complete UBL XML & gateway request payload
-        const payload = buildZATCAPayload(invoice, company, qrBase64, submission.zatca_uuid);
+        // Fetch credentials for Real Digital Signing
+        const zatcaConfig = await prisma.zATCAConfiguration.findUnique({ where: { company_id: company.id } });
+        let privateKey = null;
+        let certPem = null;
+        if (zatcaConfig && zatcaConfig.private_key_encrypted && zatcaConfig.certificate_pem) {
+            privateKey = decrypt(zatcaConfig.private_key_encrypted);
+            certPem = zatcaConfig.certificate_pem;
+        }
 
-        // 3. Update status to SUBMITTED before API call
+        // 3. Build complete UBL XML & gateway request payload (Now with ECDSA Signature)
+        const payload = buildZATCAPayload(invoice, company, qrBase64, lockedSub.zatca_uuid, privateKey, certPem);
+        realHash = payload.invoiceHash;
+
+        // 4. Update status to SUBMITTED before API call
         await prisma.zATCASubmission.update({
             where: { id: submissionId },
             data: { status: "SUBMITTED" }
         });
 
-        // 4. Submit to Gateway
+        // 5. Submit to ZATCA Phase 2 compliant Gateway
         const res = await submitInvoiceToGateway(payload, company.id);
         gatewayResponse = res.data;
 
@@ -164,16 +238,15 @@ async function processSubmission(submissionId) {
         }
     }
 
-    // 5. Hardening: Handle Retries on failures
+    // 6. Retry Handling
     let nextRetry = null;
     let finalStatus = statusAfter;
 
     if (statusAfter === "FAILED" || statusAfter === "REJECTED") {
         const retryLimit = parseInt(process.env.ZATCA_RETRY_LIMIT) || 3;
-        if (submission.retry_count < retryLimit) {
+        if (lockedSub.retry_count < retryLimit) {
             finalStatus = "RETRYING";
-            // Exponential backoff: 2 min, 4 min, 8 min, etc.
-            const backoffMinutes = Math.pow(2, submission.retry_count + 1);
+            const backoffMinutes = Math.pow(2, lockedSub.retry_count + 1);
             nextRetry = new Date(Date.now() + backoffMinutes * 60 * 1000);
             logger.info(`[ZATCA Service] Submission ${submissionId} failed. Retry enqueued in ${backoffMinutes} min.`);
         } else {
@@ -182,12 +255,13 @@ async function processSubmission(submissionId) {
         }
     }
 
-    // 6. Persist status and outcomes to Database
+    // 7. Persist status, release the processing lock, and store computed invoice hash
     const updatedSub = await prisma.zATCASubmission.update({
         where: { id: submissionId },
         data: {
             status:          finalStatus,
             qr_code_base64:  tlvBase64,
+            invoice_hash:    realHash,
             zatca_response:  gatewayResponse || undefined,
             error_message:   errMsg,
             retry_count:     finalStatus === "RETRYING" ? { increment: 1 } : undefined,
@@ -195,11 +269,12 @@ async function processSubmission(submissionId) {
             submitted_at:    new Date(),
             accepted_at:     finalStatus === "ACCEPTED" || finalStatus === "CLEARED" ? new Date() : undefined,
             rejected_at:     finalStatus === "REJECTED" ? new Date() : undefined,
-            cleared_at:      finalStatus === "CLEARED" ? new Date() : undefined
+            cleared_at:      finalStatus === "CLEARED" ? new Date() : undefined,
+            processing_lock_at: null // Release lock
         }
     });
 
-    // 7. Sync back to ClientInvoice table
+    // 8. Sync back to ClientInvoice table
     await prisma.clientInvoice.update({
         where: { id: invoice.id },
         data: {
@@ -208,13 +283,13 @@ async function processSubmission(submissionId) {
         }
     });
 
-    // 8. Immutable Event Logging
+    // 9. Immutable Event Logging
     await prisma.zATCAEventLog.create({
         data: {
             company_id:       company.id,
             submission_id:    submissionId,
             event_type:       finalStatus,
-            status_before:    submission.status,
+            status_before:    lockedSub.status,
             status_after:     finalStatus,
             error_details:    errMsg,
             retry_count:      updatedSub.retry_count,
@@ -224,7 +299,7 @@ async function processSubmission(submissionId) {
         }
     });
 
-    // 9. Auditing
+    // 10. Auditing
     await logFinancialMutation({
         companyId:  company.id,
         action:     `ZATCA_INVOICE_SUBMISSION_${finalStatus}`,
@@ -235,6 +310,56 @@ async function processSubmission(submissionId) {
     });
 
     return updatedSub;
+}
+
+/**
+ * Enqueue a Credit Note for ZATCA e-Invoicing submission.
+ * Triggered asynchronously immediately after a credit note is successfully POSTED.
+ */
+async function enqueueCreditNoteSubmission(creditNoteId, companyId, userId) {
+    try {
+        const creditNote = await prisma.creditNote.findFirst({
+            where: { id: creditNoteId, company_id: companyId }
+        });
+
+        if (!creditNote) throw new Error(`Credit Note with ID ${creditNoteId} not found.`);
+        if (creditNote.status !== "posted") {
+            throw new Error(`Only posted credit notes can be submitted to ZATCA. Current status: ${creditNote.status}`);
+        }
+
+        const xmlUUID = crypto.randomUUID();
+
+        // Create submission record linked to the credit note and the original invoice
+        const submission = await prisma.zATCASubmission.create({
+            data: {
+                company_id: companyId,
+                invoice_id: creditNote.invoice_id,
+                credit_note_id: creditNoteId,
+                status:     "QUEUED",
+                zatca_uuid: xmlUUID,
+                retry_count: 0,
+                next_retry_at: new Date()
+            }
+        });
+
+        // Write ZATCA Event Log
+        await prisma.zATCAEventLog.create({
+            data: {
+                company_id:    companyId,
+                submission_id: submission.id,
+                event_type:    "QUEUED",
+                status_before: "NOT_QUEUED",
+                status_after:  "QUEUED",
+                triggered_by:  "api"
+            }
+        });
+
+        logger.info(`[ZATCA Service] Credit Note ${creditNote.note_no} enqueued for submission.`);
+        return submission;
+    } catch (err) {
+        logger.error("[ZATCA Service] Failed to enqueue credit note", { creditNoteId, err: err.message });
+        throw err;
+    }
 }
 
 /**
@@ -317,39 +442,123 @@ async function getSubmissionLogs(submissionId, companyId) {
 
 /**
  * Onboard a company for ZATCA e-Invoicing.
- * Generates CSID or PCSID dynamically based on simulated or real gateway APIs.
+ * Generates CSR and retrieves CCSID/PCSID dynamically based on real gateway APIs.
  */
-async function onboardZATCA(companyId, { zatcaEnv, clientId, clientSecret, csrText }, userId) {
-    const encryptedClientId = encrypt(clientId);
+async function onboardZATCA(companyId, { zatcaEnv, otp }, userId) {
+    // 1. Generate real ECDSA secp256k1 key pair
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', {
+        namedCurve: 'secp256k1',
+        publicKeyEncoding: { type: 'spki', format: 'pem' },
+        privateKeyEncoding: { type: 'sec1', format: 'pem' }
+    });
+
+    const encryptedPrivateKey = encrypt(privateKey);
+
+    const company = await prisma.company.findUnique({ where: { id: companyId }});
+    if (!company) throw new Error("Company not found");
+
+    const orgName = company.name || "Default Org";
+    const vatNumber = company.vat_number || process.env.ZATCA_VAT_NUMBER || "311111111101113";
+    
+    // ZATCA specific CSR generation using node-forge
+    const forgePrivateKey = forge.pki.privateKeyFromPem(privateKey);
+    const forgePublicKey = forge.pki.publicKeyFromPem(publicKey);
+    
+    const csr = forge.pki.createCertificationRequest();
+    csr.publicKey = forgePublicKey;
+    
+    csr.setSubject([
+        { name: 'countryName', value: 'SA' },
+        { name: 'organizationName', value: orgName },
+        { name: 'organizationalUnitName', value: 'Riyadh Branch' },
+        { name: 'commonName', value: `TST-${vatNumber}` },
+        { shortName: 'SN', value: `1-TST|2-TST|3-ed22f1d8-e6a2-1118-9b58-d9a8f11e445f` },
+        { shortName: 'UID', value: vatNumber },
+        { shortName: 'title', value: '1100' },
+        { shortName: 'registeredAddress', value: company.address || 'Riyadh' },
+        { shortName: 'businessCategory', value: 'Construction' }
+    ]);
+    
+    csr.sign(forgePrivateKey, forge.md.sha256.create());
+    const csrPem = forge.pki.certificationRequestToPem(csr);
+    const csrBase64 = Buffer.from(csrPem).toString('base64');
+
+    let certificatePem = "";
+    let ccsid = "";
+    let pcsid = "";
+    let clientSecret = "";
+
+    // Simulation allowed ONLY in dev config
+    if (zatcaEnv === "simulation") {
+        if (process.env.NODE_ENV !== "development" || process.env.ALLOW_SIMULATION !== "true") {
+            throw new Error("Simulation mode is strictly blocked in this environment.");
+        }
+        logger.info(`[ZATCA Service] [SIMULATION] Generating mock onboarding credentials for testing.`);
+        certificatePem = `-----BEGIN CERTIFICATE-----\nMIIB7TCCAZegAwIBAgIU...\n-----END CERTIFICATE-----`;
+        ccsid = `ccsid_${crypto.randomBytes(16).toString("hex")}`;
+        pcsid = `pcsid_${crypto.randomBytes(16).toString("hex")}`;
+        clientSecret = `secret_${crypto.randomBytes(16).toString("hex")}`;
+    } else {
+        if (!otp) throw new Error("OTP is required for real ZATCA onboarding.");
+        
+        const baseUrl = zatcaEnv === "production" ? "https://gw-fatoora.zatca.gov.sa/e-invoicing/core" : "https://gw-fatoora.zatca.gov.sa/e-invoicing/developer-portal";
+        
+        try {
+            logger.info(`[ZATCA Service] Requesting CCSID from ${baseUrl}/compliance...`);
+            // 1. Get CCSID (Compliance CSID)
+            const ccsidRes = await axios.post(`${baseUrl}/compliance`, { csr: csrBase64 }, {
+                headers: { 'OTP': otp, 'Accept-Version': 'V2', 'Content-Type': 'application/json' }
+            });
+
+            ccsid = ccsidRes.data.binarySecurityToken;
+            clientSecret = ccsidRes.data.secret;
+
+            logger.info(`[ZATCA Service] CCSID retrieved. Requesting PCSID...`);
+
+            // 2. Get PCSID (Production CSID)
+            const pcsidRes = await axios.post(`${baseUrl}/production/csids`, { compliance_request_id: ccsidRes.data.requestID }, {
+                headers: { 
+                    'Authorization': `Basic ${Buffer.from(ccsid + ":" + clientSecret).toString('base64')}`,
+                    'Accept-Version': 'V2',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            pcsid = pcsidRes.data.binarySecurityToken;
+            certificatePem = pcsidRes.data.binarySecurityToken; // PCSID itself acts as the public cert
+            
+            logger.info(`[ZATCA Service] Successfully retrieved PCSID and completed ZATCA Compliance onboarding.`);
+        } catch (err) {
+            logger.error(`[ZATCA API] Real Compliance API failed: ${err.message}`);
+            throw new Error(`ZATCA Compliance Gateway Error: ${err.response?.data ? JSON.stringify(err.response.data) : err.message}`);
+        }
+    }
+
     const encryptedClientSecret = encrypt(clientSecret);
-    const encryptedPrivateKey = encrypt(crypto.randomBytes(32).toString("hex")); // Generated Private Key
-
-    const mockCertificate = `-----BEGIN CERTIFICATE-----\nMIIB7TCCAZegAwIBAgIU...\n-----END CERTIFICATE-----`;
-    const mockCSID = `csid_${crypto.randomBytes(16).toString("hex")}`;
-    const mockPCSID = `pcsid_${crypto.randomBytes(16).toString("hex")}`;
-
+    const finalEnv = zatcaEnv || "simulation";
+    
     const config = await prisma.zATCAConfiguration.upsert({
         where: { company_id: companyId },
         update: {
-            zatca_env: zatcaEnv || "simulation",
-            client_id_encrypted: encryptedClientId,
+            zatca_env: finalEnv,
+            client_id_encrypted: encrypt("clientId_not_used_in_v2"),
             client_secret_encrypted: encryptedClientSecret,
-            certificate_pem: mockCertificate,
+            certificate_pem: certificatePem,
             private_key_encrypted: encryptedPrivateKey,
-            csid: mockCSID,
-            pcsid: mockPCSID,
+            csid: ccsid,
+            pcsid: pcsid,
             is_onboarded: true,
             cert_expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
         },
         create: {
             company_id: companyId,
-            zatca_env: zatcaEnv || "simulation",
-            client_id_encrypted: encryptedClientId,
+            zatca_env: finalEnv,
+            client_id_encrypted: encrypt("clientId_not_used_in_v2"),
             client_secret_encrypted: encryptedClientSecret,
-            certificate_pem: mockCertificate,
+            certificate_pem: certificatePem,
             private_key_encrypted: encryptedPrivateKey,
-            csid: mockCSID,
-            pcsid: mockPCSID,
+            csid: ccsid,
+            pcsid: pcsid,
             is_onboarded: true,
             cert_expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
         }
@@ -360,7 +569,7 @@ async function onboardZATCA(companyId, { zatcaEnv, clientId, clientSecret, csrTe
         action: "ZATCA_ONBOARDED",
         entityType: "ZATCAConfiguration",
         entityId: config.id,
-        after: { zatcaEnv, csid: mockCSID },
+        after: { zatcaEnv: finalEnv, ccsid: "REDACTED", pcsid: "REDACTED" },
         meta: { userId }
     });
 
@@ -420,6 +629,7 @@ async function getZATCAConfig(companyId) {
 
 module.exports = {
     enqueueInvoiceSubmission,
+    enqueueCreditNoteSubmission,
     processSubmission,
     retrySubmission,
     getSubmissions,

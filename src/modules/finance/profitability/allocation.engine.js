@@ -73,22 +73,55 @@ async function getLaborBurdenAllocation(projectId, periodMonth) {
     const start = new Date(`${periodMonth}-01`);
     const end   = new Date(start.getFullYear(), start.getMonth() + 1, 0);
 
-    // Sum base payroll salaries enqueued to this project's cost center
-    const payrollEntries = await prisma.ledgerEntry.findMany({
+    // 1. Fetch timesheets for the project in this period
+    const timesheets = await prisma.timesheet.findMany({
         where: {
             project_id: projectId,
-            posting_date: { gte: start, lte: end },
-            account: {
-                account_code: { startsWith: "501" } // e.g. Direct Labor / Salaries
-            }
+            check_in_at: { gte: start, lte: end },
+            resource_type: "labor"
+        },
+        include: {
+            employee: true
         }
     });
 
-    const directLaborCost = payrollEntries.reduce((sum, e) => sum + (Number(e.debit) - Number(e.credit)), 0);
-    
-    // Labor burden markup is historically estimated at 22% of direct labor in GCC construction (housing, iqama, insurance)
+    if (timesheets.length === 0) {
+        logger.warn(`[Profitability Engine] No timesheets found for project ${projectId} in ${periodMonth}. Assuming zero direct labor cost.`);
+        return {
+            directLaborCost: 0,
+            laborBurden: 0,
+            totalLaborCost: 0
+        };
+    }
+
+    let directLaborCost = 0;
+
+    for (const ts of timesheets) {
+        if (!ts.employee) {
+            throw new Error(`Cost Allocation Rejected: Timesheet record ${ts.id} is missing employee assignment.`);
+        }
+
+        const emp = ts.employee;
+        const basic = Number(emp.basic_salary || emp.salary || 0);
+        const allowances = Number(emp.housing_allowance || 0) +
+                           Number(emp.transportation_allowance || 0) +
+                           Number(emp.other_allowance || 0);
+
+        const grossMonthly = basic + allowances;
+        if (grossMonthly <= 0) {
+            throw new Error(`Cost Allocation Rejected: Wage rates are missing/zero for employee ${emp.name || emp.id}.`);
+        }
+
+        const contractHours = emp.contract_hours || 200;
+        const hourlyRate = grossMonthly / contractHours;
+        const hours = Number(ts.total_hours || 0);
+
+        directLaborCost += hours * hourlyRate;
+    }
+
+    // Labor burden markup is historically estimated at 22% of direct labor in GCC construction
     const laborBurdenMarkup = round2(directLaborCost * 0.22);
-    
+
     return {
         directLaborCost: round2(directLaborCost),
         laborBurden:     laborBurdenMarkup,

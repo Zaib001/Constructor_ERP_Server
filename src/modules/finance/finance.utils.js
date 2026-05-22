@@ -6,26 +6,47 @@ const prisma = require("../../db");
  * Generates a unique sequence number for financial documents
  * Uses a transactional counter to prevent race conditions.
  */
-async function generateSequenceNo(companyId, type, prefix) {
+async function generateSequenceNo(companyId, type, prefix, txClient) {
     const now = new Date();
     const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-    const seq = await prisma.financeSequence.upsert({
-        where: {
-            company_id_type: { company_id: companyId, type: type }
-        },
-        update: {
-            last_value: { increment: 1 }
-        },
-        create: {
-            company_id: companyId,
-            type: type,
-            prefix: prefix,
-            last_value: 1
-        }
-    });
+    const execute = async (tx) => {
+        const rows = await tx.$queryRaw`
+            SELECT last_value 
+            FROM "auth"."finance_sequences" 
+            WHERE company_id = ${companyId}::uuid AND type = ${type}
+            FOR UPDATE
+        `;
 
-    const sequence = String(seq.last_value).padStart(4, "0");
+        if (rows && rows.length > 0) {
+            const nextVal = rows[0].last_value + 1;
+            await tx.$executeRaw`
+                UPDATE "auth"."finance_sequences" 
+                SET last_value = ${nextVal} 
+                WHERE company_id = ${companyId}::uuid AND type = ${type}
+            `;
+            return nextVal;
+        } else {
+            const created = await tx.financeSequence.create({
+                data: {
+                    company_id: companyId,
+                    type: type,
+                    prefix: prefix,
+                    last_value: 1
+                }
+            });
+            return created.last_value;
+        }
+    };
+
+    let seqVal;
+    if (txClient) {
+        seqVal = await execute(txClient);
+    } else {
+        seqVal = await prisma.$transaction(execute);
+    }
+
+    const sequence = String(seqVal).padStart(4, "0");
     return `${prefix}-${yearMonth}-${sequence}`;
 }
 

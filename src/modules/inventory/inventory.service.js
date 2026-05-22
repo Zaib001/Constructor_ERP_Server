@@ -610,6 +610,256 @@ async function reportExcess(user, data) {
     });
 }
 
+// ─── Material Requests (Site Engineer & Storekeeper) ───────────────────────
+
+/**
+ * Create a new Material Request (Reservation)
+ */
+async function createMaterialRequest(data, user) {
+    const { projectId, wbsId, itemId, storeId, quantity, requiredDate } = data;
+    const { companyId, id: userId } = user;
+
+    // Validate access
+    await validateResourceAccess(prisma, "project", projectId, user, { module: MODULES.PROJECTS, isWrite: false });
+
+    const request = await prisma.$transaction(async (tx) => {
+        // Validate scope
+        await _scopedFind(tx, "project", projectId, companyId);
+        await _scopedFind(tx, "wBS", wbsId, companyId);
+        await _scopedFind(tx, "item", itemId, companyId);
+        if (storeId) {
+            await _scopedFind(tx, "store", storeId, companyId);
+        }
+
+        return await tx.inventoryPlanningRequest.create({
+            data: {
+                company_id: companyId,
+                project_id: projectId,
+                wbs_id: wbsId,
+                wBSId: wbsId,
+                item_id: itemId,
+                store_id: storeId || null,
+                quantity: Number(quantity),
+                required_date: requiredDate ? new Date(requiredDate) : null,
+                reservation_status: "PENDING",
+                created_by: userId,
+                status: "draft"
+            },
+            include: {
+                project: { select: { name: true } },
+                item: { select: { name: true, unit: true, category: true } },
+                store: { select: { name: true } }
+            }
+        });
+    });
+
+    return request;
+}
+
+/**
+ * List Material Requests with Scoping
+ */
+async function getMaterialRequestList(user, filters) {
+    const where = applyDataScope(user, { projectFilter: true });
+    const { projectId, storeId, reservationStatus, page = 1, pageSize = 20 } = filters;
+
+    const finalWhere = {
+        ...where,
+        company_id: user.companyId,
+        ...(projectId && { project_id: projectId }),
+        ...(storeId && { store_id: storeId }),
+        ...(reservationStatus && { reservation_status: reservationStatus })
+    };
+
+    const skip = (page - 1) * pageSize;
+
+    const [data, total] = await Promise.all([
+        prisma.inventoryPlanningRequest.findMany({
+            where: finalWhere,
+            skip,
+            take: pageSize,
+            orderBy: { required_date: "asc" },
+            include: {
+                project: { select: { name: true } },
+                item: { select: { name: true, unit: true, category: true, standard_price: true } },
+                store: { select: { name: true } }
+            }
+        }),
+        prisma.inventoryPlanningRequest.count({ where: finalWhere })
+    ]);
+
+    return {
+        data,
+        pagination: {
+            total,
+            page,
+            pageSize,
+            pages: Math.ceil(total / pageSize)
+        }
+    };
+}
+
+/**
+ * Update reservation status directly (Approve / Reject / Cancel)
+ */
+async function updateMaterialRequestStatus(id, status, user) {
+    const { companyId } = user;
+
+    // Check request exists and belongs to company
+    const request = await prisma.inventoryPlanningRequest.findFirst({
+        where: { id, company_id: companyId }
+    });
+    if (!request) {
+        throw new AppError("Material request not found or access denied", 404);
+    }
+
+    const updated = await prisma.inventoryPlanningRequest.update({
+        where: { id },
+        data: { reservation_status: status },
+        include: {
+            project: { select: { name: true } },
+            item: { select: { name: true, unit: true, category: true } },
+            store: { select: { name: true } }
+        }
+    });
+
+    return updated;
+}
+
+/**
+ * Fulfill a Material Request by creating a Material Issue and updating status to ISSUED
+ */
+async function fulfillMaterialRequest(id, data, user, ipAddress, deviceInfo) {
+    const { storeId, costCodeId } = data;
+    const { companyId, id: userId } = user;
+
+    // Verify access to store
+    await validateResourceAccess(prisma, "store", storeId, user, { module: MODULES.INVENTORY, isWrite: true });
+
+    const result = await prisma.$transaction(async (tx) => {
+        // ── 1. Load and lock request ──────────────────────────────────────────
+        const request = await tx.inventoryPlanningRequest.findFirst({
+            where: { id, company_id: companyId }
+        });
+        if (!request) {
+            throw new AppError("Material request not found or access denied", 404);
+        }
+
+        if (request.reservation_status === "ISSUED") {
+            throw new AppError("Material request has already been issued", 400);
+        }
+
+        // ── 2. Validate supporting resources ──────────────────────────────────
+        await _scopedFind(tx, "project", request.project_id, companyId);
+        const wbsId = request.wbs_id || request.wBSId;
+        if (!wbsId) {
+            throw new AppError("Material request WBS is not set", 400);
+        }
+        await _scopedFind(tx, "wBS", wbsId, companyId);
+        await _scopedFind(tx, "store", storeId, companyId);
+        await _scopedFind(tx, "item", request.item_id, companyId);
+        await _scopedFind(tx, "costCode", costCodeId, companyId);
+
+        // ── 3. Check stock availability ───────────────────────────────────────
+        const stock = await tx.inventoryStock.findUnique({
+            where: { store_id_item_id: { store_id: storeId, item_id: request.item_id } }
+        });
+        const available = parseFloat(stock?.quantity ?? 0);
+        const reqQty = parseFloat(request.quantity);
+        if (available < reqQty - 1e-9) {
+            const item = await tx.item.findUnique({ where: { id: request.item_id }, select: { name: true } });
+            throw new AppError(
+                `Insufficient stock for "${item?.name ?? request.item_id}" in store: available ${available}, requested ${reqQty}`,
+                422
+            );
+        }
+
+        // ── 4. Generate issue sequential code and create MaterialIssue ────────
+        const issueNo = await _generateIssueNo(tx, companyId);
+        const issueRecord = await tx.materialIssue.create({
+            data: {
+                issue_no: issueNo,
+                company_id: companyId,
+                project_id: request.project_id,
+                wbs_id: wbsId,
+                store_id: storeId,
+                issued_by: userId
+            }
+        });
+
+        // ── 5. Create MaterialIssueItem ───────────────────────────────────────
+        const itemMaster = await tx.item.findUnique({
+            where: { id: request.item_id },
+            select: { standard_price: true }
+        });
+        const unitCost = parseFloat(itemMaster?.standard_price ?? 0);
+
+        await tx.materialIssueItem.create({
+            data: {
+                issue_id: issueRecord.id,
+                item_id: request.item_id,
+                quantity: reqQty,
+                unit_cost: unitCost,
+                cost_code_id: costCodeId
+            }
+        });
+
+        // ── 6. Decrement InventoryStock ───────────────────────────────────────
+        await tx.inventoryStock.update({
+            where: { store_id_item_id: { store_id: storeId, item_id: request.item_id } },
+            data: { quantity: { decrement: reqQty } }
+        });
+
+        // ── 7. Log in StockLedger ─────────────────────────────────────────────
+        await tx.stockLedger.create({
+            data: {
+                company_id: companyId,
+                item_id: request.item_id,
+                store_id: storeId,
+                move_type: "ISSUE_OUT",
+                quantity: reqQty,
+                reference_id: issueRecord.id,
+                created_by: userId
+            }
+        });
+
+        // ── 8. Update CostCode actual ─────────────────────────────────────────
+        const costImpact = reqQty * unitCost;
+        if (costImpact > 0) {
+            await updateCostCodeActual(tx, null, "material", costImpact, costCodeId);
+        }
+
+        // ── 9. Update original request status to ISSUED ───────────────────────
+        const updatedRequest = await tx.inventoryPlanningRequest.update({
+            where: { id },
+            data: { 
+                reservation_status: "ISSUED",
+                store_id: storeId
+            }
+        });
+
+        // ── 10. Recompute project progress ─────────────────────────────────────
+        await recomputeProjectProgress(tx, request.project_id);
+
+        return {
+            issue: issueRecord,
+            request: updatedRequest
+        };
+    });
+
+    // Write audit log (outside tx)
+    logAudit({
+        userId,
+        companyId,
+        action: "FULFILL_MATERIAL_REQUEST",
+        details: { requestId: id, issueId: result.issue.id, storeId, quantity: result.request.quantity },
+        ipAddress,
+        deviceInfo
+    }).catch(() => {});
+
+    return result;
+}
+
 module.exports = {
     AppError,
     createGRN,
@@ -621,6 +871,10 @@ module.exports = {
     getStores,
     createStore,
     deleteStore,
+    createMaterialRequest,
+    getMaterialRequestList,
+    updateMaterialRequestStatus,
+    fulfillMaterialRequest,
     // Legacy
     getStock,
     getPRs,
@@ -629,3 +883,4 @@ module.exports = {
     createPR,
     reportExcess
 };
+

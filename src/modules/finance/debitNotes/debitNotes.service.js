@@ -73,9 +73,9 @@ async function postDebitNote(id, companyId, userId) {
         await checkPeriodGuard(companyId, note.created_at);
 
         // 2. Resolve accounts
-        const apAccount = await resolveAccount(companyId, 'ACCOUNT_PAYABLE');
-        const expAccount = await resolveAccount(companyId, 'EXPENSE_ACCOUNT');
-        const vatAccount = await resolveAccount(companyId, 'VAT_RECEIVABLE');
+        const apAccount = await resolveAccount(companyId, 'ACCOUNTS_PAYABLE');
+        const expAccount = await resolveAccount(companyId, 'PROJECT_COST');
+        const vatAccount = await resolveAccount(companyId, 'VAT_RECOVERABLE');
 
         const activePeriod = await tx.financialPeriod.findFirst({
             where: { company_id: companyId, status: "open" }

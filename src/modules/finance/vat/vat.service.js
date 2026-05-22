@@ -326,15 +326,31 @@ const closeVATPeriod = async (companyId, periodId, userId) => {
     return filing;
 };
 
-/**
- * Retrieves all closed filing snapshots for the company
- */
 const getVATFilingsHistory = async (companyId) => {
-    return prisma.vATFiling.findMany({
+    const filings = await prisma.vATFiling.findMany({
         where: { company_id: companyId },
-        include: { period: true },
         orderBy: { filed_at: "desc" }
     });
+
+    if (filings.length === 0) return [];
+
+    // Fetch matching financial periods manually
+    const periodIds = filings.map(f => f.period_id);
+    const periods = await prisma.financialPeriod.findMany({
+        where: { id: { in: periodIds } }
+    });
+
+    // Map periods by ID for fast O(1) in-memory lookup
+    const periodMap = {};
+    periods.forEach(p => {
+        periodMap[p.id] = p;
+    });
+
+    // Merge period information back into filing objects
+    return filings.map(filing => ({
+        ...filing,
+        period: periodMap[filing.period_id] || null
+    }));
 };
 
 module.exports = {

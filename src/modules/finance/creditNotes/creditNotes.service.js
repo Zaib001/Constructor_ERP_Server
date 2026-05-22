@@ -5,6 +5,7 @@ const logger = require("../../../logger");
 const { generateSequenceNo, checkPeriodGuard, resolveAccount } = require("../finance.utils");
 const { writeVATTransactions } = require("../vat/vat.service");
 const { logFinancialMutation } = require("../audit/financial.audit");
+const { enqueueCreditNoteSubmission } = require("../zatca/zatca.service");
 
 /**
  * Get all credit notes
@@ -55,7 +56,7 @@ async function createCreditNote(companyId, { invoiceId, amount, reason }, userId
  * and writes inverted output VAT transactions
  */
 async function postCreditNote(id, companyId, userId) {
-    return prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx) => {
         const note = await tx.creditNote.findFirst({
             where: { id, company_id: companyId }
         });
@@ -196,6 +197,12 @@ async function postCreditNote(id, companyId, userId) {
 
         return updated;
     });
+
+    enqueueCreditNoteSubmission(updated.id, companyId, userId).catch(err => {
+        logger.error(`[Credit Note Post] Async ZATCA enqueue failed for Credit Note ${updated.id}:`, err.message);
+    });
+
+    return updated;
 }
 
 module.exports = {

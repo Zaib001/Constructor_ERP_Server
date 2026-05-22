@@ -9,7 +9,7 @@
 
 const prisma = require("../../../db");
 const { getVATSummary } = require("./vat.service");
-const { resolveAccount } = require("../finance.utils");
+const { resolveAccount, checkPeriodGuard } = require("../finance.utils");
 const { round2 } = require("./vat.engine");
 
 /**
@@ -21,15 +21,18 @@ async function reconcilePeriodVAT(companyId, periodId, userId) {
     });
     if (!period) throw new Error("Financial period not found.");
 
-    // 1. Sum up VAT transactions (VATTransaction table)
+    // 1. Period Guard Check
+    await checkPeriodGuard(companyId, period.start_date);
+
+    // 2. Sum up VAT transactions (VATTransaction table)
     const txSummary = await getVATSummary(companyId, periodId);
 
-    // 2. Fetch General Ledger account balances for VAT Output (Sales) and VAT Input (Purchases)
+    // 3. Fetch General Ledger account balances for VAT Output (Sales) and VAT Input (Purchases)
     let outputLedger = 0;
     let inputLedger = 0;
 
     try {
-        const outputAccount = await resolveAccount(companyId, "VAT_OUTPUT_TAX");
+        const outputAccount = await resolveAccount(companyId, "VAT_PAYABLE");
         const outAggregate = await prisma.ledgerEntry.aggregate({
             where: {
                 company_id: companyId,
@@ -45,7 +48,7 @@ async function reconcilePeriodVAT(companyId, periodId, userId) {
     }
 
     try {
-        const inputAccount = await resolveAccount(companyId, "VAT_INPUT_TAX");
+        const inputAccount = await resolveAccount(companyId, "VAT_RECOVERABLE");
         const inAggregate = await prisma.ledgerEntry.aggregate({
             where: {
                 company_id: companyId,

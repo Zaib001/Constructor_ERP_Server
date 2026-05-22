@@ -110,6 +110,10 @@ const projectPipelineRoutes = require("./modules/projectPipeline/projectPipeline
 const projectClosureRoutes = require("./modules/projectClosure/projectClosure.routes");
 const subcontractRoutes = require("./modules/subcontract/subcontract.routes");
 const financeRoutes = require("./modules/finance/finance.routes");
+const hrRoutes = require("./modules/hr/hr.routes");
+const assetsRoutes = require("./modules/assets/assets.routes");
+const dmsRoutes = require("./modules/dms/dms.routes");
+const reportsRoutes = require("./modules/reports/reports.routes");
 
 
 
@@ -158,6 +162,10 @@ app.use("/api/project-pipeline", projectPipelineRoutes);
 app.use("/api/project-closure", projectClosureRoutes);
 app.use("/api/subcontract", subcontractRoutes);
 app.use("/api/finance", financeRoutes);
+app.use("/api/v1/hr", hrRoutes);
+app.use("/api/v1/assets", assetsRoutes);
+app.use("/api/v1/documents", dmsRoutes);
+app.use("/api/v1/reports", reportsRoutes);
 
 
 // ─── 7. Static Files (Uploads) ────────────────────────────────────────────────

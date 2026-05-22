@@ -31,6 +31,7 @@
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
+    "node-forge": "^1.4.0",
     "pg": "^8.18.0",
     "prisma": "^7.4.0",
     "qrcode": "^1.5.4",
@@ -38,6 +39,6 @@
     "zod": "^4.3.6"
   },
   "prisma": {
-    "seed": "node prisma/seed_rbac.js"
+    "seed": "node prisma/seed_rbac_non_destructive.js"
   }
 }
