@@ -5,14 +5,13 @@ const crypto = require("crypto");
 // Strict dependency on explicit ZATCA encryption key to prevent fallback vulnerabilities
 const ENCRYPTION_KEY = process.env.ZATCA_ENCRYPTION_KEY;
 
-if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) {
-    throw new Error("FATAL: ZATCA_ENCRYPTION_KEY must be defined and at least 32 characters long.");
-}
-
 /**
  * Derives a valid 32-byte key from a variable-length string
  */
 function getDerivedKey() {
+    if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) {
+        throw new Error("FATAL: ZATCA_ENCRYPTION_KEY must be defined and at least 32 characters long.");
+    }
     return crypto.createHash("sha256").update(String(ENCRYPTION_KEY)).digest();
 }
 

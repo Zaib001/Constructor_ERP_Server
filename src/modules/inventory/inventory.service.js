@@ -845,7 +845,7 @@ async function fulfillMaterialRequest(id, data, user, ipAddress, deviceInfo) {
             issue: issueRecord,
             request: updatedRequest
         };
-    });
+    }, { maxWait: 20000, timeout: 40000 });
 
     // Write audit log (outside tx)
     logAudit({

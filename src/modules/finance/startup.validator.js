@@ -13,22 +13,33 @@ async function assertStartupConfig() {
     const errors = [];
 
     // 1. ZATCA Environment Variables & Security Checks
-    if (!process.env.ZATCA_VAT_NUMBER) {
-        errors.push("Missing ZATCA_VAT_NUMBER in environment variables.");
-    }
-    if (!process.env.ZATCA_SELLER_NAME) {
-        errors.push("Missing ZATCA_SELLER_NAME in environment variables.");
-    }
-    if (!process.env.ZATCA_ENCRYPTION_KEY || process.env.ZATCA_ENCRYPTION_KEY.length < 32) {
-        errors.push("Missing or weak ZATCA_ENCRYPTION_KEY. Must be at least 32 characters long.");
-    }
-    if (process.env.ZATCA_ENV === "simulation") {
-        if (process.env.NODE_ENV !== "development") {
-            errors.push("ZATCA_ENV 'simulation' is STRICTLY FORBIDDEN outside of 'development' environments.");
+    const hasZatcaConfig = !!(
+        process.env.ZATCA_VAT_NUMBER ||
+        process.env.ZATCA_SELLER_NAME ||
+        process.env.ZATCA_ENCRYPTION_KEY ||
+        (process.env.ZATCA_ENV && process.env.ZATCA_ENV !== "simulation")
+    );
+
+    if (hasZatcaConfig) {
+        if (!process.env.ZATCA_VAT_NUMBER) {
+            errors.push("Missing ZATCA_VAT_NUMBER in environment variables.");
         }
-        if (process.env.ALLOW_SIMULATION !== "true") {
-            errors.push("ZATCA_ENV 'simulation' requires ALLOW_SIMULATION=true to explicitly bypass compliance guards.");
+        if (!process.env.ZATCA_SELLER_NAME) {
+            errors.push("Missing ZATCA_SELLER_NAME in environment variables.");
         }
+        if (!process.env.ZATCA_ENCRYPTION_KEY || process.env.ZATCA_ENCRYPTION_KEY.length < 32) {
+            errors.push("Missing or weak ZATCA_ENCRYPTION_KEY. Must be at least 32 characters long.");
+        }
+        if (process.env.ZATCA_ENV === "simulation") {
+            if (process.env.NODE_ENV !== "development") {
+                errors.push("ZATCA_ENV 'simulation' is STRICTLY FORBIDDEN outside of 'development' environments.");
+            }
+            if (process.env.ALLOW_SIMULATION !== "true") {
+                errors.push("ZATCA_ENV 'simulation' requires ALLOW_SIMULATION=true to explicitly bypass compliance guards.");
+            }
+        }
+    } else {
+        logger.info("[Startup Validator] ZATCA integration is inactive (no credentials or encryption key provided). Skipping ZATCA checks.");
     }
     if (!process.env.JWT_SECRET) {
         errors.push("Missing JWT_SECRET in environment variables.");

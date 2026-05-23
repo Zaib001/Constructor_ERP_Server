@@ -4,7 +4,7 @@ const express = require("express");
 const multer = require("multer");
 const router = express.Router();
 const ctrl = require("./dms.controller");
-const { authenticateJWT } = require("../../middleware/authenticateJWT");
+const authenticateJWT = require("../../middleware/authenticateJWT");
 
 const upload = multer({
     storage: multer.memoryStorage(),

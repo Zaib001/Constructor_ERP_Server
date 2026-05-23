@@ -3,7 +3,7 @@
 const express = require("express");
 const router = express.Router();
 const ctrl = require("./reports.controller");
-const { authenticateJWT } = require("../../middleware/authenticateJWT");
+const authenticateJWT = require("../../middleware/authenticateJWT");
 
 router.use(authenticateJWT);
 
