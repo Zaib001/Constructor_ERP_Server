@@ -5,12 +5,14 @@ const logger = require("../../logger");
 
 /**
  * Validates critical environment variables and database configurations at boot time.
- * If assertions fail, halts the server to prevent half-configured operations.
+ * In production: halts server on any misconfiguration.
+ * In development: finance mapping warnings are non-fatal to allow UI-driven setup.
  */
 async function assertStartupConfig() {
     logger.info("[Startup Validator] Running enterprise finance startup checks...");
 
     const errors = [];
+    const warnings = [];
 
     // 1. ZATCA Environment Variables & Security Checks
     const hasZatcaConfig = !!(
@@ -41,6 +43,7 @@ async function assertStartupConfig() {
     } else {
         logger.info("[Startup Validator] ZATCA integration is inactive (no credentials or encryption key provided). Skipping ZATCA checks.");
     }
+
     if (!process.env.JWT_SECRET) {
         errors.push("Missing JWT_SECRET in environment variables.");
     }
@@ -68,7 +71,12 @@ async function assertStartupConfig() {
             const keys = settings.map(s => s.setting_key);
             for (const key of requiredSettings) {
                 if (!keys.includes(key)) {
-                    errors.push(`Company '${company.name || company.id}' is missing required finance setting mapping: ${key}`);
+                    const msg = `Company '${company.name || company.id}' is missing required finance setting mapping: ${key}`;
+                    // Always warn — never fatal. Finance operations (postInvoice, etc.) will
+                    // fail at point of use via resolveAccount() with a clear error message.
+                    // Blocking server boot prevents ALL modules (login, HR, projects) from
+                    // working because one company hasn't configured their Chart of Accounts.
+                    warnings.push(msg);
                 }
             }
         }
@@ -77,6 +85,15 @@ async function assertStartupConfig() {
         errors.push(`Database connection / schema check failed: ${dbErr.message}`);
     }
 
+    // Report warnings (non-fatal)
+    if (warnings.length > 0) {
+        logger.warn("[Startup Validator] FINANCE CONFIGURATION WARNINGS (non-fatal in development):");
+        warnings.forEach(w => logger.warn(`  ⚠  ${w}`));
+        logger.warn("[Startup Validator] Finance posting operations will fail until these are mapped.");
+        logger.warn("[Startup Validator] Go to Finance → Settings → Account Mappings to configure.");
+    }
+
+    // Report fatal errors and halt
     if (errors.length > 0) {
         logger.error("[Startup Validator] CRITICAL STARTUP CONFIGURATION ERRORS DETECTED:");
         errors.forEach(err => logger.error(`  - ${err}`));
@@ -88,3 +105,4 @@ async function assertStartupConfig() {
 }
 
 module.exports = { assertStartupConfig };
+
