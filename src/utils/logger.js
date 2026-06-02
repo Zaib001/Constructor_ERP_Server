@@ -57,8 +57,11 @@ const injectContext = format((info) => {
 
 const isProd = process.env.NODE_ENV === "production";
 
+const isQuiet = process.env.LOG_QUIET === "true";
+
 const logger = createLogger({
   level: process.env.LOG_LEVEL || "info",
+  silent: isQuiet,
   format: combine(
     injectContext(),
     timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),

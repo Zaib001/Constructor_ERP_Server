@@ -11,47 +11,47 @@ const CUBIX_COMPANY_ID = "aea170b3-85c2-4884-9edb-21555b46b0a2";
  */
 const DEFAULT_COA = [
     // ─── ASSETS ───────────────────────────────────────────────────────────────
-    { account_code: "1000", account_name: "Current Assets",              account_type: "asset",     parent_code: null,   is_control_account: true  },
-    { account_code: "1100", account_name: "Cash and Bank",               account_type: "asset",     parent_code: "1000", is_control_account: false },
-    { account_code: "1200", account_name: "Trade Receivables (AR)",      account_type: "asset",     parent_code: "1000", is_control_account: false },
-    { account_code: "1210", account_name: "VAT Recoverable (Input VAT)", account_type: "asset",     parent_code: "1000", is_control_account: false },
-    { account_code: "1300", account_name: "Advance Payments",            account_type: "asset",     parent_code: "1000", is_control_account: false },
-    { account_code: "1400", account_name: "Inventory / Materials Stock", account_type: "asset",     parent_code: "1000", is_control_account: false },
-    { account_code: "1500", account_name: "Fixed Assets",                account_type: "asset",     parent_code: null,   is_control_account: true  },
-    { account_code: "1510", account_name: "Property Plant & Equipment",  account_type: "asset",     parent_code: "1500", is_control_account: false },
-    { account_code: "1520", account_name: "Accumulated Depreciation",    account_type: "asset",     parent_code: "1500", is_control_account: false },
+    { account_code: "1000", account_name: "Current Assets", account_type: "asset", parent_code: null, is_control_account: true },
+    { account_code: "1100", account_name: "Cash and Bank", account_type: "asset", parent_code: "1000", is_control_account: false },
+    { account_code: "1200", account_name: "Trade Receivables (AR)", account_type: "asset", parent_code: "1000", is_control_account: false },
+    { account_code: "1210", account_name: "VAT Recoverable (Input VAT)", account_type: "asset", parent_code: "1000", is_control_account: false },
+    { account_code: "1300", account_name: "Advance Payments", account_type: "asset", parent_code: "1000", is_control_account: false },
+    { account_code: "1400", account_name: "Inventory / Materials Stock", account_type: "asset", parent_code: "1000", is_control_account: false },
+    { account_code: "1500", account_name: "Fixed Assets", account_type: "asset", parent_code: null, is_control_account: true },
+    { account_code: "1510", account_name: "Property Plant & Equipment", account_type: "asset", parent_code: "1500", is_control_account: false },
+    { account_code: "1520", account_name: "Accumulated Depreciation", account_type: "asset", parent_code: "1500", is_control_account: false },
 
     // ─── LIABILITIES ──────────────────────────────────────────────────────────
-    { account_code: "2000", account_name: "Current Liabilities",         account_type: "liability", parent_code: null,   is_control_account: true  },
-    { account_code: "2100", account_name: "Trade Payables (AP)",         account_type: "liability", parent_code: "2000", is_control_account: false },
-    { account_code: "2200", account_name: "VAT Payable (Output VAT)",    account_type: "liability", parent_code: "2000", is_control_account: false },
-    { account_code: "2300", account_name: "Accrued Expenses",            account_type: "liability", parent_code: "2000", is_control_account: false },
-    { account_code: "2400", account_name: "Advance from Clients",        account_type: "liability", parent_code: "2000", is_control_account: false },
-    { account_code: "2500", account_name: "Salary Payable",              account_type: "liability", parent_code: "2000", is_control_account: false },
+    { account_code: "2000", account_name: "Current Liabilities", account_type: "liability", parent_code: null, is_control_account: true },
+    { account_code: "2100", account_name: "Trade Payables (AP)", account_type: "liability", parent_code: "2000", is_control_account: false },
+    { account_code: "2200", account_name: "VAT Payable (Output VAT)", account_type: "liability", parent_code: "2000", is_control_account: false },
+    { account_code: "2300", account_name: "Accrued Expenses", account_type: "liability", parent_code: "2000", is_control_account: false },
+    { account_code: "2400", account_name: "Advance from Clients", account_type: "liability", parent_code: "2000", is_control_account: false },
+    { account_code: "2500", account_name: "Salary Payable", account_type: "liability", parent_code: "2000", is_control_account: false },
 
     // ─── EQUITY ───────────────────────────────────────────────────────────────
-    { account_code: "3000", account_name: "Owner Equity",                account_type: "equity",    parent_code: null,   is_control_account: true  },
-    { account_code: "3100", account_name: "Share Capital",               account_type: "equity",    parent_code: "3000", is_control_account: false },
-    { account_code: "3200", account_name: "Retained Earnings",           account_type: "equity",    parent_code: "3000", is_control_account: false },
+    { account_code: "3000", account_name: "Owner Equity", account_type: "equity", parent_code: null, is_control_account: true },
+    { account_code: "3100", account_name: "Share Capital", account_type: "equity", parent_code: "3000", is_control_account: false },
+    { account_code: "3200", account_name: "Retained Earnings", account_type: "equity", parent_code: "3000", is_control_account: false },
 
     // ─── INCOME ───────────────────────────────────────────────────────────────
-    { account_code: "4000", account_name: "Revenue",                     account_type: "income",    parent_code: null,   is_control_account: true  },
-    { account_code: "4100", account_name: "Contract Revenue",            account_type: "income",    parent_code: "4000", is_control_account: false },
-    { account_code: "4200", account_name: "Variation Order Revenue",     account_type: "income",    parent_code: "4000", is_control_account: false },
-    { account_code: "4300", account_name: "Other Income",                account_type: "income",    parent_code: "4000", is_control_account: false },
+    { account_code: "4000", account_name: "Revenue", account_type: "income", parent_code: null, is_control_account: true },
+    { account_code: "4100", account_name: "Contract Revenue", account_type: "income", parent_code: "4000", is_control_account: false },
+    { account_code: "4200", account_name: "Variation Order Revenue", account_type: "income", parent_code: "4000", is_control_account: false },
+    { account_code: "4300", account_name: "Other Income", account_type: "income", parent_code: "4000", is_control_account: false },
 
     // ─── EXPENSES ─────────────────────────────────────────────────────────────
-    { account_code: "5000", account_name: "Direct Project Costs",        account_type: "expense",   parent_code: null,   is_control_account: true  },
-    { account_code: "5100", account_name: "Material Costs",              account_type: "expense",   parent_code: "5000", is_control_account: false },
-    { account_code: "5200", account_name: "Labour Costs",                account_type: "expense",   parent_code: "5000", is_control_account: false },
-    { account_code: "5300", account_name: "Subcontractor Costs",         account_type: "expense",   parent_code: "5000", is_control_account: false },
-    { account_code: "5400", account_name: "Equipment / Plant Costs",     account_type: "expense",   parent_code: "5000", is_control_account: false },
-    { account_code: "6000", account_name: "Overhead & Admin Expenses",   account_type: "expense",   parent_code: null,   is_control_account: true  },
-    { account_code: "6100", account_name: "Salaries & Allowances",       account_type: "expense",   parent_code: "6000", is_control_account: false },
-    { account_code: "6200", account_name: "Rent & Utilities",            account_type: "expense",   parent_code: "6000", is_control_account: false },
-    { account_code: "6300", account_name: "Office & Admin Expenses",     account_type: "expense",   parent_code: "6000", is_control_account: false },
-    { account_code: "6400", account_name: "Depreciation Expense",        account_type: "expense",   parent_code: "6000", is_control_account: false },
-    { account_code: "6500", account_name: "Finance Charges & Interest",  account_type: "expense",   parent_code: "6000", is_control_account: false },
+    { account_code: "5000", account_name: "Direct Project Costs", account_type: "expense", parent_code: null, is_control_account: true },
+    { account_code: "5100", account_name: "Material Costs", account_type: "expense", parent_code: "5000", is_control_account: false },
+    { account_code: "5200", account_name: "Labour Costs", account_type: "expense", parent_code: "5000", is_control_account: false },
+    { account_code: "5300", account_name: "Subcontractor Costs", account_type: "expense", parent_code: "5000", is_control_account: false },
+    { account_code: "5400", account_name: "Equipment / Plant Costs", account_type: "expense", parent_code: "5000", is_control_account: false },
+    { account_code: "6000", account_name: "Overhead & Admin Expenses", account_type: "expense", parent_code: null, is_control_account: true },
+    { account_code: "6100", account_name: "Salaries & Allowances", account_type: "expense", parent_code: "6000", is_control_account: false },
+    { account_code: "6200", account_name: "Rent & Utilities", account_type: "expense", parent_code: "6000", is_control_account: false },
+    { account_code: "6300", account_name: "Office & Admin Expenses", account_type: "expense", parent_code: "6000", is_control_account: false },
+    { account_code: "6400", account_name: "Depreciation Expense", account_type: "expense", parent_code: "6000", is_control_account: false },
+    { account_code: "6500", account_name: "Finance Charges & Interest", account_type: "expense", parent_code: "6000", is_control_account: false },
 ];
 
 /**
@@ -59,11 +59,11 @@ const DEFAULT_COA = [
  */
 const FINANCE_SETTING_MAP = {
     ACCOUNT_RECEIVABLE: "1200",
-    REVENUE_ACCOUNT:    "4100",
-    VAT_PAYABLE:        "2200",
-    ACCOUNTS_PAYABLE:   "2100",
-    PROJECT_COST:       "5000",
-    VAT_RECOVERABLE:    "1210",
+    REVENUE_ACCOUNT: "4100",
+    VAT_PAYABLE: "2200",
+    ACCOUNTS_PAYABLE: "2100",
+    PROJECT_COST: "5000",
+    VAT_RECOVERABLE: "1210",
 };
 
 async function main() {
@@ -92,12 +92,12 @@ async function main() {
         for (const acc of parents) {
             const created = await prisma.chartOfAccount.create({
                 data: {
-                    company_id:         CUBIX_COMPANY_ID,
-                    account_code:       acc.account_code,
-                    account_name:       acc.account_name,
-                    account_type:       acc.account_type,
+                    company_id: CUBIX_COMPANY_ID,
+                    account_code: acc.account_code,
+                    account_name: acc.account_name,
+                    account_type: acc.account_type,
                     is_control_account: acc.is_control_account,
-                    is_active:          true,
+                    is_active: true,
                 }
             });
             codeToId[acc.account_code] = created.id;
@@ -110,13 +110,13 @@ async function main() {
             const parentId = codeToId[acc.parent_code] || null;
             const created = await prisma.chartOfAccount.create({
                 data: {
-                    company_id:         CUBIX_COMPANY_ID,
-                    account_code:       acc.account_code,
-                    account_name:       acc.account_name,
-                    account_type:       acc.account_type,
-                    parent_id:          parentId,
+                    company_id: CUBIX_COMPANY_ID,
+                    account_code: acc.account_code,
+                    account_name: acc.account_name,
+                    account_type: acc.account_type,
+                    parent_id: parentId,
                     is_control_account: acc.is_control_account,
-                    is_active:          true,
+                    is_active: true,
                 }
             });
             codeToId[acc.account_code] = created.id;
@@ -150,12 +150,12 @@ async function main() {
             prisma.companyFinanceSetting.upsert({
                 where: {
                     company_id_setting_key: {
-                        company_id:  CUBIX_COMPANY_ID,
+                        company_id: CUBIX_COMPANY_ID,
                         setting_key: settingKey
                     }
                 },
-                update:  { account_id: accountId },
-                create:  { company_id: CUBIX_COMPANY_ID, setting_key: settingKey, account_id: accountId }
+                update: { account_id: accountId },
+                create: { company_id: CUBIX_COMPANY_ID, setting_key: settingKey, account_id: accountId }
             })
         )
     );

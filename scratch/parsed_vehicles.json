@@ -1,0 +1,156 @@
+[
+  {
+    "id": "10",
+    "vehicle_no": "VEH-010",
+    "plate_no": "8625 BKD",
+    "brand": "Chanhan CS95",
+    "insurance_expiry": "2027-02-27T00:00:00.000Z",
+    "registration_expiry": "2028-09-19T00:00:00.000Z",
+    "service_interval": null,
+    "odometer_reading": 0,
+    "insurance_details": "Year: 2020 | Last Service KM: 0 | Next Service KM: 0"
+  },
+  {
+    "id": "1",
+    "vehicle_no": "VEH-001",
+    "plate_no": "5017 HZJ",
+    "brand": "Audi A8L",
+    "insurance_expiry": "2026-11-18T00:00:00.000Z",
+    "registration_expiry": "2028-10-17T00:00:00.000Z",
+    "service_interval": null,
+    "odometer_reading": null,
+    "insurance_details": "Year: 2014"
+  },
+  {
+    "id": "2",
+    "vehicle_no": "VEH-002",
+    "plate_no": "5570 ULD",
+    "brand": "Porsche Cayenne S",
+    "insurance_expiry": null,
+    "registration_expiry": null,
+    "service_interval": null,
+    "odometer_reading": null,
+    "insurance_details": null
+  },
+  {
+    "id": "3",
+    "vehicle_no": "VEH-003",
+    "plate_no": "6896 AEB",
+    "brand": "Kia Cadenza",
+    "insurance_expiry": "2026-11-18T00:00:00.000Z",
+    "registration_expiry": "2028-10-25T00:00:00.000Z",
+    "service_interval": null,
+    "odometer_reading": 330581,
+    "insurance_details": "Year: 2012 | Last Service Date: 30-Apr-26 | Last Service KM: 330581"
+  },
+  {
+    "id": "4",
+    "vehicle_no": "VEH-004",
+    "plate_no": "1085 DKL",
+    "brand": "Toyota Camry",
+    "insurance_expiry": "2027-03-25T00:00:00.000Z",
+    "registration_expiry": "2028-09-18T00:00:00.000Z",
+    "service_interval": 18529,
+    "odometer_reading": 334378,
+    "insurance_details": "Year: 2015 | Last Service Date: 12-May-25 | Last Service KM: 334378 | Next Service KM: 352907"
+  },
+  {
+    "id": "5",
+    "vehicle_no": "VEH-005",
+    "plate_no": "8985 LHR",
+    "brand": "Changan CS35",
+    "insurance_expiry": null,
+    "registration_expiry": "2028-01-24T00:00:00.000Z",
+    "service_interval": null,
+    "odometer_reading": null,
+    "insurance_details": "Year: 2025"
+  },
+  {
+    "id": "6",
+    "vehicle_no": "VEH-006",
+    "plate_no": "ANR3063",
+    "brand": "Changan Alsvin",
+    "insurance_expiry": "2026-12-15T00:00:00.000Z",
+    "registration_expiry": "2027-11-16T00:00:00.000Z",
+    "service_interval": 25000,
+    "odometer_reading": 29348,
+    "insurance_details": "Year: 2025 | Last Service Date: 31-Aug-25 | Last Service KM: 29348 | Next Service KM: 54348"
+  },
+  {
+    "id": "7",
+    "vehicle_no": "VEH-007",
+    "plate_no": "5259 ETJ",
+    "brand": "Toyota Innova",
+    "insurance_expiry": "2027-01-31T00:00:00.000Z",
+    "registration_expiry": null,
+    "service_interval": 9700,
+    "odometer_reading": 430300,
+    "insurance_details": "Year: 2015 | Last Service Date: 24-Jul-25 | Last Service KM: 430300 | Next Service KM: 440000"
+  },
+  {
+    "id": "8",
+    "vehicle_no": "VEH-008",
+    "plate_no": "8692 UXB",
+    "brand": "Changan Pick up-01 Eqtaad",
+    "insurance_expiry": "2027-03-13T00:00:00.000Z",
+    "registration_expiry": null,
+    "service_interval": 5000,
+    "odometer_reading": 111000,
+    "insurance_details": "Year: 2023 | Last Service Date: 18-Jun-25 | Last Service KM: 111000 | Next Service KM: 116000"
+  },
+  {
+    "id": "9",
+    "vehicle_no": "VEH-009",
+    "plate_no": "2702 BTH",
+    "brand": "Changan Pick up-02",
+    "insurance_expiry": "2027-04-28T00:00:00.000Z",
+    "registration_expiry": null,
+    "service_interval": 1000,
+    "odometer_reading": 88000,
+    "insurance_details": "Year: 2025 | Last Service Date: 18-May-26 | Last Service KM: 88000 | Next Service KM: 89000"
+  },
+  {
+    "id": "11",
+    "vehicle_no": "VEH-011",
+    "plate_no": "9721 ETA",
+    "brand": "JMC TOURING",
+    "insurance_expiry": null,
+    "registration_expiry": null,
+    "service_interval": null,
+    "odometer_reading": 0,
+    "insurance_details": "Year: 2026 | Last Service KM: 0 | Next Service KM: 0"
+  },
+  {
+    "id": "12",
+    "vehicle_no": "VEH-012",
+    "plate_no": "9727 GGB",
+    "brand": "JMC GRAND",
+    "insurance_expiry": null,
+    "registration_expiry": null,
+    "service_interval": null,
+    "odometer_reading": 31984,
+    "insurance_details": "Year: 2025 | Last Service Date: 13-May-26 | Last Service KM: 31984 | Next Service KM: 0"
+  },
+  {
+    "id": "13",
+    "vehicle_no": "VEH-013",
+    "plate_no": "9728 GGB",
+    "brand": "JMC GRAND",
+    "insurance_expiry": null,
+    "registration_expiry": null,
+    "service_interval": null,
+    "odometer_reading": 33090,
+    "insurance_details": "Year: 2025 | Last Service Date: 13-May-26 | Last Service KM: 33090 | Next Service KM: 0"
+  },
+  {
+    "id": "14",
+    "vehicle_no": "VEH-014",
+    "plate_no": "9729 GGB",
+    "brand": "JMC GRAND",
+    "insurance_expiry": null,
+    "registration_expiry": null,
+    "service_interval": null,
+    "odometer_reading": 0,
+    "insurance_details": "Year: 2025 | Last Service KM: 0 | Next Service KM: 0"
+  }
+]

@@ -35,6 +35,7 @@ if (!isVercel) {
 
 const logger = winston.createLogger({
     level: 'info',
+    silent: process.env.LOG_QUIET === 'true',
     format: winston.format.json(),
     transports: transports,
 });

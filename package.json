@@ -8,7 +8,9 @@
     "dev": "node --watch src/server.js",
     "build": "npx prisma generate",
     "vercel-build": "npx prisma generate",
-    "test": "node test_week9_enterprise.js"
+    "test": "node test_week9_enterprise.js",
+    "seed": "node prisma/seed.js",
+    "db:seed": "npx prisma db seed"
   },
   "keywords": [],
   "author": "",
@@ -39,6 +41,6 @@
     "zod": "^4.3.6"
   },
   "prisma": {
-    "seed": "node prisma/seed_rbac_non_destructive.js"
+    "seed": "node prisma/seed.js"
   }
 }

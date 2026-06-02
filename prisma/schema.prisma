@@ -6,7 +6,9 @@ datasource db {
   provider = "postgresql"
   schemas  = ["audit", "auth"]
 }
-
+generator seed {
+  provider = "node -r tsconfig-paths/register -r dotenv/config"
+}
 // ─── Company (Multi-Company Structure) ──────────────────────────────────────
 model Company {
   id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

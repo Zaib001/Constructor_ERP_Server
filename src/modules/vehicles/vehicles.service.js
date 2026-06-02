@@ -1,5 +1,16 @@
 const prisma = require("../../db");
-const { applyDataScope } = require("../../utils/scoping");
+const { applyDataScope, MODULES, ROLE_GROUPS } = require("../../utils/scoping");
+
+function allowNullCompany(whereObj) {
+    if (!whereObj) return;
+    if (whereObj.company_id) {
+        whereObj.OR = [
+            { company_id: whereObj.company_id },
+            { company_id: null }
+        ];
+        delete whereObj.company_id;
+    }
+}
 
 async function getAllVehicles(user, runningSite, departmentId, page = 1, pageSize = 50) {
     const { companyId, isSuperAdmin } = user;
@@ -16,8 +27,11 @@ async function getAllVehicles(user, runningSite, departmentId, page = 1, pageSiz
                 { running_site: null, company_id: user.companyId }
             ]
         };
+        allowNullCompany(where.OR[0]);
+        allowNullCompany(where.OR[1]);
     } else {
         where.deleted_at = null;
+        allowNullCompany(where);
     }
 
     if (runningSite) where.running_site = runningSite;
@@ -52,9 +66,12 @@ async function getVehicleById(id, user) {
                 { running_site: null, company_id: user.companyId }
             ]
         };
+        allowNullCompany(where.OR[0]);
+        allowNullCompany(where.OR[1]);
     } else {
         where.id = id;
         where.deleted_at = null;
+        allowNullCompany(where);
     }
 
     return await prisma.vehicle.findFirst({
@@ -67,8 +84,13 @@ async function getVehicleById(id, user) {
 }
 
 async function createVehicle(data, user) {
-    const { companyId, isSuperAdmin } = user;
-    const targetCompanyId = isSuperAdmin ? (data.company_id || companyId) : companyId;
+    const { companyId, isSuperAdmin, roleCode } = user;
+    const isGlobalManager = roleCode ? ROLE_GROUPS.GLOBAL_MANAGERS.includes(roleCode) : false;
+
+    let targetCompanyId = companyId;
+    if (isSuperAdmin || isGlobalManager || roleCode === "fleet_manager" || roleCode === "fleet_admin") {
+        targetCompanyId = data.hasOwnProperty("company_id") ? data.company_id : companyId;
+    }
 
     // 1. Validate Required Fields
     if (!data.vehicle_no) {
@@ -123,7 +145,12 @@ async function createVehicle(data, user) {
 async function updateVehicle(id, data, user) {
     const { companyId, isSuperAdmin } = user;
     const where = { id };
-    if (!isSuperAdmin) where.company_id = companyId;
+    if (!isSuperAdmin) {
+        where.OR = [
+            { company_id: companyId },
+            { company_id: null }
+        ];
+    }
 
     // 1. Tenant Security
     const vehicle = await prisma.vehicle.findFirst({ where });
@@ -158,7 +185,12 @@ async function updateVehicle(id, data, user) {
 async function deleteVehicle(id, user) {
     const { companyId, isSuperAdmin } = user;
     const where = { id };
-    if (!isSuperAdmin) where.company_id = companyId;
+    if (!isSuperAdmin) {
+        where.OR = [
+            { company_id: companyId },
+            { company_id: null }
+        ];
+    }
 
     const vehicle = await prisma.vehicle.findFirst({ where });
     if (!vehicle) throw new Error("Vehicle not found or access denied.");

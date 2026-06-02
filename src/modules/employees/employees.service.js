@@ -11,6 +11,14 @@ async function getAllEmployees(user, projectId, departmentId, page = 1, pageSize
         projectFilter: true
     });
 
+    if (where.company_id) {
+        where.OR = [
+            { company_id: where.company_id },
+            { company_id: null }
+        ];
+        delete where.company_id;
+    }
+
     if (projectId) where.project_id = projectId;
     if (departmentId) where.department_id = departmentId;
 
@@ -44,6 +52,14 @@ async function getEmployeeById(id, user) {
     });
     where.id = id;
 
+    if (where.company_id) {
+        where.OR = [
+            { company_id: where.company_id },
+            { company_id: null }
+        ];
+        delete where.company_id;
+    }
+
     return await prisma.employee.findFirst({
         where: { ...where, is_active: true },
         include: {
@@ -67,7 +83,11 @@ async function createEmployee(data, user) {
     const { companyId, isSuperAdmin, roleCode } = actualUser || {};
     const creatorId = actualUser?.id;
     const isGlobalManager = roleCode ? ROLE_GROUPS.GLOBAL_MANAGERS.includes(roleCode) : false;
-    const targetCompanyId = (isSuperAdmin || isGlobalManager) ? (actualData.company_id || companyId) : (companyId || actualData.company_id);
+    
+    let targetCompanyId = companyId;
+    if (isSuperAdmin || isGlobalManager || roleCode === "hr_admin" || roleCode === "hr_manager") {
+        targetCompanyId = actualData.hasOwnProperty("company_id") ? actualData.company_id : companyId;
+    }
 
     // 1. Validate Required Fields & Financials
     if (!actualData.name) throw new Error("Missing required fields: Employee name is mandatory.");
@@ -192,6 +212,14 @@ async function updateEmployee(id, data, user) {
     const where = applyDataScope(user, { module: MODULES.HR, isWrite: true });
     where.id = id;
 
+    if (where.company_id) {
+        where.OR = [
+            { company_id: where.company_id },
+            { company_id: null }
+        ];
+        delete where.company_id;
+    }
+
     // 1. Tenant Security (Already enforced by where)
     const employee = await prisma.employee.findFirst({ where });
     if (!employee) throw new Error("Employee not found or access denied.");
@@ -245,6 +273,14 @@ async function updateEmployee(id, data, user) {
 async function deleteEmployee(id, user) {
     const where = applyDataScope(user, { module: MODULES.HR, isWrite: true });
     where.id = id;
+
+    if (where.company_id) {
+        where.OR = [
+            { company_id: where.company_id },
+            { company_id: null }
+        ];
+        delete where.company_id;
+    }
 
     const employee = await prisma.employee.findFirst({ where });
     if (!employee) throw new Error("Employee not found or access denied.");
