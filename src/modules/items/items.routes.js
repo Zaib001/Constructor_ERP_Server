@@ -8,8 +8,10 @@ const requirePermission = require("../../middleware/requirePermission");
 
 router.use(authenticateJWT);
 
-router.get("/",       requirePermission("item.read"),   itemsController.getAllItems);
-router.get("/:id",    requirePermission("item.read"),   itemsController.getItemById);
+// item.read OR procurement.pr.* roles — PR creators must be able to browse the catalog
+const itemReadPerms = ["item.read", "procurement.pr.create", "procurement.pr.read"];
+router.get("/",       requirePermission(itemReadPerms),   itemsController.getAllItems);
+router.get("/:id",    requirePermission(itemReadPerms),   itemsController.getItemById);
 router.post("/",      requirePermission("item.create"), itemsController.createItem);
 router.put("/:id",    requirePermission("item.update"), itemsController.updateItem);
 router.delete("/:id", requirePermission("item.update"), itemsController.deleteItem);

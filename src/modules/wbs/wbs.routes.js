@@ -14,6 +14,7 @@ router.post("/",            requirePermission("wbs.create"),  wbsController.crea
 router.put("/:id",          requirePermission("wbs.update"),  wbsController.updateWBS);
 router.delete("/:id",       requirePermission("wbs.archive"), wbsController.deleteWBS);
 
+router.post("/bootstrap",         requirePermission("wbs.create"), wbsController.bootstrapWBS);
 router.post("/cost-codes",        requirePermission("wbs.create"), wbsController.createCostCode);
 router.put("/cost-codes/:id",     requirePermission("wbs.update"), wbsController.updateCostCodeBudget);
 router.delete("/cost-codes/:id",  requirePermission("wbs.archive"),wbsController.deleteCostCode);

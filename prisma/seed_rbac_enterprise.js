@@ -17,26 +17,7 @@ const prisma = new PrismaClient({ adapter });
 
 const BCRYPT_ROUNDS = 10;
 
-async function clearAllData() {
-    console.log("🧹 Clearing ALL existing data (full reset)...");
 
-    try {
-        const result = await prisma.$queryRawUnsafe(`
-            SELECT table_schema || '.' || table_name AS table_name
-            FROM information_schema.tables
-            WHERE table_schema IN ('auth', 'audit') AND table_type = 'BASE TABLE'
-        `);
-        
-        const tables = result.map(t => t.table_name);
-        if (tables.length > 0) {
-            await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables.join(', ')} CASCADE`);
-            console.log(`✅ All data truncated successfully via CASCADE (${tables.length} tables).`);
-        }
-    } catch (error) {
-        console.error("⚠️ Truncate failed:", error);
-        process.exit(1);
-    }
-}
 
 async function main() {
     console.log("🚀 Starting Enterprise RBAC Seed (Full ERP)...");

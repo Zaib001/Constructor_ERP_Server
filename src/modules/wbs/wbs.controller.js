@@ -97,6 +97,16 @@ async function updateCostCodeBudget(req, res, next) {
     }
 }
 
+async function bootstrapWBS(req, res, next) {
+    try {
+        const results = await wbsService.bootstrapWBS(req.user);
+        return res.status(200).json({ success: true, results });
+    } catch (err) {
+        logger.error("Error in bootstrapWBS:", err);
+        next(err);
+    }
+}
+
 module.exports = {
     getAllWBS,
     getWBSById,
@@ -105,5 +115,6 @@ module.exports = {
     deleteWBS,
     createCostCode,
     deleteCostCode,
-    updateCostCodeBudget
+    updateCostCodeBudget,
+    bootstrapWBS
 };

@@ -82,7 +82,10 @@ async function assertStartupConfig() {
         }
     } catch (dbErr) {
         logger.error("[Startup Validator] Database connection failed during startup checks:", dbErr);
-        errors.push(`Database connection / schema check failed: ${dbErr.message}`);
+        // On Vercel serverless, pg-pool connections are terminated between invocations.
+        // A failed startup DB check should never halt the server — individual requests
+        // will fail with a clear error if the DB is genuinely unreachable.
+        warnings.push(`Database connection check skipped (serverless cold-start): ${dbErr.message}`);
     }
 
     // Report warnings (non-fatal)

@@ -275,6 +275,63 @@ async function recomputeProjectProgress(tx, project_id) {
     });
 }
 
+const DEFAULT_WBS_STRUCTURE = [
+    { name: "Site Mobilization",           wbs_code: "1",   children: [] },
+    { name: "Earthworks & Substructure",   wbs_code: "2",   children: [
+        { name: "Excavation",              wbs_code: "2.1" },
+        { name: "Foundation Works",        wbs_code: "2.2" },
+    ]},
+    { name: "Structural Works",            wbs_code: "3",   children: [
+        { name: "Concrete Works",          wbs_code: "3.1" },
+        { name: "Steel Erection",          wbs_code: "3.2" },
+    ]},
+    { name: "MEP Works",                   wbs_code: "4",   children: [] },
+    { name: "Finishing & Handover",        wbs_code: "5",   children: [] },
+];
+
+/**
+ * Admin-only: creates the default WBS structure for every active project
+ * in the caller's company that currently has zero WBS nodes.
+ */
+async function bootstrapWBS(user) {
+    const { isSuperAdmin, companyId } = user;
+    if (!isSuperAdmin && !["erp_admin", "super_admin"].includes(user.roleCode)) {
+        throw new Error("Unauthorized: only super_admin or erp_admin can bootstrap WBS.");
+    }
+
+    const where = { status: "active" };
+    if (!isSuperAdmin) where.company_id = companyId;
+
+    const projects = await prisma.project.findMany({
+        where,
+        include: { _count: { select: { wbs: true } } }
+    });
+
+    const results = [];
+    for (const project of projects) {
+        if (project._count.wbs > 0) {
+            results.push({ project_id: project.id, code: project.code, skipped: true, reason: "already has WBS nodes" });
+            continue;
+        }
+
+        let created = 0;
+        for (const rootDef of DEFAULT_WBS_STRUCTURE) {
+            const root = await prisma.wBS.create({
+                data: { project_id: project.id, name: rootDef.name, wbs_code: rootDef.wbs_code }
+            });
+            created++;
+            for (const child of (rootDef.children || [])) {
+                await prisma.wBS.create({
+                    data: { project_id: project.id, name: child.name, wbs_code: child.wbs_code, parent_id: root.id }
+                });
+                created++;
+            }
+        }
+        results.push({ project_id: project.id, code: project.code, skipped: false, wbs_created: created });
+    }
+    return results;
+}
+
 module.exports = {
     getAllWBS,
     getWBSById,
@@ -285,5 +342,6 @@ module.exports = {
     deleteCostCode,
     updateCostCodeBudget,
     updateCostCodeActual,
-    recomputeProjectProgress
+    recomputeProjectProgress,
+    bootstrapWBS
 };
