@@ -7,13 +7,13 @@
     "node": "22.x"
   },
   "scripts": {
-    "start": "npx prisma db push --accept-data-loss && node src/server.js",
+    "start": "prisma db push --accept-data-loss && node src/server.js",
     "dev": "node --watch src/server.js",
-    "build": "npx prisma generate",
-    "vercel-build": "npx prisma generate",
+    "build": "prisma generate",
+    "vercel-build": "prisma generate",
     "test": "node test_week9_enterprise.js",
     "seed": "node prisma/seed.js",
-    "db:seed": "npx prisma db seed"
+    "db:seed": "prisma db seed"
   },
   "keywords": [],
   "author": "",
