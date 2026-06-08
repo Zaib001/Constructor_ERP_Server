@@ -65,9 +65,13 @@ router.get(
     controller.getMaterialRequests
 );
 
+// NOTE: This is an admin/emergency override endpoint.
+// The canonical PM approval path is POST /api/approvals/:id/approve,
+// which goes through the full approval engine (audit, steps, notifications).
+// This raw endpoint exists for storekeeper confirmations and admin corrections.
 router.put(
     "/requests/:id/status",
-    requirePermission("inventory.read"),
+    requirePermission("inventory.issue.create"),
     controller.updateMaterialRequestStatus
 );
 
@@ -98,10 +102,10 @@ router.delete(
     requirePermission("inventory.store.manage"),
     controller.deleteStore
 );
-router.post("/stock",  controller.addStock);
-router.get("/pr",      controller.getPRs);
-router.post("/pr",     controller.createPR);
-router.get("/excess",  controller.getExcess);
-router.post("/excess", controller.reportExcess);
+router.post(
+    "/stock",
+    requirePermission("inventory.store.manage"),
+    controller.addStock
+);
 
 module.exports = router;

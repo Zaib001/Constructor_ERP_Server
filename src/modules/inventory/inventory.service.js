@@ -4,6 +4,25 @@ const prisma = require("../../db");
 const { applyDataScope, MODULES, validateResourceAccess } = require("../../utils/scoping");
 const { logAudit } = require("../../utils/auditLogger");
 const { updateCostCodeActual, recomputeProjectProgress } = require("../wbs/wbs.service");
+const { registerAdapter } = require("../approvals/approvals.adapter");
+const { requestApproval } = require("../approvals/approvals.service");
+
+// ─── MR Approval Adapter ─────────────────────────────────────────────────────
+// Called by the approval engine when the PM approves/rejects a Material Request.
+// Maps approval outcome → reservation_status on the InventoryPlanningRequest.
+registerAdapter("MR", async ({ docId, status }) => {
+    let reservationStatus;
+    if (status === "approved")            reservationStatus = "RESERVED";
+    else if (status === "rejected")        reservationStatus = "CANCELLED";
+    else if (status === "cancelled")       reservationStatus = "CANCELLED";
+    else if (status === "sent_back")       reservationStatus = "PENDING";   // engineer must resubmit
+    else return; // no-op for other statuses (in_approval, in_progress)
+
+    await prisma.inventoryPlanningRequest.update({
+        where: { id: docId },
+        data: { reservation_status: reservationStatus }
+    });
+});
 
 // ─── AppError ────────────────────────────────────────────────────────────────
 class AppError extends Error {
@@ -653,6 +672,30 @@ async function createMaterialRequest(data, user) {
         });
     });
 
+    // ── Submit to Approval Engine ───────────────────────────────────────────
+    // This creates an ApprovalRequest (docType="MR") so the PM sees it in their inbox.
+    // Non-fatal: if approval submission fails (e.g. missing matrix), the MR is still
+    // created but stays PENDING until manually submitted for approval.
+    try {
+        await requestApproval(
+            {
+                docType: "MR",
+                docId: request.id,
+                projectId,
+                amount: 0,
+                companyId
+            },
+            userId,
+            null,
+            null
+        );
+    } catch (approvalErr) {
+        // Log but do not fail the MR creation — the engineer can resubmit via
+        // POST /api/approvals/request if the matrix is missing.
+        const logger = require("../../logger");
+        logger.warn(`[MR] Approval submission failed for MR ${request.id}: ${approvalErr.message}`);
+    }
+
     return request;
 }
 
@@ -749,6 +792,17 @@ async function fulfillMaterialRequest(id, data, user, ipAddress, deviceInfo) {
             throw new AppError("Material request has already been issued", 400);
         }
 
+        // ── Pre-issuance status gate ────────────────────────────────────────────
+        // The MR must be RESERVED (PM-approved via the approval engine) before
+        // the storekeeper can fulfil it. A PENDING or CANCELLED MR cannot be issued.
+        if (request.reservation_status !== "RESERVED") {
+            throw new AppError(
+                `Material request cannot be issued: current status is '${request.reservation_status}'. ` +
+                `The request must be approved by the Project Manager first (status must be 'RESERVED').`,
+                422
+            );
+        }
+
         // ── 2. Validate supporting resources ──────────────────────────────────
         await _scopedFind(tx, "project", request.project_id, companyId);
         const wbsId = request.wbs_id || request.wBSId;
@@ -798,89 +852,72 @@ async function fulfillMaterialRequest(id, data, user, ipAddress, deviceInfo) {
             data: {
                 issue_id: issueRecord.id,
                 item_id: request.item_id,
+                cost_code_id: costCodeId,
                 quantity: reqQty,
                 unit_cost: unitCost,
-                cost_code_id: costCodeId
             }
         });
 
-        // ── 6. Decrement InventoryStock ───────────────────────────────────────
+        // ── 6. Decrement stock ────────────────────────────────────────────────
         await tx.inventoryStock.update({
             where: { store_id_item_id: { store_id: storeId, item_id: request.item_id } },
             data: { quantity: { decrement: reqQty } }
         });
 
-        // ── 7. Log in StockLedger ─────────────────────────────────────────────
+        // ── 7. Stock ledger entry ─────────────────────────────────────────────
         await tx.stockLedger.create({
             data: {
                 company_id: companyId,
-                item_id: request.item_id,
                 store_id: storeId,
+                item_id: request.item_id,
                 move_type: "ISSUE_OUT",
                 quantity: reqQty,
                 reference_id: issueRecord.id,
-                created_by: userId
+                reference_type: "material_issue",
+                created_by: userId,
             }
         });
 
-        // ── 8. Update CostCode actual ─────────────────────────────────────────
-        const costImpact = reqQty * unitCost;
-        if (costImpact > 0) {
-            await updateCostCodeActual(tx, null, "material", costImpact, costCodeId);
-        }
-
-        // ── 9. Update original request status to ISSUED ───────────────────────
+        // ── 8. Mark request as ISSUED ─────────────────────────────────────────
         const updatedRequest = await tx.inventoryPlanningRequest.update({
             where: { id },
-            data: { 
-                reservation_status: "ISSUED",
-                store_id: storeId
-            }
+            data: { reservation_status: "ISSUED" },
+            include: { store: { select: { name: true } } }
         });
 
-        // ── 10. Recompute project progress ─────────────────────────────────────
-        await recomputeProjectProgress(tx, request.project_id);
-
-        return {
-            issue: issueRecord,
-            request: updatedRequest
-        };
-    }, { maxWait: 20000, timeout: 40000 });
-
-    // Write audit log (outside tx)
-    logAudit({
-        userId,
-        companyId,
-        action: "FULFILL_MATERIAL_REQUEST",
-        details: { requestId: id, issueId: result.issue.id, storeId, quantity: result.request.quantity },
-        ipAddress,
-        deviceInfo
-    }).catch(() => {});
+        return { issue: issueRecord, request: updatedRequest };
+    });
 
     return result;
 }
 
+async function updateStock(user, id, data) {
+    const { companyId } = user;
+    const stock = await prisma.inventoryStock.findFirst({ where: { id, company_id: companyId } });
+    if (!stock) throw new AppError("Stock record not found", 404);
+    return prisma.inventoryStock.update({ where: { id }, data });
+}
+
 module.exports = {
-    AppError,
+    getPRs,
+    getExcess,
     createGRN,
+    getGRNList,
     createMaterialIssue,
+    getIssueList,
     getStockSnapshot,
     getStockLedger,
-    getGRNList,
-    getIssueList,
+    getStock,
     getStores,
     createStore,
+    updateStore,
     deleteStore,
+    addStock,
+    updateStock,
+    createPR,
+    reportExcess,
     createMaterialRequest,
     getMaterialRequestList,
     updateMaterialRequestStatus,
     fulfillMaterialRequest,
-    // Legacy
-    getStock,
-    getPRs,
-    getExcess,
-    addStock,
-    createPR,
-    reportExcess
 };
-

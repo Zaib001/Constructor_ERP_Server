@@ -121,7 +121,18 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
     };
 
     const departmentId = data.departmentId || actorUserRaw.department_id;
-    const targetCompanyId = companyId || userCtx.companyId;
+
+    // Resolve company: prefer explicit → actor's company → project's company.
+    // The last fallback handles super-admins who have no company of their own
+    // but are submitting documents that belong to a specific tenant's project.
+    let targetCompanyId = companyId || userCtx.companyId;
+    if (!targetCompanyId && projectId) {
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            select: { company_id: true },
+        });
+        targetCompanyId = project?.company_id || null;
+    }
 
     // Check for an existing active approval for this document
     const existingRequest = await repo.findActiveRequest(userCtx, docType, docId);
@@ -194,7 +205,11 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
     // Build the steps to create
     const stepInserts = [];
     for (const matrix of matrices) {
-        const resolved = await resolveApprover(matrix.role_id, actorId, departmentId, userCtx.companyId);
+        // Use the matrix's own department_id for approver lookup (null = global matrix →
+        // no department restriction). Fall back to the requester's department only when
+        // the matrix row explicitly targets a department.
+        const resolverDeptId = matrix.department_id ?? null;
+        const resolved = await resolveApprover(matrix.role_id, actorId, resolverDeptId, userCtx.companyId);
         stepInserts.push({
             step_order: matrix.step_order,
             role_id: matrix.role_id,
@@ -210,7 +225,7 @@ async function requestApproval(data, actorId, ipAddress, deviceInfo) {
             data: {
                 doc_type: docType,
                 doc_id: docId,
-                company_id: userCtx.companyId,
+                company_id: targetCompanyId,
                 project_id: projectId || null,
                 requested_by: actorId,
                 department_id: departmentId || null,
@@ -995,5 +1010,35 @@ module.exports = {
     sendBackStep,
     getHistory,
     cancelApproval,
+    getRequestById,
+};
+name || "Unknown",
+        currentStatus: r.current_status,
+        amount: r.amount,
+        totalSteps: r.total_steps,
+        currentStep: r.current_step,
+        isCompleted: r.is_completed,
+        completedAt: r.completed_at,
+        createdAt: r.created_at,
+        attachment_url: r.attachment_url,
+        steps: steps,
+        items: items,
+        extendedData: extendedData,
+    };
+}
+
+// ─── Exports ──────────────────────────────────────────────────────────────────
+
+module.exports = {
+    requestApproval,
+    getInbox,
+    approveStep,
+    rejectStep,
+    sendBackStep,
+    getHistory,
+    cancelApproval,
+    getRequestById,
+};
+
     getRequestById,
 };

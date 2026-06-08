@@ -196,10 +196,143 @@ async function deleteUser(id, user) {
     });
 }
 
+// ─── Feature 2: paginated user list ──────────────────────────────────────────
+
+async function listUsers(actorUser, { search, role, page, limit }) {
+    const ADMIN_ROLES = new Set(["super_admin", "erp_admin"]);
+    if (!ADMIN_ROLES.has(actorUser.roleCode)) {
+        const e = new Error("Forbidden: Admin only."); e.statusCode = 403; throw e;
+    }
+
+    const scopeWhere = applyDataScope(actorUser);
+    const where = { ...scopeWhere, deleted_at: null };
+
+    if (search) {
+        where.OR = [
+            { name:  { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+        ];
+    }
+    if (role) {
+        where.roles = { code: { equals: role, mode: "insensitive" } };
+    }
+
+    const skip = (page - 1) * limit;
+    const [rawUsers, total] = await Promise.all([
+        prisma.user.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { created_at: "desc" },
+            include: {
+                roles: { select: { id: true, name: true, code: true } },
+                _count: { select: { user_projects: { where: { revoked_at: null } } } },
+            },
+        }),
+        prisma.user.count({ where }),
+    ]);
+
+    const users = rawUsers.map((u) => ({
+        id:           u.id,
+        name:         u.name,
+        email:        u.email,
+        role:         u.roles?.code?.toUpperCase() || "UNKNOWN",
+        roleName:     u.roles?.name || "",
+        roleId:       u.roles?.id || null,
+        status:       u.is_active ? "ACTIVE" : "INACTIVE",
+        projectCount: u._count.user_projects,
+        createdAt:    u.created_at,
+    }));
+
+    return { total, page, limit, users };
+}
+
+// ─── Feature 2: get projects for a user ──────────────────────────────────────
+
+async function getUserProjects(userId, actorUser) {
+    const ADMIN_ROLES = new Set(["super_admin", "erp_admin"]);
+    if (!ADMIN_ROLES.has(actorUser.roleCode)) {
+        const e = new Error("Forbidden: Admin only."); e.statusCode = 403; throw e;
+    }
+
+    const assignments = await prisma.userProject.findMany({
+        where: { user_id: userId, revoked_at: null },
+        include: { projects: { select: { id: true, name: true, code: true } } },
+    });
+
+    return assignments.map((a) => ({
+        id:   a.projects?.id,
+        name: a.projects?.name,
+        role: a.access_type,
+    }));
+}
+
+// ─── Feature 2: assign user to project ───────────────────────────────────────
+
+const VALID_ROLES = new Set(["full", "read_only", "approval_only", "contributor",
+    "project_manager", "site_engineer", "storekeeper"]);
+
+async function assignProjectAccess(actorUser, { userId, projectId, role }) {
+    const ADMIN_ROLES = new Set(["super_admin", "erp_admin"]);
+    if (!ADMIN_ROLES.has(actorUser.roleCode)) {
+        const e = new Error("Forbidden: Admin only."); e.statusCode = 403; throw e;
+    }
+    if (!VALID_ROLES.has(role)) {
+        const e = new Error(`Invalid role '${role}'.`); e.statusCode = 400; throw e;
+    }
+
+    const [userExists, projectExists] = await Promise.all([
+        prisma.user.findFirst({ where: { id: userId, is_active: true }, select: { id: true } }),
+        prisma.project.findFirst({ where: { id: projectId }, select: { id: true } }),
+    ]);
+    if (!userExists)    { const e = new Error("User not found.");    e.statusCode = 404; throw e; }
+    if (!projectExists) { const e = new Error("Project not found."); e.statusCode = 404; throw e; }
+
+    const existing = await prisma.userProject.findFirst({
+        where: { user_id: userId, project_id: projectId, revoked_at: null },
+    });
+    if (existing) {
+        const e = new Error("User is already assigned to this project."); e.statusCode = 409; throw e;
+    }
+
+    return prisma.userProject.create({
+        data: {
+            user_id: userId, project_id: projectId,
+            access_type: role, assigned_by: actorUser.id, assigned_at: new Date(),
+        },
+        select: { id: true, user_id: true, project_id: true, access_type: true },
+    });
+}
+
+// ─── Feature 2: remove user from project ─────────────────────────────────────
+
+async function removeProjectAccess(actorUser, { userId, projectId }) {
+    const ADMIN_ROLES = new Set(["super_admin", "erp_admin"]);
+    if (!ADMIN_ROLES.has(actorUser.roleCode)) {
+        const e = new Error("Forbidden: Admin only."); e.statusCode = 403; throw e;
+    }
+
+    const assignment = await prisma.userProject.findFirst({
+        where: { user_id: userId, project_id: projectId, revoked_at: null },
+    });
+    if (!assignment) {
+        const e = new Error("Assignment not found."); e.statusCode = 404; throw e;
+    }
+
+    await prisma.userProject.update({
+        where: { id: assignment.id },
+        data: { revoked_at: new Date() },
+    });
+}
+
 module.exports = {
     createUser,
     getAllUsers,
     getUserById,
     updateUser,
-    deleteUser
+    deleteUser,
+    listUsers,
+    getUserProjects,
+    assignProjectAccess,
+    removeProjectAccess,
 };

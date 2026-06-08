@@ -184,7 +184,13 @@ async function getUserProjects(userId, caller) {
     // Validate user exists
     const targetUser = await prisma.user.findFirst({
         where: { id: userId },
-        select: { id: true, name: true, email: true, company_id: true }
+        select: { 
+            id: true, 
+            name: true, 
+            email: true, 
+            company_id: true,
+            roles: { select: { code: true } }
+        }
     });
     if (!targetUser) throw createAppError("User not found", 404);
 
@@ -230,17 +236,22 @@ async function getUserProjects(userId, caller) {
         }
     }
 
-    // Add company projects that aren't already in assignments
-    for (const p of companyProjects) {
-        if (!assignedMap.has(p.id)) {
-            assignedMap.set(p.id, {
-                id: p.id,
-                project_id: p.id,
-                name: p.name,
-                code: p.code,
-                access_type: "department",
-                assigned_at: null
-            });
+    // Add company projects that aren't already in assignments, ONLY if the target user is not project-restricted
+    const targetRole = targetUser.roles?.code?.toLowerCase();
+    const isProjectRestricted = ["project_manager", "site_engineer", "site_coordinator", "quantity_surveyor"].includes(targetRole);
+
+    if (!isProjectRestricted) {
+        for (const p of companyProjects) {
+            if (!assignedMap.has(p.id)) {
+                assignedMap.set(p.id, {
+                    id: p.id,
+                    project_id: p.id,
+                    name: p.name,
+                    code: p.code,
+                    access_type: "department",
+                    assigned_at: null
+                });
+            }
         }
     }
 

@@ -39,13 +39,20 @@ async function main() {
     }
     const companyId = company.id;
 
+    const pmRole = await prisma.role.upsert({
+        where: { code: "project_manager" },
+        update: {},
+        create: { name: "Project Manager", code: "project_manager", is_system_role: false }
+    });
+
     // 3. Clear existing matrices to avoid duplicates
     await prisma.approvalMatrix.deleteMany({
-        where: { doc_type: { in: ["QUOTATION", "PR", "PO", "VENDOR", "PAYROLL", "PROFIT", "PURCHASE_ORDER", "EXPENSE"] } }
+        where: { doc_type: { in: ["MR", "QUOTATION", "PR", "PO", "VENDOR", "PAYROLL", "PROFIT", "PURCHASE_ORDER", "EXPENSE"] } }
     });
 
     const dh = deptHeadRole.id;
     const sa = superAdminRole.id;
+    const pm = pmRole.id;
 
     // Helper to build a matrix row
     const row = (docType, stepOrder, roleId, minAmt = null, maxAmt = null) => ({
@@ -65,6 +72,9 @@ async function main() {
     // 4. Insert all matrix rules
     await prisma.approvalMatrix.createMany({
         data: [
+            // MR (Material Request): Project Manager only (no amount threshold — qty-based doc)
+            row("MR", 1, pm),
+
             // QUOTATION: Dept Head → Super Admin
             row("QUOTATION", 1, dh),
             row("QUOTATION", 2, sa),
@@ -114,6 +124,7 @@ async function main() {
 
     console.log("✅  Approval Matrix configured successfully!");
     console.log("");
+    console.log("   MR:         Project Manager only");
     console.log("   QUOTATION:  Dept Head → Super Admin");
     console.log("   PR:         Dept Head → Super Admin");
     console.log("   PO ≤ 50K:   Dept Head only");

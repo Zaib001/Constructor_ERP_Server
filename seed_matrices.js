@@ -33,6 +33,9 @@ async function main() {
         { doc_type: "PR", min_amount: 10001, max_amount: null, role_id: roleMap["project_manager"], step_order: 1 },
         { doc_type: "PR", min_amount: 10001, max_amount: null, role_id: roleMap["erp_admin"], step_order: 2 },
 
+        // --- DPR (Daily Progress Report) ---
+        { doc_type: "DPR", min_amount: 0, max_amount: null, role_id: roleMap["project_manager"], step_order: 1 },
+
         // --- PO (Purchase Order) ---
         { doc_type: "PO", min_amount: 0, max_amount: 50000, role_id: roleMap["erp_admin"], step_order: 1 },
         { doc_type: "PO", min_amount: 50001, max_amount: null, role_id: roleMap["erp_admin"], step_order: 1 },
@@ -46,7 +49,11 @@ async function main() {
         { doc_type: "QUOTATION", min_amount: 0, max_amount: null, role_id: roleMap["erp_admin"], step_order: 2 },
 
         // --- Payroll ---
-        { doc_type: "PAYROLL", min_amount: 0, max_amount: null, role_id: roleMap["erp_admin"], step_order: 1 }
+        { doc_type: "PAYROLL", min_amount: 0, max_amount: null, role_id: roleMap["erp_admin"], step_order: 1 },
+
+        // --- MR (Material Request) ---
+        // Requires project_manager sign-off before storekeeper can issue stock
+        { doc_type: "MR", min_amount: 0, max_amount: null, role_id: roleMap["project_manager"], step_order: 1 }
     ];
 
     console.log(`🧹 Clearing existing matrices...`);

@@ -38,9 +38,10 @@ async function findMatrices(user, docType, projectId, amount, departmentId, comp
     }
 
     // Optional department filter — only apply when the matrix row has a department set
-    // (rows without department match all departments)
+    // (rows without department match all departments).
+    // Push into AND so we never clobber an OR already placed by applyDataScope.
     if (departmentId) {
-        baseWhere.OR = [{ department_id: null }, { department_id: departmentId }];
+        baseWhere.AND.push({ OR: [{ department_id: null }, { department_id: departmentId }] });
     }
 
     // Project-specific
@@ -126,8 +127,11 @@ async function findInboxSteps(userCtx, userRoleId, statusFilter, departmentId) {
     const stepStatus = statusFilter || "pending";
     const userId = userCtx.id;
 
-    // Apply data scope to ensure they only see steps for matching companies/projects
-    const requestFilter = applyDataScope(userCtx, { projectFilter: true, prefix: "" });
+    // Apply data scope for company isolation only.
+    // Do NOT apply projectFilter here: if a user was explicitly assigned as an approver
+    // (or their role matches), they must see that step regardless of project membership.
+    // Project-membership gating belongs on document list endpoints, not the approval inbox.
+    const requestFilter = applyDataScope(userCtx, { projectFilter: false, prefix: "" });
 
     // Only enforce "in_progress" for pending steps — approved/rejected steps
     // live on requests that may have advanced or completed
@@ -135,9 +139,12 @@ async function findInboxSteps(userCtx, userRoleId, statusFilter, departmentId) {
         requestFilter.current_status = "in_progress";
     }
 
-    if (departmentId) {
-        requestFilter.department_id = departmentId;
-    }
+    // NOTE: Do NOT filter approval_requests by department_id here.
+    // Who sees a step is determined solely by approver_user (direct assignment)
+    // or role_id (role-based). The request's origin department is irrelevant —
+    // a project_manager may approve requests raised by any department.
+    // departmentId is retained as a parameter for potential future UI filtering
+    // but must not be applied as a request-level constraint.
 
     // Find all steps where user is direct assignee exact match
     const steps = await prisma.approvalStep.findMany({
@@ -351,5 +358,31 @@ module.exports = {
     findUserById,
     findUsersByRole,
     findHistoryByDoc,
+    findSentRequests,
+};
+ orderBy: { step_order: "asc" },
+                include: { roles: { select: { name: true, code: true } } },
+            },
+        },
+    });
+}
+
+// ─── Exports ──────────────────────────────────────────────────────────────────
+
+module.exports = {
+    findMatrices,
+    findActiveRequest,
+    findRequestById,
+    findRequestWithSteps,
+    findInboxSteps,
+    findStepsAtOrder,
+    findNextStepOrder,
+    findPendingDelegation,
+    findDelegationsForInbox,
+    findUserById,
+    findUsersByRole,
+    findHistoryByDoc,
+    findSentRequests,
+};
     findSentRequests,
 };
