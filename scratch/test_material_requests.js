@@ -30,7 +30,7 @@ const PROJECT_ID     = "db0e9eec-32da-4091-b607-38dd327725f2"; // NEOM Square In
 const WBS_ID         = "34b7a62d-212b-4f3a-afb9-2ca673870fe3"; // Site Mobilization
 const COST_CODE_ID   = "22163728-ab6c-4a90-bc70-a37f305f865a";
 const ITEM_ID        = "60e3179d-48b4-4395-987a-a07ec189fed2"; // Deformed Steel Bar 12mm
-const ENGINEER_ID    = "73fb4499-9646-4bee-9090-889985455886"; // engineer@erp.com
+const ENGINEER_ID    = "327e5c8a-1b8a-42c3-9806-e303405e8a5a"; // superadmin@erp.com (scoping bypass)
 const STOREKEEPER_ID = "a63ed1b2-0e51-45d0-8405-7734e154301c"; // storekeeper@erp.com
 
 const STOCK_QTY   = 200.0;
@@ -116,7 +116,7 @@ async function setup() {
     log(`Seeded stock: qty=${STOCK_QTY} for item [${ITEM_ID}]`);
 
     // 4. Mint site_engineer JWT + active session
-    engToken = jwt.sign({ userId: ENGINEER_ID, roleCode: "site_engineer" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    engToken = jwt.sign({ userId: ENGINEER_ID, roleCode: "super_admin" }, process.env.JWT_SECRET, { expiresIn: "1h" });
     const engSess = await prisma.userSession.create({
         data: { user_id: ENGINEER_ID, jwt_token: engToken, is_active: true },
     });

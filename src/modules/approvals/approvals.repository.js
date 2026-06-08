@@ -360,29 +360,4 @@ module.exports = {
     findHistoryByDoc,
     findSentRequests,
 };
- orderBy: { step_order: "asc" },
-                include: { roles: { select: { name: true, code: true } } },
-            },
-        },
-    });
-}
 
-// ─── Exports ──────────────────────────────────────────────────────────────────
-
-module.exports = {
-    findMatrices,
-    findActiveRequest,
-    findRequestById,
-    findRequestWithSteps,
-    findInboxSteps,
-    findStepsAtOrder,
-    findNextStepOrder,
-    findPendingDelegation,
-    findDelegationsForInbox,
-    findUserById,
-    findUsersByRole,
-    findHistoryByDoc,
-    findSentRequests,
-};
-    findSentRequests,
-};

@@ -1012,33 +1012,4 @@ module.exports = {
     cancelApproval,
     getRequestById,
 };
-name || "Unknown",
-        currentStatus: r.current_status,
-        amount: r.amount,
-        totalSteps: r.total_steps,
-        currentStep: r.current_step,
-        isCompleted: r.is_completed,
-        completedAt: r.completed_at,
-        createdAt: r.created_at,
-        attachment_url: r.attachment_url,
-        steps: steps,
-        items: items,
-        extendedData: extendedData,
-    };
-}
 
-// ─── Exports ──────────────────────────────────────────────────────────────────
-
-module.exports = {
-    requestApproval,
-    getInbox,
-    approveStep,
-    rejectStep,
-    sendBackStep,
-    getHistory,
-    cancelApproval,
-    getRequestById,
-};
-
-    getRequestById,
-};

@@ -345,7 +345,7 @@ async function createMaterialIssue(data, user, ipAddress, deviceInfo) {
         await recomputeProjectProgress(tx, projectId);
 
         return issueRecord;
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     // ── 5. Audit ──────────────────────────────────────────────────────────
     logAudit({
@@ -873,7 +873,6 @@ async function fulfillMaterialRequest(id, data, user, ipAddress, deviceInfo) {
                 move_type: "ISSUE_OUT",
                 quantity: reqQty,
                 reference_id: issueRecord.id,
-                reference_type: "material_issue",
                 created_by: userId,
             }
         });
@@ -886,7 +885,7 @@ async function fulfillMaterialRequest(id, data, user, ipAddress, deviceInfo) {
         });
 
         return { issue: issueRecord, request: updatedRequest };
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     return result;
 }
