@@ -15,7 +15,7 @@ const router = Router();
 router.get(
     "/logs",
     authenticateJWT,
-    requireSuperAdmin,
+    requirePermission("system.read"),
     controller.getSystemLogs
 );
 

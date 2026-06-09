@@ -199,7 +199,7 @@ async function deleteUser(id, user) {
 // ─── Feature 2: paginated user list ──────────────────────────────────────────
 
 async function listUsers(actorUser, { search, role, page, limit }) {
-    const ADMIN_ROLES = new Set(["super_admin", "erp_admin"]);
+    const ADMIN_ROLES = new Set(["super_admin", "erp_admin", "accounts_manager"]);
     if (!ADMIN_ROLES.has(actorUser.roleCode)) {
         const e = new Error("Forbidden: Admin only."); e.statusCode = 403; throw e;
     }
@@ -250,7 +250,7 @@ async function listUsers(actorUser, { search, role, page, limit }) {
 // ─── Feature 2: get projects for a user ──────────────────────────────────────
 
 async function getUserProjects(userId, actorUser) {
-    const ADMIN_ROLES = new Set(["super_admin", "erp_admin"]);
+    const ADMIN_ROLES = new Set(["super_admin", "erp_admin", "accounts_manager"]);
     if (!ADMIN_ROLES.has(actorUser.roleCode)) {
         const e = new Error("Forbidden: Admin only."); e.statusCode = 403; throw e;
     }
@@ -273,7 +273,7 @@ const VALID_ROLES = new Set(["full", "read_only", "approval_only", "contributor"
     "project_manager", "site_engineer", "storekeeper"]);
 
 async function assignProjectAccess(actorUser, { userId, projectId, role }) {
-    const ADMIN_ROLES = new Set(["super_admin", "erp_admin"]);
+    const ADMIN_ROLES = new Set(["super_admin", "erp_admin", "accounts_manager"]);
     if (!ADMIN_ROLES.has(actorUser.roleCode)) {
         const e = new Error("Forbidden: Admin only."); e.statusCode = 403; throw e;
     }
@@ -307,7 +307,7 @@ async function assignProjectAccess(actorUser, { userId, projectId, role }) {
 // ─── Feature 2: remove user from project ─────────────────────────────────────
 
 async function removeProjectAccess(actorUser, { userId, projectId }) {
-    const ADMIN_ROLES = new Set(["super_admin", "erp_admin"]);
+    const ADMIN_ROLES = new Set(["super_admin", "erp_admin", "accounts_manager"]);
     if (!ADMIN_ROLES.has(actorUser.roleCode)) {
         const e = new Error("Forbidden: Admin only."); e.statusCode = 403; throw e;
     }

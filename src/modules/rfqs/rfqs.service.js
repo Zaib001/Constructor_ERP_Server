@@ -1,5 +1,7 @@
 const prisma = require("../../db");
 const { applyDataScope, MODULES } = require("../../utils/scoping");
+const { registerAdapter } = require("../approvals/approvals.adapter");
+const { requestApproval } = require("../approvals/approvals.service");
 
 async function getAllRFQs(user, page, pageSize) {
     const where = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: false, prefix: "requisition", projectFilter: true });
@@ -90,8 +92,20 @@ async function compareQuotes(rfqId, data, user) {
     const rfqWhere = applyDataScope(user, { module: MODULES.PROCUREMENT, isWrite: true, prefix: "requisition" });
     rfqWhere.id = rfqId;
     
-    const rfq = await prisma.rFQ.findFirst({ where: rfqWhere });
+    const rfq = await prisma.rFQ.findFirst({ 
+        where: rfqWhere,
+        include: { requisition: true }
+    });
     if (!rfq) throw new Error("RFQ not found or access denied.");
+
+    // Retrieve the selected quote and calculate the amount
+    const selectedQuote = await prisma.vendorQuote.findFirst({
+        where: { rfq_id: rfqId, vendor_id: data.selected_vendor_id },
+        include: { items: true }
+    });
+    const totalAmount = selectedQuote?.items.reduce((sum, item) => {
+        return sum + Number(item.total_price || 0);
+    }, 0) || 0;
 
     const comparison = await prisma.comparisonEngine.create({
         data: {
@@ -102,13 +116,76 @@ async function compareQuotes(rfqId, data, user) {
             comparison_snapshot: data.snapshot || {}
         }
     });
-    
-    await prisma.rFQ.update({
-        where: { id: rfqId },
-        data: { status: "vendor_selected" }
-    });
+
+    // Request Vendor Selection Approval from central approval engine
+    await requestApproval({
+        docType: "VENDOR_SELECTION",
+        docId: comparison.id,
+        projectId: rfq.requisition?.project_id || null,
+        amount: totalAmount,
+        companyId: rfq.requisition?.company_id || user.companyId || user.company_id,
+        remarks: `Vendor Selection Approval for RFQ ${rfq.rfq_no} - Total ${totalAmount} SAR`,
+        items: selectedQuote?.items.map(item => ({
+            itemName: `Quote Item`,
+            quantity: Number(item.quantity || 0),
+            unit: "",
+            unitPrice: Number(item.unit_price || 0),
+            totalPrice: Number(item.total_price || 0)
+        })) || []
+    }, user.id || user.userId);
 
     return comparison;
 }
+
+// ─── Vendor Selection Approval Adapter ──────────────────────────────────────────
+registerAdapter("VENDOR_SELECTION", async ({ docId, status }) => {
+    const comparison = await prisma.comparisonEngine.findUnique({
+        where: { id: docId }
+    });
+    if (!comparison) return;
+
+    let rfqStatus = "issued";
+    if (status === "in_approval" || status === "submitted") {
+        rfqStatus = "pending_selection_approval";
+    } else if (status === "approved") {
+        rfqStatus = "vendor_selected";
+    } else if (status === "rejected") {
+        rfqStatus = "selection_rejected";
+    } else if (status === "cancelled") {
+        rfqStatus = "selection_cancelled";
+    } else if (status === "sent_back") {
+        rfqStatus = "selection_draft";
+    }
+
+    await prisma.rFQ.update({
+        where: { id: comparison.rfq_id },
+        data: { status: rfqStatus }
+    });
+});
+
+registerAdapter("VENDOR_SELECTION:meta", async ({ docId }) => {
+    const comparison = await prisma.comparisonEngine.findUnique({
+        where: { id: docId },
+        include: {
+            rfq: true,
+            selected_vendor: true
+        }
+    });
+    if (!comparison) return null;
+
+    const selectedQuote = await prisma.vendorQuote.findFirst({
+        where: { rfq_id: comparison.rfq_id, vendor_id: comparison.selected_vendor_id },
+        include: { items: true }
+    });
+    const totalAmount = selectedQuote?.items.reduce((sum, item) => {
+        return sum + Number(item.total_price || 0);
+    }, 0) || 0;
+
+    return {
+        title: `Vendor Selection Approval: RFQ ${comparison.rfq.rfq_no}`,
+        amount: totalAmount,
+        description: `Selected vendor: ${comparison.selected_vendor?.name || "Unknown"}. Reason: ${comparison.selection_reason || "None"}.`
+    };
+});
 
 module.exports = { getAllRFQs, getRFQById, createRFQ, addVendors, submitQuote, compareQuotes };

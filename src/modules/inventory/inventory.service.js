@@ -641,11 +641,12 @@ async function createMaterialRequest(data, user) {
     // Validate access
     await validateResourceAccess(prisma, "project", projectId, user, { module: MODULES.PROJECTS, isWrite: false });
 
+    let itemRecord = null;
     const request = await prisma.$transaction(async (tx) => {
         // Validate scope
         await _scopedFind(tx, "project", projectId, companyId);
         await _scopedFind(tx, "wBS", wbsId, companyId);
-        await _scopedFind(tx, "item", itemId, companyId);
+        itemRecord = await _scopedFind(tx, "item", itemId, companyId);
         if (storeId) {
             await _scopedFind(tx, "store", storeId, companyId);
         }
@@ -677,12 +678,13 @@ async function createMaterialRequest(data, user) {
     // Non-fatal: if approval submission fails (e.g. missing matrix), the MR is still
     // created but stays PENDING until manually submitted for approval.
     try {
+        const calculatedAmount = Number(quantity) * Number(itemRecord?.standard_price || 0);
         await requestApproval(
             {
                 docType: "MR",
                 docId: request.id,
                 projectId,
-                amount: 0,
+                amount: calculatedAmount,
                 companyId
             },
             userId,

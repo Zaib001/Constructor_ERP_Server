@@ -16,6 +16,7 @@ async function main() {
         { code: "approval.approve",       module: "approvals",    description: "Approve assigned workflow steps" },
         { code: "approval.reject",        module: "approvals",    description: "Reject approval steps" },
         { code: "audit.read",             module: "audit",        description: "View global audit logs" },
+        { code: "system.read",            module: "system",       description: "View system health and logs" },
         { code: "delegation.read",        module: "delegations",  description: "View approval delegations" },
         { code: "delegation.manage",      module: "delegations",  description: "Create and manage delegations" },
         { code: "role.manage",            module: "roles",        description: "Create and manage roles/permissions" },
@@ -309,7 +310,8 @@ async function main() {
             "pettycash.read", "pettycash.approve", "pettycash.expense.verify",
             "petrol.read", "petrol.verify", "payroll.read", "expense.read", "expense.verify",
             "subcontract.read", "subcontract.rabill.read", "subcontract.payment.read", "subcontract.payment.write",
-            "dashboard.company"
+            "dashboard.company",
+            "system.read", "audit.read", "project.access.manage", "user.read"
         ],
 
         // Accounts Officer

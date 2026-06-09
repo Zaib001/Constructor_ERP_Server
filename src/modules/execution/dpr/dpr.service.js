@@ -407,12 +407,20 @@ async function submitDPR(dpr_id, userId, companyId) {
       }
   }
 
+  // Calculate total cost from resource logs
+  const resourceLogs = await prisma.resourceLog.findMany({
+    where: { dpr_id: dpr.id }
+  });
+  const totalCost = resourceLogs.reduce((sum, log) => {
+    return sum + Number(log.labor_cost || 0) + Number(log.equip_cost || 0);
+  }, 0);
+
   // Initiate Centralized Approval Request
   const approvalData = {
     docType: 'DPR',
     docId: dpr.id,
     projectId: dpr.project_id,
-    amount: 0, // DPR doesn't have a direct monetary value for matrix, but can be added if needed
+    amount: totalCost,
     items: dpr.items.map(it => ({
       itemName: it.description,
       quantity: Number(it.actual_today_qty || 0),
@@ -595,9 +603,18 @@ registerAdapter('DPR:meta', async ({ docId }) => {
         include: { _count: { select: { items: true } } }
     });
     if (!dpr) return null;
+
+    // Compute total cost from ResourceLog
+    const resourceLogs = await prisma.resourceLog.findMany({
+        where: { dpr_id: docId }
+    });
+    const totalCost = resourceLogs.reduce((sum, log) => {
+        return sum + Number(log.labor_cost || 0) + Number(log.equip_cost || 0);
+    }, 0);
+
     return {
         title: `Daily Progress Report: ${dpr.dpr_no}`,
-        amount: 0,
+        amount: totalCost,
         description: `Project progress for ${dpr.report_date.toLocaleDateString()}. ${dpr._count.items} activities logged.`
     };
 });
