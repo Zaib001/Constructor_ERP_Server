@@ -140,6 +140,7 @@ const requestFilterSchema = Joi.object({
     projectId: Joi.string().uuid().optional(),
     storeId: Joi.string().uuid().optional(),
     reservationStatus: Joi.string().valid("PENDING", "RESERVED", "ISSUED", "CANCELLED").optional(),
+    status: Joi.string().valid("draft", "submitted", "approved", "rejected", "sent_back").optional(),
     page: Joi.number().integer().min(1).default(1),
     pageSize: Joi.number().integer().min(1).max(200).default(20)
 });

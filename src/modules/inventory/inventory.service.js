@@ -702,44 +702,100 @@ async function createMaterialRequest(data, user) {
 }
 
 /**
- * List Material Requests with Scoping
+ * List Material Requests with Role-Aware Scoping
+ *
+ * Scoping rules:
+ *  - site_engineer / site_coordinator → own MRs only (created_by = self)
+ *  - project_manager                  → ALL MRs on projects they are assigned to
+ *  - erp_admin / super_admin          → all MRs company-wide (no project restriction)
+ *  - storekeeper / procurement_*      → all MRs company-wide (they fulfil/review MRs)
  */
 async function getMaterialRequestList(user, filters) {
-    const where = applyDataScope(user, { projectFilter: true });
-    const { projectId, storeId, reservationStatus, page = 1, pageSize = 20 } = filters;
+    const { projectId, storeId, reservationStatus, status, page = 1, pageSize = 20 } = filters;
+    const { roleCode, companyId, id: userId, isSuperAdmin } = user;
 
-    const finalWhere = {
-        ...where,
-        company_id: user.companyId,
-        ...(projectId && { project_id: projectId }),
+    const baseWhere = {
+        ...(reservationStatus && { reservation_status: reservationStatus }),
+        ...(status && { status }),
         ...(storeId && { store_id: storeId }),
-        ...(reservationStatus && { reservation_status: reservationStatus })
+        ...(projectId && { project_id: projectId }),
     };
 
-    const skip = (page - 1) * pageSize;
+    // Super admin — global visibility (no company filter)
+    if (isSuperAdmin) {
+        // no company restriction
+    } else {
+        baseWhere.company_id = companyId;
+    }
+
+    // Role-specific project scoping
+    const CREATOR_ONLY_ROLES = ["site_engineer", "site_coordinator", "quantity_surveyor"];
+    const PM_ROLES = ["project_manager"];
+    const COMPANY_WIDE_ROLES = ["erp_admin", "storekeeper", "procurement_officer", "procurement_manager", "accounts_manager", "accounts_officer"];
+
+    if (CREATOR_ONLY_ROLES.includes(roleCode)) {
+        // Engineers see only MRs they created
+        baseWhere.created_by = userId;
+    } else if (PM_ROLES.includes(roleCode)) {
+        // PM sees all MRs for projects they are assigned to
+        // (they are the approver, not the creator)
+        if (!projectId) {
+            // No specific project filter — scope to their assigned projects
+            baseWhere.project = {
+                user_projects: {
+                    some: { user_id: userId, revoked_at: null }
+                }
+            };
+        }
+        // If projectId is provided, it's already in baseWhere — no additional restriction needed
+        // (the PM can view any MR for a project they're assigned to)
+    } else if (COMPANY_WIDE_ROLES.includes(roleCode) || isSuperAdmin) {
+        // Admin, storekeeper, procurement — see all (company filter already applied above)
+    }
+    // Any other role gets company-scoped results only
+
+    const skip = (Number(page) - 1) * Number(pageSize);
 
     const [data, total] = await Promise.all([
         prisma.inventoryPlanningRequest.findMany({
-            where: finalWhere,
+            where: baseWhere,
             skip,
-            take: pageSize,
-            orderBy: { required_date: "asc" },
+            take: Number(pageSize),
+            orderBy: { created_at: "desc" },
             include: {
-                project: { select: { name: true } },
+                project: { select: { id: true, name: true, code: true } },
                 item: { select: { name: true, unit: true, category: true, standard_price: true } },
-                store: { select: { name: true } }
+                store: { select: { name: true } },
+                wbs: { select: { name: true, code: true } },
+                // Resolve creator name via raw lookup below
             }
         }),
-        prisma.inventoryPlanningRequest.count({ where: finalWhere })
+        prisma.inventoryPlanningRequest.count({ where: baseWhere })
     ]);
 
+    // Enrich each record with the requester's name (avoiding N+1 with a single batched query)
+    const creatorIds = [...new Set(data.map(d => d.created_by).filter(Boolean))];
+    let creatorMap = {};
+    if (creatorIds.length > 0) {
+        const creators = await prisma.user.findMany({
+            where: { id: { in: creatorIds } },
+            select: { id: true, name: true }
+        });
+        creators.forEach(c => { creatorMap[c.id] = c.name; });
+    }
+
+    const enriched = data.map(r => ({
+        ...r,
+        requestedByName: creatorMap[r.created_by] || null,
+    }));
+
     return {
-        data,
+        data: enriched,
         pagination: {
             total,
-            page,
-            pageSize,
-            pages: Math.ceil(total / pageSize)
+            page: Number(page),
+            pageSize: Number(pageSize),
+            pages: Math.ceil(total / Number(pageSize))
         }
     };
 }

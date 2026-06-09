@@ -458,7 +458,7 @@ async function getInbox(userCtx, statusFilter, page = 1, pageSize = 10, reqDepar
 
     // 4. Final mapping (Requester info is already joined in findInboxSteps for non-admins 
     // and in the adminSteps block for admins)
-    const data = merged.map((s) => {
+    const baseData = merged.map((s) => {
         const req = s.approval_requests;
         return {
             stepId: s.id,
@@ -477,16 +477,115 @@ async function getInbox(userCtx, statusFilter, page = 1, pageSize = 10, reqDepar
             approverUser: s.approver_user,
             status: s.status,
             submittedAt: req?.created_at,
+            amount: req?.amount,
             escalated: s.escalated,
             delegatedFrom: s._delegatedFrom || null,
+            docSummary: null, // will be populated below
         };
     });
 
-    const total = data.length;
-    const paginated = data.slice(skip, skip + pageSize);
+    // 5. Batch-fetch compact document summaries so the approver can see what they're
+    //    reviewing without a second API call. Grouped by doc_type to avoid N+1.
+    try {
+        const byType = {};
+        for (const item of baseData) {
+            if (!item.docType || !item.docId) continue;
+            if (!byType[item.docType]) byType[item.docType] = [];
+            byType[item.docType].push(item.docId);
+        }
+
+        const summaryMaps = {};
+
+        if (byType["MR"]?.length > 0) {
+            const mrs = await prisma.inventoryPlanningRequest.findMany({
+                where: { id: { in: byType["MR"] } },
+                select: {
+                    id: true,
+                    quantity: true,
+                    required_date: true,
+                    reservation_status: true,
+                    status: true,
+                    item: { select: { name: true, unit: true } },
+                    store: { select: { name: true } },
+                    wbs: { select: { name: true, code: true } },
+                }
+            });
+            summaryMaps["MR"] = {};
+            mrs.forEach(m => {
+                summaryMaps["MR"][m.id] = {
+                    itemName: m.item?.name,
+                    unit: m.item?.unit,
+                    quantity: m.quantity,
+                    requiredDate: m.required_date,
+                    storeName: m.store?.name,
+                    wbsName: m.wbs ? `${m.wbs.code} – ${m.wbs.name}` : null,
+                    reservationStatus: m.reservation_status,
+                    mrStatus: m.status,
+                };
+            });
+        }
+
+        if (byType["DPR"]?.length > 0) {
+            const dprs = await prisma.dPR.findMany({
+                where: { id: { in: byType["DPR"] } },
+                select: {
+                    id: true,
+                    report_date: true,
+                    weather: true,
+                    status: true,
+                    overall_progress: true,
+                }
+            });
+            summaryMaps["DPR"] = {};
+            dprs.forEach(d => {
+                summaryMaps["DPR"][d.id] = {
+                    reportDate: d.report_date,
+                    weather: d.weather,
+                    overallProgress: d.overall_progress,
+                    dprStatus: d.status,
+                };
+            });
+        }
+
+        if (byType["PR"]?.length > 0) {
+            const prs = await prisma.purchaseRequisition.findMany({
+                where: { id: { in: byType["PR"] } },
+                select: {
+                    id: true,
+                    pr_no: true,
+                    reason: true,
+                    status: true,
+                    _count: { select: { items: true } }
+                }
+            });
+            summaryMaps["PR"] = {};
+            prs.forEach(p => {
+                summaryMaps["PR"][p.id] = {
+                    prNo: p.pr_no,
+                    reason: p.reason,
+                    itemCount: p._count?.items ?? 0,
+                    prStatus: p.status,
+                };
+            });
+        }
+
+        // Embed summaries into base data
+        for (const item of baseData) {
+            if (item.docType && item.docId && summaryMaps[item.docType]) {
+                item.docSummary = summaryMaps[item.docType][item.docId] || null;
+            }
+        }
+    } catch (summaryErr) {
+        logger.warn(`[INBOX] Failed to fetch doc summaries: ${summaryErr.message}`);
+        // Non-fatal — inbox still returns without summaries
+    }
+
+    const total = baseData.length;
+    const paginated = baseData.slice(skip, skip + pageSize);
 
     return { data: paginated, total, page, pageSize };
 }
+
 
 // ─── 3. Approve Step ──────────────────────────────────────────────────────────
 
@@ -939,6 +1038,25 @@ async function getRequestById(id) {
                     }
                 }
             });
+        } else if (r.doc_type === "MR") {
+            // Material Request — fetch the full InventoryPlanningRequest with item, store, WBS detail
+            extendedData = await prisma.inventoryPlanningRequest.findUnique({
+                where: { id: r.doc_id },
+                include: {
+                    project: { select: { id: true, name: true, code: true } },
+                    item: { select: { id: true, name: true, unit: true, category: true, standard_price: true } },
+                    store: { select: { id: true, name: true } },
+                    wbs:   { select: { id: true, name: true, code: true } },
+                }
+            });
+            // Enrich with requester name
+            if (extendedData) {
+                const creator = await prisma.user.findUnique({
+                    where: { id: extendedData.created_by },
+                    select: { name: true }
+                });
+                extendedData = { ...extendedData, requestedByName: creator?.name || null };
+            }
         }
     } catch (err) {
         logger.warn(`Failed to fetch extendedData for ${r.doc_type}: ${err.message}`);
