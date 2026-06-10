@@ -507,7 +507,7 @@ async function getInbox(userCtx, statusFilter, page = 1, pageSize = 10, reqDepar
                     status: true,
                     item: { select: { name: true, unit: true } },
                     store: { select: { name: true } },
-                    wbs: { select: { name: true, code: true } },
+                    wbs: { select: { name: true, wbs_code: true } },
                 }
             });
             summaryMaps["MR"] = {};

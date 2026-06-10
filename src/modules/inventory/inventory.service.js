@@ -766,7 +766,7 @@ async function getMaterialRequestList(user, filters) {
                 project: { select: { id: true, name: true, code: true } },
                 item: { select: { name: true, unit: true, category: true, standard_price: true } },
                 store: { select: { name: true } },
-                wbs: { select: { name: true, code: true } },
+                wbs: { select: { name: true, wbs_code: true } },
                 // Resolve creator name via raw lookup below
             }
         }),
