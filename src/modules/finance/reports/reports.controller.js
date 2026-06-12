@@ -31,7 +31,33 @@ const getTrialBalance = async (req, res) => {
 
 const getCashFlow = async (req, res) => {
     try {
+        const { start_date, end_date } = req.query;
         const data = await service.getCashFlow(req.user.companyId, req.query);
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+const getBudgetVsActual = async (req, res) => {
+    try {
+        const { projectId, project_id, costCode, from, to } = req.query;
+        const targetProjectId = projectId || project_id || null;
+
+        if (from && isNaN(Date.parse(from))) {
+            return res.status(400).json({ success: false, message: "Invalid 'from' date — must be ISO 8601." });
+        }
+        if (to && isNaN(Date.parse(to))) {
+            return res.status(400).json({ success: false, message: "Invalid 'to' date — must be ISO 8601." });
+        }
+
+        const data = await service.getBudgetVsActualReport(req.user.companyId, {
+            projectId: targetProjectId,
+            costCodeFilter: costCode || null,
+            from: from ? new Date(from) : null,
+            to:   to   ? new Date(to)   : null,
+        }, req.user);
+
         res.json({ success: true, data });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -105,6 +131,7 @@ module.exports = {
     getBalanceSheet,
     getTrialBalance,
     getCashFlow,
+    getBudgetVsActual,
     exportVATReport,
     exportZATCALog,
     exportProfitabilityReport

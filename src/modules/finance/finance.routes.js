@@ -25,11 +25,13 @@ const profitabilityRoutes = require("./profitability/profitability.routes");
 const creditNotesRoutes = require("./creditNotes/creditNotes.routes");
 const debitNotesRoutes = require("./debitNotes/debitNotes.routes");
 const workersRoutes = require("./workers/workers.routes");
+const financeApprovalsRoutes = require("./approvals/financeApprovals.routes");
 
 // Apply auth to all finance routes
 router.use(authenticate);
 
 router.use("/workers", workersRoutes);
+router.use("/approvals", financeApprovalsRoutes);
 
 router.use("/coa", coaRoutes);
 router.use("/periods", periodRoutes);

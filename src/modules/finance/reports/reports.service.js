@@ -225,9 +225,89 @@ const getCashFlow = async (companyId, filters = {}) => {
     };
 };
 
+const projectsFinanceService = require("../../projects/finance.service");
+
+const getBudgetVsActualReport = async (companyId, filters, user) => {
+    const { projectId, costCodeFilter, from, to } = filters;
+
+    if (projectId) {
+        // Detailed project-specific report
+        return await projectsFinanceService.getBudgetVsActual(user, {
+            projectId,
+            costCodeFilter,
+            from,
+            to
+        });
+    }
+
+    // Consolidated company-wide report
+    const projects = await prisma.project.findMany({
+        where: {
+            company_id: companyId,
+            status: "active",
+            deleted_at: null
+        },
+        select: { id: true, name: true, code: true }
+    });
+
+    const projectData = await Promise.all(projects.map(async (proj) => {
+        try {
+            const result = await projectsFinanceService.getBudgetVsActual(user, {
+                projectId: proj.id,
+                costCodeFilter,
+                from,
+                to
+            });
+
+            return {
+                projectId: proj.id,
+                projectName: proj.name,
+                projectCode: proj.code,
+                totalBudget: result.summary.totalBudget,
+                totalActual: result.summary.totalActual,
+                totalVariance: result.summary.totalVariance,
+                variancePercent: result.summary.variancePercent,
+                status: result.summary.totalActual > result.summary.totalBudget ? "OVERSPENT" :
+                        result.summary.totalActual > result.summary.totalBudget * 0.85 ? "AT_RISK" : "ON_TRACK"
+            };
+        } catch (err) {
+            // If there's an error for a project (e.g. scoping / no access), return basic info
+            return {
+                projectId: proj.id,
+                projectName: proj.name,
+                projectCode: proj.code,
+                totalBudget: 0,
+                totalActual: 0,
+                totalVariance: 0,
+                variancePercent: 0,
+                status: "UNKNOWN",
+                error: err.message
+            };
+        }
+    }));
+
+    const totalBudget = projectData.reduce((sum, p) => sum + p.totalBudget, 0);
+    const totalActual = projectData.reduce((sum, p) => sum + p.totalActual, 0);
+    const totalVariance = totalBudget - totalActual;
+    const variancePercent = totalBudget > 0 ? parseFloat(((totalActual / totalBudget) * 100).toFixed(2)) : 0;
+
+    return {
+        companyId,
+        generatedAt: new Date().toISOString(),
+        summary: {
+            totalBudget: parseFloat(totalBudget.toFixed(2)),
+            totalActual: parseFloat(totalActual.toFixed(2)),
+            totalVariance: parseFloat(totalVariance.toFixed(2)),
+            variancePercent
+        },
+        projects: projectData
+    };
+};
+
 module.exports = {
     getPnL,
     getBalanceSheet,
     getTrialBalance,
-    getCashFlow
+    getCashFlow,
+    getBudgetVsActualReport
 };

@@ -432,7 +432,7 @@ async function main() {
         rfq_id: rfq.id,
         quote_id: quote.id,
         amount: 551000,
-        status: 'draft',
+        status: 'issued',
         delivery_status: 'pending',
         created_by: user.id,
         delivery_terms: 'FOB',
