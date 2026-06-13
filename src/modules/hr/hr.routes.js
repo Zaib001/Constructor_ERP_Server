@@ -36,8 +36,8 @@ router.get("/overtime/requests", controller.listOvertimeRequests);
 router.post("/payroll/runs/draft", requirePermission("hr.payroll.manage"), controller.createPayrollDraft);
 router.post("/payroll/runs/:id/approve", requirePermission("hr.payroll.approve"), controller.approvePayrollRun);
 router.post("/payroll/runs/:id/reverse", requirePermission("hr.payroll.approve"), controller.reversePayrollRun);
-router.get("/payroll/runs", requirePermission("hr.payroll.read"), controller.getPayrollRuns);
-router.get("/payroll/runs/:id", requirePermission("hr.payroll.read"), controller.getPayrollRunDetails);
+router.get("/payroll/runs", requirePermission("payroll.read"), controller.getPayrollRuns);
+router.get("/payroll/runs/:id", requirePermission("payroll.read"), controller.getPayrollRunDetails);
 router.get("/payroll/payslips", controller.getPayslips);
 
 // ─── Salary Revision Routes ──────────────────────────────────────────
@@ -48,7 +48,7 @@ router.get("/payroll/revisions/history", requirePermission("hr.salary.manage"), 
 router.get("/payroll/allocations", requirePermission("hr.allocation.read"), controller.getLaborAllocations);
 
 // ─── HR Audit Log Routes ─────────────────────────────────────────────
-router.get("/audit-logs", requirePermission("hr.payroll.read"), controller.getHRAuditLogs);
+router.get("/audit-logs", requirePermission("payroll.read"), controller.getHRAuditLogs);
 
 // ─── Directory Lookups (Utilities) ──────────────────────────────────
 router.get("/directory/employees", controller.getHREmployees);
