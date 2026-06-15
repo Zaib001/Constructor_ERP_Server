@@ -218,7 +218,7 @@ async function listUsers(actorUser, { search, role, page, limit }) {
     }
 
     const skip = (page - 1) * limit;
-    const [rawUsers, total] = await Promise.all([
+    const [rawUsers, total, activeProjects] = await Promise.all([
         prisma.user.findMany({
             where,
             skip,
@@ -230,19 +230,37 @@ async function listUsers(actorUser, { search, role, page, limit }) {
             },
         }),
         prisma.user.count({ where }),
+        prisma.project.findMany({
+            where: { status: "active" },
+            select: { id: true, company_id: true }
+        }),
     ]);
 
-    const users = rawUsers.map((u) => ({
-        id:           u.id,
-        name:         u.name,
-        email:        u.email,
-        role:         u.roles?.code?.toUpperCase() || "UNKNOWN",
-        roleName:     u.roles?.name || "",
-        roleId:       u.roles?.id || null,
-        status:       u.is_active ? "ACTIVE" : "INACTIVE",
-        projectCount: u._count.user_projects,
-        createdAt:    u.created_at,
-    }));
+    const users = rawUsers.map((u) => {
+        const role = u.roles?.code || "unknown";
+        const isProjectRestricted = ["project_manager", "site_engineer", "site_coordinator", "quantity_surveyor"].includes(role.toLowerCase());
+        
+        let projectCount = 0;
+        if (role.toLowerCase() === "super_admin") {
+            projectCount = activeProjects.length;
+        } else if (isProjectRestricted) {
+            projectCount = u._count.user_projects;
+        } else {
+            projectCount = activeProjects.filter((p) => p.company_id === u.company_id).length;
+        }
+
+        return {
+            id:           u.id,
+            name:         u.name,
+            email:        u.email,
+            role:         role.toUpperCase(),
+            roleName:     u.roles?.name || "",
+            roleId:       u.roles?.id || null,
+            status:       u.is_active ? "ACTIVE" : "INACTIVE",
+            projectCount,
+            createdAt:    u.created_at,
+        };
+    });
 
     return { total, page, limit, users };
 }
