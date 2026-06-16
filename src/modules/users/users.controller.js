@@ -46,9 +46,13 @@ async function deleteUser(req, res, next) {
 
 async function listUsers(req, res, next) {
     try {
-        const { search = "", role = "", page = 1, limit = 20 } = req.query;
-        const pageNum  = Math.max(1, parseInt(page, 10) || 1);
-        const pageSize = Math.min(100, parseInt(limit, 10) || 20);
+        // If no pagination parameters are specified, delegate to legacy getAllUsers
+        if (req.query.page === undefined && req.query.limit === undefined) {
+            return getAllUsers(req, res, next);
+        }
+        const { search = "", role = "" } = req.query;
+        const pageNum  = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const pageSize = Math.min(100, parseInt(req.query.limit, 10) || 20);
         const result = await usersService.listUsers(req.user, { search, role, page: pageNum, limit: pageSize });
         return res.status(200).json({ success: true, total: result.total, page: result.page, limit: result.limit, users: result.users });
     } catch (err) {

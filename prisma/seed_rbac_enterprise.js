@@ -394,7 +394,8 @@ async function main() {
             "document.read", "document.create", "document.update",
             "payroll.read", "payroll.process",
             "expense.read", "expense.verify",
-            "dashboard.company", "dashboard.department", "dashboard.compliance"
+            "dashboard.company", "dashboard.department", "dashboard.compliance",
+            "company.read", "department.read", "project.read"
         ],
 
         // Procurement Manager: Oversight across all procurement

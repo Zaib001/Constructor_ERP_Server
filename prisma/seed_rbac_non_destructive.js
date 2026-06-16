@@ -343,7 +343,8 @@ async function main() {
             "employee.read", "employee.create", "employee.update", "employee.archive",
             "document.read", "document.create", "document.update",
             "payroll.read", "payroll.process", "expense.read", "expense.verify",
-            "dashboard.company", "dashboard.department", "dashboard.compliance"
+            "dashboard.company", "dashboard.department", "dashboard.compliance",
+            "company.read", "department.read", "project.read"
         ],
 
         // HR Admin
