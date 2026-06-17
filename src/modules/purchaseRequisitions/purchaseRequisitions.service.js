@@ -3,6 +3,7 @@ const prisma = require("../../db");
 const { applyDataScope, MODULES, validateResourceAccess } = require("../../utils/scoping");
 const { requestApproval } = require("../approvals/approvals.service");
 const { registerAdapter } = require("../approvals/approvals.adapter");
+const { sendPushNotification } = require("../../services/notification.service");
 
 registerAdapter("PR", async ({ docId, status }) => {
     let finalStatus = "submitted";
@@ -11,10 +12,27 @@ registerAdapter("PR", async ({ docId, status }) => {
     if (status === "sent_back") finalStatus = "sent_back";
     if (status === "pending") finalStatus = "submitted";
 
-    await prisma.purchaseRequisition.update({
+    const updatedPr = await prisma.purchaseRequisition.update({
         where: { id: docId },
         data: { status: finalStatus, updated_at: new Date() }
     });
+
+    try {
+        if (updatedPr && updatedPr.requested_by) {
+            if (status === "approved" || status === "rejected") {
+                const displayStatus = status === "approved" ? "Approved" : "Rejected";
+                const type = status === "approved" ? "PR_APPROVED" : "PR_REJECTED";
+                await sendPushNotification(updatedPr.requested_by, {
+                    title: `PR ${displayStatus}`,
+                    body: `Your PR ${updatedPr.pr_no} has been ${displayStatus.toLowerCase()}`,
+                    data: { type, refId: updatedPr.id }
+                });
+            }
+        }
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error sending PR status notification in adapter", err);
+    }
 });
 
 async function getAllPRs(user, page, pageSize) {
@@ -141,6 +159,13 @@ async function createPR(data, user) {
         items: []
     }, user.id);
 
+    try {
+        await notifyPRSubmitted(pr, actor.name || "User");
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error triggering PR submission notifications in createPR", err);
+    }
+
     return pr;
 }
 
@@ -178,10 +203,27 @@ async function approvePR(id, data, user) {
 
     const finalStatus = data.action === "reject" ? "rejected" : "approved_for_rfq";
 
-    return prisma.purchaseRequisition.update({
+    const updatedPr = await prisma.purchaseRequisition.update({
         where: { id },
         data: { status: finalStatus, updated_at: new Date() }
     });
+
+    try {
+        if (updatedPr && updatedPr.requested_by) {
+            const displayStatus = data.action === "reject" ? "Rejected" : "Approved";
+            const type = data.action === "reject" ? "PR_REJECTED" : "PR_APPROVED";
+            await sendPushNotification(updatedPr.requested_by, {
+                title: `PR ${displayStatus}`,
+                body: `Your PR ${updatedPr.pr_no} has been ${displayStatus.toLowerCase()}`,
+                data: { type, refId: updatedPr.id }
+            });
+        }
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error sending PR status notification in approvePR", err);
+    }
+
+    return updatedPr;
 }
 
 
@@ -251,7 +293,7 @@ async function submitPR(id, user) {
         throw new Error("Only draft or sent back PRs can be submitted.");
     }
 
-    await prisma.purchaseRequisition.update({ where: { id }, data: { status: "submitted", updated_at: new Date() } });
+    const updated = await prisma.purchaseRequisition.update({ where: { id }, data: { status: "submitted", updated_at: new Date() } });
 
     await requestApproval({
         docType: "PR",
@@ -262,7 +304,89 @@ async function submitPR(id, user) {
         items: []
     }, user.id);
 
+    try {
+        const actor = await prisma.user.findUnique({ where: { id: user.id }, select: { name: true } });
+        await notifyPRSubmitted(updated, actor?.name || "User");
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error sending PR submitted notifications inside submitPR", err);
+    }
+
     return prisma.purchaseRequisition.findUnique({ where: { id } });
+}
+
+/**
+ * Helper to fetch PMs and Finance users and send PR submission notifications.
+ */
+async function notifyPRSubmitted(pr, actorName) {
+    try {
+        // 1. Fetch PMs for this project
+        const pmUsers = await prisma.userProject.findMany({
+            where: {
+                project_id: pr.project_id,
+                revoked_at: null,
+                OR: [
+                    { access_type: "project_manager" },
+                    {
+                        users: {
+                            roles: {
+                                code: "project_manager"
+                            }
+                        }
+                    }
+                ]
+            },
+            select: {
+                user_id: true
+            }
+        });
+        const pmUserIds = pmUsers.map(pu => pu.user_id).filter(Boolean);
+
+        // 2. Fetch Finance users
+        const financeUsers = await prisma.user.findMany({
+            where: {
+                company_id: pr.company_id,
+                is_active: true,
+                OR: [
+                    {
+                        roles: {
+                            code: { in: ["accounts_manager", "accounts_officer"] }
+                        }
+                    },
+                    {
+                        departments: {
+                            code: "DEPT-FIN"
+                        }
+                    }
+                ]
+            },
+            select: {
+                id: true
+            }
+        });
+        const financeUserIds = financeUsers.map(f => f.id);
+
+        // Notify PMs
+        for (const pmId of pmUserIds) {
+            await sendPushNotification(pmId, {
+                title: 'New Purchase Request',
+                body: `"${pr.pr_no}" submitted by ${actorName}`,
+                data: { type: 'PR_SUBMITTED', refId: pr.id },
+            });
+        }
+
+        // Notify Finance
+        for (const financeId of financeUserIds) {
+            await sendPushNotification(financeId, {
+                title: 'New Purchase Request',
+                body: `"${pr.pr_no}" submitted by ${actorName}`,
+                data: { type: 'PR_SUBMITTED', refId: pr.id },
+            });
+        }
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error sending PR submitted notifications in helper", err);
+    }
 }
 
 module.exports = { getAllPRs, getPRById, createPR, updatePR, submitPR, approvePR };

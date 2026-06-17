@@ -343,6 +343,55 @@ async function removeProjectAccess(actorUser, { userId, projectId }) {
     });
 }
 
+/**
+ * Register or update an FCM token for a user.
+ */
+async function upsertFcmToken(userId, token, platform) {
+    if (!token || !platform) {
+        const err = new Error("Token and platform are required");
+        err.statusCode = 400;
+        throw err;
+    }
+    const validPlatforms = ["android", "ios", "web"];
+    if (!validPlatforms.includes(platform.toLowerCase())) {
+        const err = new Error("Invalid platform. Must be 'android', 'ios', or 'web'");
+        err.statusCode = 400;
+        throw err;
+    }
+
+    return await prisma.fcmToken.upsert({
+        where: { token },
+        update: {
+            user_id: userId,
+            platform: platform.toLowerCase(),
+            updated_at: new Date()
+        },
+        create: {
+            user_id: userId,
+            token,
+            platform: platform.toLowerCase()
+        }
+    });
+}
+
+/**
+ * Remove an FCM token on logout.
+ */
+async function deleteFcmToken(userId, token) {
+    if (!token) {
+        const err = new Error("Token is required");
+        err.statusCode = 400;
+        throw err;
+    }
+
+    return await prisma.fcmToken.deleteMany({
+        where: {
+            token,
+            user_id: userId
+        }
+    });
+}
+
 module.exports = {
     createUser,
     getAllUsers,
@@ -353,4 +402,6 @@ module.exports = {
     getUserProjects,
     assignProjectAccess,
     removeProjectAccess,
+    upsertFcmToken,
+    deleteFcmToken,
 };

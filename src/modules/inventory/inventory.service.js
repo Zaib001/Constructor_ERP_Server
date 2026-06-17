@@ -6,8 +6,8 @@ const { logAudit } = require("../../utils/auditLogger");
 const { updateCostCodeActual, recomputeProjectProgress } = require("../wbs/wbs.service");
 const { registerAdapter } = require("../approvals/approvals.adapter");
 const { requestApproval } = require("../approvals/approvals.service");
+const { sendPushNotification } = require("../../services/notification.service");
 
-// ─── MR Approval Adapter ─────────────────────────────────────────────────────
 // Called by the approval engine when the PM approves/rejects a Material Request.
 // Maps approval outcome → reservation_status on the InventoryPlanningRequest.
 registerAdapter("MR", async ({ docId, status }) => {
@@ -18,10 +18,26 @@ registerAdapter("MR", async ({ docId, status }) => {
     else if (status === "sent_back")       reservationStatus = "PENDING";   // engineer must resubmit
     else return; // no-op for other statuses (in_approval, in_progress)
 
-    await prisma.inventoryPlanningRequest.update({
+    const updated = await prisma.inventoryPlanningRequest.update({
         where: { id: docId },
         data: { reservation_status: reservationStatus }
     });
+
+    try {
+        if (updated && updated.created_by) {
+            if (status === "approved" || status === "rejected") {
+                const displayStatus = status === "approved" ? "Approved" : "Rejected";
+                await sendPushNotification(updated.created_by, {
+                    title: `MR ${displayStatus}`,
+                    body: `Your material request was ${displayStatus.toLowerCase()}`,
+                    data: { type: 'MR_UPDATED', refId: updated.id, status: displayStatus }
+                });
+            }
+        }
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error sending MR adapter status push notification", err);
+    }
 });
 
 // ─── AppError ────────────────────────────────────────────────────────────────
@@ -233,6 +249,86 @@ async function createGRN(data, user, ipAddress, deviceInfo) {
         ipAddress,
         deviceInfo
     });
+
+    // ── 9. Push Notification (outside tx — non-blocking) ─────────────────
+    try {
+        const poRecord = await prisma.purchaseOrder.findUnique({
+            where: { id: poId },
+            select: { project_id: true }
+        });
+        
+        if (poRecord && poRecord.project_id) {
+            // Fetch PMs
+            const pmUsers = await prisma.userProject.findMany({
+                where: {
+                    project_id: poRecord.project_id,
+                    revoked_at: null,
+                    OR: [
+                        { access_type: "project_manager" },
+                        {
+                            users: {
+                                roles: {
+                                    code: "project_manager"
+                                }
+                            }
+                        }
+                    ]
+                },
+                select: { user_id: true }
+            });
+            const pmUserIds = pmUsers.map(pu => pu.user_id).filter(Boolean);
+
+            // Fetch Finance users
+            const financeUsers = await prisma.user.findMany({
+                where: {
+                    company_id: companyId,
+                    is_active: true,
+                    OR: [
+                        {
+                            roles: {
+                                code: { in: ["accounts_manager", "accounts_officer"] }
+                            }
+                        },
+                        {
+                            departments: {
+                                code: "DEPT-FIN"
+                            }
+                        }
+                    ]
+                },
+                select: { id: true }
+            });
+            const financeUserIds = financeUsers.map(f => f.id);
+
+            const storekeeperName = user.name || "Storekeeper";
+            const projectRecord = await prisma.project.findUnique({
+                where: { id: poRecord.project_id },
+                select: { name: true }
+            });
+            const projectName = projectRecord?.name || "Project";
+
+            // Notify PMs
+            for (const pmId of pmUserIds) {
+                await sendPushNotification(pmId, {
+                    title: 'GRN Created',
+                    body: `${storekeeperName} created a GRN for ${projectName}`,
+                    data: { type: 'GRN_CREATED', refId: grn.id }
+                });
+            }
+
+            // Notify Finance
+            for (const financeId of financeUserIds) {
+                await sendPushNotification(financeId, {
+                    title: 'GRN Created',
+                    body: `${storekeeperName} created a GRN for ${projectName}`,
+                    data: { type: 'GRN_CREATED', refId: grn.id }
+                });
+            }
+        }
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error sending GRN created push notifications", err);
+    }
 
     return grn;
 }
@@ -698,6 +794,43 @@ async function createMaterialRequest(data, user) {
         logger.warn(`[MR] Approval submission failed for MR ${request.id}: ${approvalErr.message}`);
     }
 
+    // ── Submit push notification to Storekeeper ────────────────────────────
+    try {
+        let storekeeperIds = [];
+        if (storeId) {
+            const store = await prisma.store.findUnique({
+                where: { id: storeId },
+                select: { store_keeper_id: true }
+            });
+            if (store?.store_keeper_id) {
+                storekeeperIds.push(store.store_keeper_id);
+            }
+        }
+        
+        if (storekeeperIds.length === 0) {
+            const storekeepers = await prisma.user.findMany({
+                where: {
+                    company_id: companyId,
+                    is_active: true,
+                    roles: { code: "storekeeper" }
+                },
+                select: { id: true }
+            });
+            storekeeperIds = storekeepers.map(s => s.id);
+        }
+
+        for (const skId of storekeeperIds) {
+            await sendPushNotification(skId, {
+                title: 'New Material Request',
+                body: `New request from ${user.name || "Site Engineer"}`,
+                data: { type: 'MR_SUBMITTED', refId: request.id }
+            });
+        }
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error sending MR submission notification to storekeeper", err);
+    }
+
     return request;
 }
 
@@ -823,6 +956,20 @@ async function updateMaterialRequestStatus(id, status, user) {
             store: { select: { name: true } }
         }
     });
+
+    try {
+        if (updated && updated.created_by) {
+            const displayStatus = status.toUpperCase();
+            await sendPushNotification(updated.created_by, {
+                title: `MR ${displayStatus}`,
+                body: `Your material request was ${displayStatus.toLowerCase()}`,
+                data: { type: 'MR_UPDATED', refId: updated.id, status: displayStatus }
+            });
+        }
+    } catch (err) {
+        const logger = require("../../logger");
+        logger.error("Error sending MR direct status push notification", err);
+    }
 
     return updated;
 }

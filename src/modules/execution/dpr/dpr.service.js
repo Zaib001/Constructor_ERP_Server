@@ -6,6 +6,7 @@ const { updateCostCodeActual, recomputeProjectProgress } = require('../../wbs/wb
 const logger = require('../../../logger');
 const qualityService = require('../../quality/quality.service');
 const hseService = require('../../hse/hse.service');
+const { sendPushNotification } = require('../../../services/notification.service');
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -430,10 +431,48 @@ async function submitDPR(dpr_id, userId, companyId) {
 
   await requestApproval(approvalData, userId, 'SYSTEM', 'ERP-SITE-ENGINEER');
 
-  return prisma.dPR.update({
+  const updatedDpr = await prisma.dPR.update({
     where: { id: dpr_id },
     data: { status: 'submitted', submitted_by: userId, submitted_at: new Date() }
   });
+
+  try {
+    const pmUsers = await prisma.userProject.findMany({
+      where: {
+        project_id: dpr.project_id,
+        revoked_at: null,
+        OR: [
+          { access_type: "project_manager" },
+          {
+            users: {
+              roles: {
+                code: "project_manager"
+              }
+            }
+          }
+        ]
+      },
+      select: { user_id: true }
+    });
+    const pmUserIds = pmUsers.map(pu => pu.user_id).filter(Boolean);
+
+    const submitter = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    const project = await prisma.project.findUnique({ where: { id: dpr.project_id }, select: { name: true } });
+    const creatorName = submitter?.name || "Someone";
+    const projectName = project?.name || "Project";
+
+    for (const pmId of pmUserIds) {
+      await sendPushNotification(pmId, {
+        title: 'New DPR Submitted',
+        body: `${creatorName} submitted a DPR for ${projectName}`,
+        data: { type: 'DPR_SUBMITTED', refId: dpr.id }
+      });
+    }
+  } catch (err) {
+    logger.error("Error sending DPR submission push notification:", err);
+  }
+
+  return updatedDpr;
 }
 
 // ─── Review / Approve DPR ─────────────────────────────────────────────────────
@@ -466,6 +505,21 @@ async function reviewDPR(dpr_id, action, userId, companyId) {
         reviewed_at: new Date()
       }
     });
+
+    try {
+      if (dpr.created_by) {
+        const displayStatus = action === 'approve' ? 'Approved' : 'Rejected';
+        const type = action === 'approve' ? 'DPR_APPROVED' : 'DPR_REJECTED';
+        const reportDate = dpr.report_date ? new Date(dpr.report_date).toISOString().slice(0, 10) : "";
+        await sendPushNotification(dpr.created_by, {
+          title: `DPR ${displayStatus}`,
+          body: `Your DPR for ${reportDate} was ${displayStatus.toLowerCase()}`,
+          data: { type, refId: dpr.id }
+        });
+      }
+    } catch (err) {
+      logger.error("Error sending DPR review status push notification:", err);
+    }
 
     if (action === 'approve') {
       for (const item of dpr.items) {

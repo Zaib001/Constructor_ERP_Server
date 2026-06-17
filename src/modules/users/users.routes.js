@@ -8,6 +8,9 @@ const requirePermission = require("../../middleware/requirePermission");
 
 router.use(authenticateJWT);
 
+router.post("/fcm-token", usersController.upsertFcmToken);
+router.delete("/fcm-token", usersController.deleteFcmToken);
+
 router.post("/", requirePermission(["user.create", "user.register"]), usersController.createUser);
 router.get("/", requirePermission("user.read"), usersController.listUsers);
 router.get("/:id/projects", requirePermission("user.read"), usersController.getUserProjects);

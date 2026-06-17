@@ -104,7 +104,38 @@ async function removeProjectAccess(req, res, next) {
     }
 }
 
+async function upsertFcmToken(req, res, next) {
+    try {
+        const { token, platform } = req.body;
+        const userId = req.user?.id || req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+        await usersService.upsertFcmToken(userId, token, platform);
+        return res.status(200).json({ success: true, message: "FCM token registered successfully." });
+    } catch (err) {
+        const code = err.statusCode || 500;
+        return res.status(code).json({ success: false, message: err.message });
+    }
+}
+
+async function deleteFcmToken(req, res, next) {
+    try {
+        const { token } = req.body;
+        const userId = req.user?.id || req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+        await usersService.deleteFcmToken(userId, token);
+        return res.status(200).json({ success: true, message: "FCM token removed successfully." });
+    } catch (err) {
+        const code = err.statusCode || 500;
+        return res.status(code).json({ success: false, message: err.message });
+    }
+}
+
 module.exports = {
     createUser, getAllUsers, getUserById, updateUser, deleteUser,
     listUsers, getUserProjects, assignProjectAccess, removeProjectAccess,
+    upsertFcmToken, deleteFcmToken,
 };
